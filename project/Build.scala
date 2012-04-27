@@ -29,19 +29,19 @@ object Resolvers {
 object Dependencies {
 	val apacheHttpCore = "org.apache.httpcomponents" % "httpcore" % "4.2-beta1" withSources()
 	val apacheHttpClient = "org.apache.httpcomponents" % "httpclient" % "4.1.2" withSources()
-  val scalaCheck     = "org.scala-tools.testing" %% "scalacheck" % "1.9" % "test" withSources()
-  val specs2         = "org.specs2" %% "specs2" % "1.9" % "test" withSources()
-  val mockito        = "org.mockito" % "mockito-all" % "1.9.0" % "test" withSources()
-  val specs2Core     = "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test" withSources()
+  val scalaCheck = "org.scala-tools.testing" %% "scalacheck" % "1.9" % "test" withSources()
+  val specs2 = "org.specs2" %% "specs2" % "1.9" % "test" withSources()
+  val mockito = "org.mockito" % "mockito-all" % "1.9.0" % "test" withSources()
+  val specs2Core = "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test" withSources()
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.3" withSources()
+  val stackmobCommon = "com.stackmob" %% "stackmob-common" % "0.3.0-SNAPSHOT" withSources() changing()
   
-  val allDeps = Seq(apacheHttpCore, apacheHttpClient, scalaCheck, specs2, mockito, specs2Core, scalaz)
+  val allDeps = Seq(apacheHttpCore, apacheHttpClient, scalaCheck, specs2, mockito, specs2Core, scalaz, stackmobCommon)
 }
 
 object NewmanBuild extends Build {
-  //uncomment the stuff in this object if you want to develop stackmob-common locally
 
-  lazy val barney = Project("newman", file("."),
+  lazy val newman = Project("newman", file("."),
     settings = buildSettings ++ 
       assemblySettings ++ 
       addArtifact(Artifact("newman", "assembly"), assembly) ++
@@ -51,10 +51,7 @@ object NewmanBuild extends Build {
         libraryDependencies ++= Dependencies.allDeps,
         jarName in assembly <<= (name) { _ + ".jar" }
       )
-  ) //dependsOn (scaliak, localStackMobCommon)
-
-  //lazy val localStackMobCommon = RootProject(file("../stackmob-common"))
-  //lazy val scaliak = RootProject(file("../scaliak"))
+  )
 }
 
 object ShellPrompt {
