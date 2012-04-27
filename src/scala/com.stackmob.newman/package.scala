@@ -14,6 +14,5 @@ import scalaz.NonEmptyList
 
 package object newman {
   type HeaderList = Option[NonEmptyList[(String, String)]]
-  case class HttpResponse(code: HttpResponseStatus, headers: HeaderList, body: Array[Byte])
-  //TODO: response code enum
+  case class HttpResponse(code: HttpResponseCode, headers: HeaderList, body: Array[Byte])
 }
