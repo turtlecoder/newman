@@ -27,8 +27,8 @@ object Resolvers {
 }
 
 object Dependencies {
-	val apacheHttpCore = "org.apache.httpcomponents" %% "httpcore" % "4.2-beta1" withSources()
-	val apacheHttpClient = "org.apache.httpcomponents" %% "httpclient" % "4.1.2" withSources()
+	val apacheHttpCore = "org.apache.httpcomponents" % "httpcore" % "4.2-beta1" withSources()
+	val apacheHttpClient = "org.apache.httpcomponents" % "httpclient" % "4.1.2" withSources()
   val scalaCheck     = "org.scala-tools.testing" %% "scalacheck" % "1.9" % "test" withSources()
   val specs2         = "org.specs2" %% "specs2" % "1.9" % "test" withSources()
   val mockito        = "org.mockito" % "mockito-all" % "1.9.0" % "test" withSources()
