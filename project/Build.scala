@@ -33,8 +33,9 @@ object Dependencies {
   val specs2         = "org.specs2" %% "specs2" % "1.9" % "test" withSources()
   val mockito        = "org.mockito" % "mockito-all" % "1.9.0" % "test" withSources()
   val specs2Core     = "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test" withSources()
-
-  val allDeps = Seq(apacheHttpCore, apacheHttpClient, scalaCheck, specs2, mockito, specs2Core)
+  val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.3" withSources()
+  
+  val allDeps = Seq(apacheHttpCore, apacheHttpClient, scalaCheck, specs2, mockito, specs2Core, scalaz)
 }
 
 object NewmanBuild extends Build {
