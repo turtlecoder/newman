@@ -18,30 +18,44 @@ import com.stackmob.common.validation.validating
 
 object RequestBuilder {
 
-  case class HeaderTransformer(fn: Headers => HttpRequest) {
+  private case class HeaderTransformer(fn: Headers => HttpRequest) {
     def withHeaders(h: Headers) = fn(h)
+    def withNoHeaders = fn(none[HeaderList])
   }
 
-  case class BodyTransformer(fn: Array[Byte] => HttpRequestWithBody) {
-    def withBody(a: Array[Byte]) = fn(a)
+  private case class BodyTransformer(fn: RawBody => HttpRequestWithBody) {
+    def withBody(a: RawBody) = fn(a)
+    def withEmptyBody = fn(EmptyRawBody)
   }
 
-  case class HeaderAndBodyTransformer(fn: (Headers, Array[Byte]) => HttpRequestWithBody) {
-    def withBody(b: Array[Byte]) = fn(_: Headers, b)
-    def withHeaders(h: Headers) = fn(h, _: Array[Byte])
-    def withHeadersAndBody(h: Headers, b: Array[Byte]) = fn(h, b)
+  private case class HeaderAndBodyTransformer(fn: (Headers, RawBody) => HttpRequestWithBody) {
+    def withBody(b: RawBody): HeaderTransformer = fn(_: Headers, b)
+    def withNoHeaders: BodyTransformer = fn(none, _: RawBody)
+    def withHeaders(h: Headers): BodyTransformer = fn(h, _: RawBody)
+    def withHeadersAndBody(h: Headers, b: RawBody) = fn(h, b)
   }
 
-  implicit def headerFnToTransformer(fn: Headers => HttpRequest) =
-    HeaderTransformer(fn)
-  implicit def bodyFnToTransformer(fn: Array[Byte] => HttpRequestWithBody) =
-    BodyTransformer(fn)
-  implicit def headerAndBodyFnToTransformer(fn: (Headers, Array[Byte]) => HttpRequestWithBody) =
-    HeaderAndBodyTransformer(fn)
+  implicit def headerFnToTransformer(fn: Headers => HttpRequest) = HeaderTransformer(fn)
+  implicit def bodyFnToTransformer(fn: RawBody => HttpRequestWithBody) = BodyTransformer(fn)
+  implicit def headerAndBodyFnToTransformer(fn: (Headers, RawBody) => HttpRequestWithBody) = HeaderAndBodyTransformer(fn)
 
-  def GET(url: URL)(implicit client: HttpClient) = { h: Headers => client.get(url, h) }
-  def PUT(url: URL)(implicit client: HttpClient) = { (h: Headers, b: Array[Byte]) => client.put(url, h, b) }
-  def POST(url: URL)(implicit client: HttpClient) = { (h: Headers, b: Array[Byte]) => client.post(url, h, b) }
-  def DELETE(url: URL)(implicit client: HttpClient) = { (h: Headers) => client.delete(url, h) }
-  def HEAD(url: URL)(implicit client: HttpClient) = { (h: Headers) => client.head(url, h) }
+  def GET(url: URL)(implicit client: HttpClient): Headers => GetRequest = { h: Headers =>
+    client.get(url, h)
+  }
+
+  def PUT(url: URL)(implicit client: HttpClient): (Headers, RawBody) => PutRequest = { (h: Headers, b: RawBody) =>
+    client.put(url, h, b)
+  }
+
+  def POST(url: URL)(implicit client: HttpClient): (Headers, RawBody) => PostRequest = { (h: Headers, b: RawBody) =>
+    client.post(url, h, b)
+  }
+
+  def DELETE(url: URL)(implicit client: HttpClient): Headers => DeleteRequest = { h: Headers =>
+    client.delete(url, h)
+  }
+
+  def HEAD(url: URL)(implicit client: HttpClient): Headers => HeadRequest = { h: Headers =>
+    client.head(url, h)
+  }
 }

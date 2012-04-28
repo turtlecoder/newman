@@ -57,7 +57,7 @@ class ApacheHttpClient extends HttpClient {
           }
           val headers = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
           val body = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
-          HttpResponse(responseCode, headers.toNel, body | Array[Byte]())
+          HttpResponse(responseCode, headers.toNel, body | EmptyRawBody)
         } finally {
           client.getConnectionManager.shutdown()
         }
@@ -69,12 +69,12 @@ class ApacheHttpClient extends HttpClient {
     extends GetRequest with Executor {
     override protected val httpMessage = new HttpGet(url.toURI)
   }
-  case class Post(override val url: URL, override val headers: Headers, override val body: Array[Byte])
+  case class Post(override val url: URL, override val headers: Headers, override val body: RawBody)
     extends PostRequest with Executor {
     override protected val httpMessage = new HttpPost(url.toURI)
     httpMessage.setEntity(new ByteArrayEntity(body))
   }
-  case class Put(override val url: URL, override val headers: Headers, override val body: Array[Byte])
+  case class Put(override val url: URL, override val headers: Headers, override val body: RawBody)
     extends PutRequest with Executor {
     override protected val httpMessage = new HttpPut(url.toURI)
     httpMessage.setEntity(new ByteArrayEntity(body))
@@ -89,8 +89,8 @@ class ApacheHttpClient extends HttpClient {
   }
 
   override def get(url: URL, headers: Headers) = Get(url, headers)
-  override def post(url: URL, headers: Headers, body: Array[Byte]) = Post(url, headers, body)
-  override def put(url: URL, headers: Headers, body: Array[Byte]) = Put(url, headers, body)
+  override def post(url: URL, headers: Headers, body: RawBody) = Post(url, headers, body)
+  override def put(url: URL, headers: Headers, body: RawBody) = Put(url, headers, body)
   override def delete(url: URL, headers: Headers) = Delete(url, headers)
   override def head(url: URL, headers: Headers) = Head(url, headers)
 }

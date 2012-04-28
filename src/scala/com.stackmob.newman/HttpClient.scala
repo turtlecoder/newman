@@ -22,7 +22,7 @@ trait HttpRequest {
 }
 
 sealed trait HttpRequestWithBody extends HttpRequest {
-  def body: Array[Byte]
+  def body: RawBody
 }
 
 sealed trait HttpRequestWithoutBody extends HttpRequest
@@ -35,8 +35,8 @@ trait HeadRequest extends HttpRequestWithoutBody
 
 trait HttpClient {
   def get(url: URL, headers: Headers): GetRequest
-  def post(url: URL, headers: Headers, body: Array[Byte]): PostRequest
-  def put(url: URL, headers: Headers, body: Array[Byte]): PutRequest
+  def post(url: URL, headers: Headers, body: RawBody): PostRequest
+  def put(url: URL, headers: Headers, body: RawBody): PutRequest
   def delete(url: URL, headers: Headers): DeleteRequest
   def head(url: URL, headers: Headers): HeadRequest
 }

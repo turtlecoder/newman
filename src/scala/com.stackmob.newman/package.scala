@@ -17,7 +17,9 @@ package object newman {
   type Header = (String, String)
   type HeaderList = NonEmptyList[Header]
   type Headers = Option[HeaderList]
+  type RawBody = Array[Byte]
+  val EmptyRawBody = Array[Byte]()
 
-  case class HttpResponse(code: HttpResponseCode, headers: Headers, body: Array[Byte])
+  case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody)
   case class UnknownHttpStatusCodeException(i: Int) extends Exception("Unknown HTTP status code %d".format(i))
 }
