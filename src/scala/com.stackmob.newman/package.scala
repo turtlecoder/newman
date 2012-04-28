@@ -1,6 +1,7 @@
 package com.stackmob
 
-import scalaz.NonEmptyList
+import scalaz._
+import Scalaz._
 
 /**
  * Created by IntelliJ IDEA.
@@ -13,6 +14,10 @@ import scalaz.NonEmptyList
  */
 
 package object newman {
-  type HeaderList = Option[NonEmptyList[(String, String)]]
-  case class HttpResponse(code: HttpResponseCode, headers: HeaderList, body: Array[Byte])
+  type Header = (String, String)
+  type HeaderList = NonEmptyList[Header]
+  type Headers = Option[HeaderList]
+
+  case class HttpResponse(code: HttpResponseCode, headers: Headers, body: Array[Byte])
+  case class UnknownHttpStatusCodeException(i: Int) extends Exception("Unknown HTTP status code %d".format(i))
 }

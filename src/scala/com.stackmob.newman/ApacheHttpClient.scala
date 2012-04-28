@@ -1,6 +1,5 @@
 package com.stackmob.newman
 
-import org.apache.http.client
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.params.HttpConnectionParams
 import scalaz.effects._
@@ -28,7 +27,7 @@ class ApacheHttpClient extends HttpClient {
 
   private[ApacheHttpClient] trait Executor {
     protected def httpMessage: HttpRequestBase
-    protected def headers: HeaderList
+    protected def headers: Headers
 
     private[Executor] def getHttpClient = {
       val client = new DefaultHttpClient
@@ -53,7 +52,9 @@ class ApacheHttpClient extends HttpClient {
       io {
         try {
           val apacheResponse = client.execute(httpMessage)
-          val responseCode = HttpResponseStatus.valueOf(apacheResponse.getStatusLine.getStatusCode)
+          val responseCode = HttpResponseCode.fromInt(apacheResponse.getStatusLine.getStatusCode) | {
+            throw new UnknownHttpStatusCodeException(apacheResponse.getStatusLine.getStatusCode)
+          }
           val headers = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
           val body = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
           HttpResponse(responseCode, headers.toNel, body | Array[Byte]())
@@ -64,32 +65,32 @@ class ApacheHttpClient extends HttpClient {
     }
   }
 
-  case class Get(override val url: URL, override val headers: HeaderList)
+  case class Get(override val url: URL, override val headers: Headers)
     extends GetRequest with Executor {
     override protected val httpMessage = new HttpGet(url.toURI)
   }
-  case class Post(override val url: URL, override val headers: HeaderList, override val body: Array[Byte])
+  case class Post(override val url: URL, override val headers: Headers, override val body: Array[Byte])
     extends PostRequest with Executor {
     override protected val httpMessage = new HttpPost(url.toURI)
     httpMessage.setEntity(new ByteArrayEntity(body))
   }
-  case class Put(override val url: URL, override val headers: HeaderList, override val body: Array[Byte])
+  case class Put(override val url: URL, override val headers: Headers, override val body: Array[Byte])
     extends PutRequest with Executor {
     override protected val httpMessage = new HttpPut(url.toURI)
     httpMessage.setEntity(new ByteArrayEntity(body))
   }
-  case class Delete(override val url: URL, override val headers: HeaderList)
+  case class Delete(override val url: URL, override val headers: Headers)
     extends DeleteRequest with Executor {
     override protected val httpMessage = new HttpDelete(url.toURI)
   }
-  case class Head(override val url: URL, override val headers: HeaderList)
+  case class Head(override val url: URL, override val headers: Headers)
     extends HeadRequest with Executor {
     override protected val httpMessage = new HttpHead(url.toURI)
   }
 
-  override def get(url: URL, headers: HeaderList) = Get(url, headers)
-  override def post(url: URL, headers: HeaderList, body: Array[Byte]) = Post(url, headers, body)
-  override def put(url: URL, headers: HeaderList, body: Array[Byte]) = Put(url, headers, body)
-  override def delete(url: URL, headers: HeaderList) = Delete(url, headers)
-  override def head(url: URL, headers: HeaderList) = Head(url, headers)
+  override def get(url: URL, headers: Headers) = Get(url, headers)
+  override def post(url: URL, headers: Headers, body: Array[Byte]) = Post(url, headers, body)
+  override def put(url: URL, headers: Headers, body: Array[Byte]) = Put(url, headers, body)
+  override def delete(url: URL, headers: Headers) = Delete(url, headers)
+  override def head(url: URL, headers: Headers) = Head(url, headers)
 }

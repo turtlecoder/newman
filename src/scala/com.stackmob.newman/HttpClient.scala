@@ -17,7 +17,7 @@ import java.net.URL
 
 trait HttpRequest {
   def url: URL
-  def headers: HeaderList
+  def headers: Headers
   def execute: IO[HttpResponse]
 }
 
@@ -34,9 +34,9 @@ trait DeleteRequest extends HttpRequestWithoutBody
 trait HeadRequest extends HttpRequestWithoutBody
 
 trait HttpClient {
-  def get(url: URL, headers: HeaderList): GetRequest
-  def post(url: URL, headers: HeaderList, body: Array[Byte]): PostRequest
-  def put(url: URL, headers: HeaderList, body: Array[Byte]): PutRequest
-  def delete(url: URL, headers: HeaderList): DeleteRequest
-  def head(url: URL, headers: HeaderList): HeadRequest
+  def get(url: URL, headers: Headers): GetRequest
+  def post(url: URL, headers: Headers, body: Array[Byte]): PostRequest
+  def put(url: URL, headers: Headers, body: Array[Byte]): PutRequest
+  def delete(url: URL, headers: Headers): DeleteRequest
+  def head(url: URL, headers: Headers): HeadRequest
 }

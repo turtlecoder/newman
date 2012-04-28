@@ -1,6 +1,8 @@
 package com.stackmob.newman
 
 import com.stackmob.common.enumeration._
+import scalaz._
+import Scalaz._
 
 /**
  * Created by IntelliJ IDEA.
@@ -49,5 +51,44 @@ object HttpResponseCode {
   object ServiceUnavailable extends HttpResponseCode(503, "Service Unavailable")
   object UnsupportedMediaType extends HttpResponseCode(415, "Unsupported Media Type")
   object UseProxy extends HttpResponseCode(305, "Use Proxy")
-  object HTTPVersionNotSupported extends HttpResponseCode(505, "HTTP Version Not Supported")
+  object HttpVersionNotSupported extends HttpResponseCode(505, "HTTP Version Not Supported")
+
+  def fromInt(i: Int) = i match {
+    case Accepted.code => Accepted.some
+    case BadGateway.code => BadGateway.some
+    case MethodNotAllowed.code => MethodNotAllowed.some
+    case BadRequest.code => BadRequest.some
+    case ClientTimeout.code => ClientTimeout.some
+    case Conflict.code => Conflict.some
+    case Created.code => Created.some
+    case EntityTooLarge.code => EntityTooLarge.some
+    case Forbidden.code => Forbidden.some
+    case GatewayTimeout.code => GatewayTimeout.some
+    case Gone.code => Gone.some
+    case InternalServerError.code => InternalServerError.some
+    case LengthRequired.code => LengthRequired.some
+    case MovedPermanently.code => MovedPermanently.some
+    case TemporaryRedirect.code => TemporaryRedirect.some
+    case MultipleChoices.code => MultipleChoices.some
+    case NoContent.code => NoContent.some
+    case NotAcceptable.code => NotAcceptable.some
+    case NonAuthoritativeInformation.code => NonAuthoritativeInformation.some
+    case NotFound.code => NotFound.some
+    case NotImplemented.code => NotImplemented.some
+    case NotModified.code => NotModified.some
+    case Ok.code => Ok.some
+    case PartialContent.code => PartialContent.some
+    case PaymentRequired.code => PaymentRequired.some
+    case PreconditionFailed.code => PreconditionFailed.some
+    case AuthenticationRequired.code => AuthenticationRequired.some
+    case RequestURITooLarge.code => RequestURITooLarge.some
+    case ResetContent.code => ResetContent.some
+    case SeeOther.code => SeeOther.some
+    case Unauthorized.code => Unauthorized.some
+    case ServiceUnavailable.code => ServiceUnavailable.some
+    case UnsupportedMediaType.code => UnsupportedMediaType.some
+    case UseProxy.code => UseProxy.some
+    case HttpVersionNotSupported.code => HttpVersionNotSupported.some
+    case _ => none
+  }
 }
