@@ -1,10 +1,9 @@
 package com.stackmob.newman.DSL
 
 import java.net.URL
-import com.stackmob.newman._
 import scalaz._
 import Scalaz._
-import com.stackmob.common.validation.validating
+import com.stackmob.newman._
 
 /**
  * Created by IntelliJ IDEA.
@@ -18,7 +17,19 @@ import com.stackmob.common.validation.validating
 
 object RequestBuilder {
 
+  private val HeadersPrependLens = Lens[Headers, Option[Header]](
+    get = { h: Headers => h.map(_.head) },
+    set = { (headers: Headers, hOpt: Option[Header]) =>
+      val listAndEltOpt: Option[(HeaderList, Header)] = headers <|*|> hOpt
+      listAndEltOpt.map { tup: (HeaderList, Header) =>
+        val (headerList, header) = tup
+        nel(header, headerList.list)
+      }
+    }
+  )
+
   private case class HeaderTransformer(fn: Headers => HttpRequest) {
+    def withHeader(toAdd: Header): HeaderTransformer = { h: Headers => fn(HeadersPrependLens.set(h, toAdd.some)) }
     def withHeaders(h: Headers) = fn(h)
     def withNoHeaders = fn(none[HeaderList])
   }
@@ -30,8 +41,7 @@ object RequestBuilder {
 
   private case class HeaderAndBodyTransformer(fn: (Headers, RawBody) => HttpRequestWithBody) {
     def withBody(b: RawBody): HeaderTransformer = fn(_: Headers, b)
-    def withNoHeaders: BodyTransformer = fn(none, _: RawBody)
-    def withHeaders(h: Headers): BodyTransformer = fn(h, _: RawBody)
+    def withHeader(toAdd: Header): HeaderAndBodyTransformer = { (h: Headers, b: RawBody) => fn(HeadersPrependLens.set(h, toAdd.some), b) }
     def withHeadersAndBody(h: Headers, b: RawBody) = fn(h, b)
   }
 
