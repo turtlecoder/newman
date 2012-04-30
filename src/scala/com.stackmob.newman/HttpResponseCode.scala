@@ -3,6 +3,7 @@ package com.stackmob.newman
 import com.stackmob.common.enumeration._
 import scalaz._
 import Scalaz._
+import HttpClient._
 
 /**
  * Created by IntelliJ IDEA.
@@ -13,6 +14,8 @@ import Scalaz._
  * Date: 4/27/12
  * Time: 4:44 PM
  */
+
+case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody)
 
 sealed abstract class HttpResponseCode(val code: Int, override val stringVal: String) extends Enumeration
 

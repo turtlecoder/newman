@@ -1,4 +1,4 @@
-package com.stackmob.newman.DSL
+package com.stackmob.newman.dsl
 
 import com.stackmob.common.enumeration._
 import scalaz._
@@ -7,7 +7,7 @@ import Scalaz._
 /**
  * Created by IntelliJ IDEA.
  *
- * com.stackmob.newman.DSL
+ * com.stackmob.newman.dsl
  *
  * User: aaron
  * Date: 4/27/12

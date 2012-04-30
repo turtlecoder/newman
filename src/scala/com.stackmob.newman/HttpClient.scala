@@ -1,7 +1,9 @@
 package com.stackmob.newman
 
+import scalaz._
 import scalaz.effects._
 import java.net.URL
+import HttpClient._
 
 /**
  * Created by IntelliJ IDEA.
@@ -39,4 +41,12 @@ trait HttpClient {
   def put(url: URL, headers: Headers, body: RawBody): PutRequest
   def delete(url: URL, headers: Headers): DeleteRequest
   def head(url: URL, headers: Headers): HeadRequest
+}
+
+object HttpClient {
+  type Header = (String, String)
+  type HeaderList = NonEmptyList[Header]
+  type Headers = Option[HeaderList]
+  type RawBody = Array[Byte]
+  val EmptyRawBody = Array[Byte]()
 }

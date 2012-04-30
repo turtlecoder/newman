@@ -1,4 +1,4 @@
-package com.stackmob.newman.DSL
+package com.stackmob.newman.dsl
 
 //import org.apache.http.Header
 //import org.apache.http.message.BasicHeader
