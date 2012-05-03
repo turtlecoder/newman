@@ -2,6 +2,7 @@ package com.stackmob.newman
 
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.params.HttpConnectionParams
+import response.HttpResponseCode
 import scalaz.effects._
 import org.apache.http.util.EntityUtils
 import java.net.URL
