@@ -29,18 +29,18 @@ object RequestBuilder {
     }
   )
 
-  private case class HeaderTransformer(fn: Headers => HttpRequest) {
+  case class HeaderTransformer(fn: Headers => HttpRequest) {
     def withHeader(toAdd: Header): HeaderTransformer = { h: Headers => fn(HeadersPrependLens.set(h, toAdd.some)) }
     def withHeaders(h: Headers) = fn(h)
     def withNoHeaders = fn(none[HeaderList])
   }
 
-  private case class BodyTransformer(fn: RawBody => HttpRequestWithBody) {
+  case class BodyTransformer(fn: RawBody => HttpRequestWithBody) {
     def withBody(a: RawBody) = fn(a)
     def withEmptyBody = fn(EmptyRawBody)
   }
 
-  private case class HeaderAndBodyTransformer(fn: (Headers, RawBody) => HttpRequestWithBody) {
+  case class HeaderAndBodyTransformer(fn: (Headers, RawBody) => HttpRequestWithBody) {
     def withBody(b: RawBody): HeaderTransformer = fn(_: Headers, b)
     def withHeader(toAdd: Header): HeaderAndBodyTransformer = { (h: Headers, b: RawBody) => fn(HeadersPrependLens.set(h, toAdd.some), b) }
     def withHeadersAndBody(h: Headers, b: RawBody) = fn(h, b)

@@ -3,6 +3,7 @@ package com.stackmob.newman.dsl
 import scalaz.Validation
 import com.stackmob.common.validation._
 import com.stackmob.newman._
+import com.stackmob.newman.response.HttpResponse
 
 /**
  * Created by IntelliJ IDEA.

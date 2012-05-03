@@ -1,5 +1,6 @@
 package com.stackmob.newman
 
+import com.stackmob.newman.response.HttpResponse
 import scalaz._
 import scalaz.effects._
 import java.net.URL

@@ -25,14 +25,15 @@ object HttpVerb {
   object Delete extends HttpVerbWithoutBody("DELETE")
   object Head extends HttpVerbWithoutBody("HEAD")
 
+  private val verbs = Map(
+    Get.stringVal.toLowerCase -> Get,
+    Post.stringVal.toLowerCase -> Post,
+    Put.stringVal.toLowerCase -> Put,
+    Delete.stringVal.toLowerCase -> Delete,
+    Head.stringVal.toLowerCase -> Head
+  )
+
   implicit def HttpVerbToReader: EnumReader[HttpVerb] = new EnumReader[HttpVerb] {
-    def read(s: String): Option[HttpVerb] = s.toLowerCase match {
-      case Get.stringVal.toLowerCase => Get.some
-      case Post.stringVal.toLowerCase => Post.some
-      case Put.stringVal.toLowerCase => Put.some
-      case Delete.stringVal.toLowerCase => Delete.some
-      case Head.stringVal.toLowerCase => Head.some
-      case _ => none
-    }
+    def read(s: String): Option[HttpVerb] = verbs.get(s.toLowerCase)
   }
 }
