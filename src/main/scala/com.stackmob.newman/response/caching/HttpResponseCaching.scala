@@ -34,8 +34,8 @@ object HttpResponseCodeCaching extends CommonCaching {
   }
 
   implicit def HttpResponseCodeJSONR: JSONR[HttpResponseCode] = new JSONR[HttpResponseCode] {
-    override def read(jValue: JValue): Result[HttpResponseCode] = {
-      (jValue \ CodeKey) match {
+    override def read(json: JValue): Result[HttpResponseCode] = {
+      (json \ CodeKey) match {
         case JInt(code) => validating(HttpResponseCode.fromInt(code.toInt)).fold(
           success = { o: Option[HttpResponseCode] =>
             o.map { c: HttpResponseCode => c.successNel[Error]} | {
@@ -67,24 +67,30 @@ object HeadersCaching extends CommonCaching {
 
   implicit def HeadersJSONR: JSONR[Headers] = new JSONR[Headers] {
     override def read(json: JValue): Result[Headers] = {
-      //TODO: implement
+      json match {
+        case JObject(list) => list.flatMap({ jField: JField =>
+          val headerName = jField.name
+          //for now, ignoring headers that don't have strings as their values
+          jField.value match {
+            case JString(s) => List(headerName -> s)
+            case j => List[(String, String)]()
+          }
+        }).toList.toNel.successNel[Error]
+        case j => UnexpectedJSONError(j, classOf[JObject]).failNel[Headers]
+      }
     }
   }
 }
 
 object HttpResponseCaching extends CommonCaching {
   implicit def HttpResponseJSONW: JSONW[HttpResponse] = new JSONW[HttpResponse] {
+    import HttpResponseCodeCaching.HttpResponseCodeJSONW
+    import HeadersCaching.HeadersJSONW
     override def write(h: HttpResponse): JValue = {
-      val codeInt = h.code.code
-      val headerList: List[JObject] = h.headers.map { headerList: HeaderList =>
-        (headerList.list.map { header: Header =>
-          JObject(JField("name", JString(header._1)) :: JField("value", JString(header._2)) :: Nil)
-        }).toList
-      } | List[JObject]()
       val bodyString = new String(h.body, UTF8Charset)
-      JObject(
-        JField(CodeKey, JInt(codeInt)) ::
-        JField(HeadersKey, JArray(headerList)) ::
+      JArray(
+        toJSON(h.code) ::
+        toJSON(h.headers) ::
         JField(BodyKey, JString(bodyString)) ::
         Nil
       )
