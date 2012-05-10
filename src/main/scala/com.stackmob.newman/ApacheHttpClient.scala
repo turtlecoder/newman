@@ -11,7 +11,9 @@ import scalaz._
 import Scalaz._
 import org.apache.http.entity.{ByteArrayEntity, BufferedHttpEntity}
 import org.apache.http.HttpHeaders._
-import HttpClient._
+import com.stackmob.newman.request._
+import HttpRequest._
+import HttpRequestWithBody._
 import com.stackmob.newman.Exceptions.UnknownHttpStatusCodeException
 import com.stackmob.newman.response.HttpResponse
 

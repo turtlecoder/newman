@@ -1,21 +1,23 @@
 package com.stackmob.newman
 
+import request._
+import request.HttpRequest._
+import request.HttpRequestWithBody._
+import scalaz.Lens
+import scalaz.Scalaz._
 import java.net.URL
-import scalaz._
-import Scalaz._
-import HttpClient._
 
 /**
  * Created by IntelliJ IDEA.
  *
- * com.stackmob.newman.dsl
+ * com.stackmob.newman
  *
  * User: aaron
  * Date: 5/10/12
- * Time: 2:58 PM
+ * Time: 3:18 PM
  */
 
-package object dsl {
+object DSL {
   private val HeadersPrependLens = Lens[Headers, Option[Header]](
     get = { h: Headers => h.map(_.head) },
     set = { (headers: Headers, hOpt: Option[Header]) =>

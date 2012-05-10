@@ -1,6 +1,8 @@
 package com.stackmob.newman.response
 
-import com.stackmob.newman.HttpClient._
+import com.stackmob.newman.request._
+import HttpRequest._
+import HttpRequestWithBody._
 
 /**
  * Created by IntelliJ IDEA.

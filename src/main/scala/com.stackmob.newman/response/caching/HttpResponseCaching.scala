@@ -3,11 +3,10 @@ package com.stackmob.newman.response.caching
 import java.nio.charset.Charset
 import scalaz._
 import Scalaz._
-import net.liftweb.json.scalaz.JsonScalaz._
 import net.liftweb.json._
-import net.liftweb.json.{NoTypeHints, Serialization}
+import net.liftweb.json.scalaz.JsonScalaz._
 import com.stackmob.common.validation._
-import com.stackmob.newman.HttpClient.{Header, HeaderList, Headers}
+import com.stackmob.newman.request.HttpRequest._
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 
 
@@ -98,12 +97,15 @@ object HttpResponseCaching extends CommonCaching {
   }
 
   implicit def HttpResponseJSONR: JSONR[HttpResponse] = new JSONR[HttpResponse] {
-    import HttpResponseCodeCaching.HttpResponseCodeJSONR
     import HeadersCaching.HeadersJSONR
-    override def read(json: JValue): Result[HttpResponse] =
-      (field[HttpResponseCode](CodeKey)(json) |@| field[Headers](HeadersKey)(json) |@| field[String](BodyKey)(json)) {
-        (code: HttpResponseCode, headers: Headers, body: String) => HttpResponse(code, headers, body.getBytes(UTF8Charset))
-      }
+    import HttpResponseCodeCaching.HttpResponseCodeJSONR
+    override def read(json: JValue): Result[HttpResponse] = (
+      field[HttpResponseCode](CodeKey)(json)(HttpResponseCodeJSONR) |@|
+      field[Headers](HeadersKey)(json)(HeadersJSONR) |@|
+      field[String](BodyKey)(json)
+    ) { (code: HttpResponseCode, headers: Headers, body: String) =>
+      HttpResponse(code, headers, body.getBytes(UTF8Charset))
+    }
   }
 
   def toJValue(h: HttpResponse): JValue = toJSON(h)

@@ -3,10 +3,6 @@ package com.stackmob.newman.response
 import com.stackmob.common.enumeration._
 import scalaz._
 import Scalaz._
-import com.stackmob.newman.HttpClient._
-import java.nio.charset.Charset
-import net.liftweb.json._
-import com.stackmob.common.validation.validating
 
 /**
  * Created by IntelliJ IDEA.
