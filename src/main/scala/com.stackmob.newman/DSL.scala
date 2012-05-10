@@ -46,9 +46,12 @@ object DSL {
     def withHeadersAndBody(h: Headers, b: RawBody) = fn(h, b)
   }
 
+  //implicit that goes from header function -> HeaderTransformer
+  implicit def headerFnToHttpRequest(fn: Headers => HttpRequest) = headerFnToTransformer(fn).withNoHeaders
   implicit def headerFnToTransformer(fn: Headers => HttpRequest): HeaderTransformer = HeaderTransformer(fn)
   implicit def bodyFnToTransformer(fn: RawBody => HttpRequestWithBody): BodyTransformer = BodyTransformer(fn)
   implicit def headerAndBodyFnToTransformer(fn: (Headers, RawBody) => HttpRequestWithBody): HeaderAndBodyTransformer = HeaderAndBodyTransformer(fn)
+
 
   def GET(url: URL)(implicit client: HttpClient): Headers => GetRequest = { h: Headers =>
     client.get(url, h)
