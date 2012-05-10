@@ -1,9 +1,8 @@
-package com.stackmob.newman.dsl
+package com.stackmob.newman
 
 import java.net.URL
 import scalaz._
 import Scalaz._
-import com.stackmob.newman._
 import HttpClient._
 
 /**
@@ -12,12 +11,11 @@ import HttpClient._
  * com.stackmob.newman.dsl
  *
  * User: aaron
- * Date: 4/27/12
- * Time: 5:20 PM
+ * Date: 5/10/12
+ * Time: 2:58 PM
  */
 
-object RequestBuilder {
-
+package object dsl {
   private val HeadersPrependLens = Lens[Headers, Option[Header]](
     get = { h: Headers => h.map(_.head) },
     set = { (headers: Headers, hOpt: Option[Header]) =>

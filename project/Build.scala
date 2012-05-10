@@ -36,7 +36,16 @@ object Dependencies {
   val scalaz = "org.scalaz" %% "scalaz-core" % "6.0.3" withSources()
   val stackmobCommon = "com.stackmob" %% "stackmob-common" % "0.3.0-SNAPSHOT" withSources() changing()
   
-  val allDeps = Seq(apacheHttpCore, apacheHttpClient, scalaCheck, specs2, mockito, specs2Core, scalaz, stackmobCommon)
+  val allDeps = Seq(
+    apacheHttpCore,
+    apacheHttpClient,
+    scalaCheck,
+    specs2,
+    mockito,
+    specs2Core,
+    scalaz,
+    stackmobCommon
+  )
 }
 
 object NewmanBuild extends Build {
