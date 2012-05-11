@@ -30,5 +30,5 @@ trait BaseContext extends LoggingSugar {
     }
   }
 
-  protected def beEqualTo(h: Headers) = new HeadersAreEqualMatcher(h)
+  protected def haveTheSameHeadersAs(h: Headers) = new HeadersAreEqualMatcher(h)
 }

@@ -44,45 +44,77 @@ class DSLSpecs extends Specification { def is =
     "correctly add a header"                                                                                            ! HeaderTransformerTest().correctlyAddsAHeader ^
     "correctly add headers"                                                                                             ! HeaderTransformerTest().correctlyAddsHeaders ^
     "correctly prepend headers"                                                                                         ! HeaderTransformerTest().correctlyPrependsHeaders ^
+                                                                                                                        end ^
+  "HeaderAndBodyTransformer should"                                                                                     ^
+    "correctly add a header"                                                                                            ! HeaderAndBodyTransformerTest().correctlyAddsAHeader ^
+    "correctly add headers"                                                                                             ! HeaderAndBodyTransformerTest().correctlyAddsHeaders ^
+    "correctly prepend headers"                                                                                         ! HeaderAndBodyTransformerTest().correctlyPrependsHeaders ^
+    "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
                                                                                                                         end
 
+  implicit protected val client = new DummyHttpClient
+  protected val url = new URL("http://stackmob.com")
+
   trait Context extends BaseContext {
-    implicit protected val client = new DummyHttpClient
-    protected val url = new URL("http://stackmob.com")
+
+    protected def ensureEmptyHeaders[T <: Transformer](t: T)(implicit m: Manifest[T]): SpecsResult = {
+      (t must beAnInstanceOf[T]) and
+      (t.headers must beNone)
+    }
   }
 
   case class GetTest() extends Context {
-    def returnsProperFunction: SpecsResult = GET(url) must beAnInstanceOf[HeaderTransformer]
+    def returnsProperFunction = ensureEmptyHeaders(GET(url))
   }
 
   case class PostTest() extends Context {
-    def returnsProperFunction: SpecsResult = POST(url) must beAnInstanceOf[HeaderAndBodyTransformer]
+    def returnsProperFunction = ensureEmptyHeaders(POST(url))
   }
 
   case class PutTest() extends Context {
-    def returnsProperFunction: SpecsResult = PUT(url) must beAnInstanceOf[HeaderAndBodyTransformer]
+    def returnsProperFunction = ensureEmptyHeaders(PUT(url))
   }
 
   case class DeleteTest() extends Context {
-    def returnsProperFunction: SpecsResult = DELETE(url) must beAnInstanceOf[HeaderTransformer]
+    def returnsProperFunction = ensureEmptyHeaders(DELETE(url))
   }
 
   case class HeadTest() extends Context {
-    def returnsProperFunction: SpecsResult = HEAD(url) must beAnInstanceOf[HeaderTransformer]
+    def returnsProperFunction = ensureEmptyHeaders(HEAD(url))
   }
 
-  case class HeaderTransformerTest() extends Context {
-    private val header1 = "testHeaderName" -> "testHeaderVal"
-    private val header2 = "testHeaderName2" -> "testHeaderVal2"
-    private val headers = nel(header1, header2)
-    private val transformer = GET(url)
+  trait HeaderTransformerTestBase extends Context {
+    protected def transformer: Transformer
 
-    def correctlyAddsAHeader: SpecsResult = transformer.addHeader(header1).soFar must beEqualTo(Some(nel(header1)))
-    def correctlyAddsHeaders: SpecsResult = transformer.addHeaders(headers.some).soFar must beEqualTo(Some(headers))
+    protected def ensureEqualHeaders(t: Transformer, expected: Headers): SpecsResult = (t.headers must haveTheSameHeadersAs(expected))
+    protected def ensureEqualHeaders(t: Transformer, expected: HeaderList): SpecsResult = ensureEqualHeaders(t, Some(expected))
+    protected def ensureEqualHeaders(t: Transformer, expected: Header): SpecsResult = ensureEqualHeaders(t, nel(expected))
+
+
+    protected val header1 = "testHeaderName" -> "testHeaderVal"
+    protected val header2 = "testHeaderName2" -> "testHeaderVal2"
+    protected val headers = nel(header1, header2)
+    def correctlyAddsAHeader = ensureEqualHeaders(transformer.addHeader(header1), header1)
+    def correctlyAddsHeaders = ensureEqualHeaders(transformer.addHeaders(headers.some), headers)
     def correctlyPrependsHeaders: SpecsResult = {
-      val oneAtATime = transformer.addHeader(header1).addHeader(header2).soFar must beEqualTo(Some(nel(header2, header1)))
-      val multipleAtATime = transformer.addHeaders(headers.some).addHeader(header2).soFar must beEqualTo(Some(nel(header2, headers.list)))
-      oneAtATime and multipleAtATime
+      ensureEqualHeaders(transformer.addHeader(header1).addHeader(header2), nel(header2, header1)) and
+      ensureEqualHeaders(transformer.addHeaders(headers.some).addHeader(header2), nel(header2, headers.list))
+    }
+  }
+
+  case class HeaderTransformerTest() extends HeaderTransformerTestBase {
+    override protected val transformer = GET(url)
+  }
+
+  case class HeaderAndBodyTransformerTest() extends HeaderTransformerTestBase {
+    override protected val transformer = POST(url)
+
+    def correctlyPrependsBody: SpecsResult = {
+      val b1 = "abc".getBytes
+      val b2 = "def".getBytes
+      val expected = b1 ++ b2
+      val resultantBody: Array[Byte] = transformer.addBody(b2).addBody(b1).body
+      resultantBody must beEqualTo(expected)
     }
   }
 }

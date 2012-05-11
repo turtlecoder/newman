@@ -18,6 +18,8 @@ import java.net.URL
  */
 
 object DSL {
+  implicit val client = new ApacheHttpClient
+
   private val HeaderPrependLens = Lens[Headers, Option[Header]](
     get = { h: Headers => h.map(_.head) },
     set = { (headers: Headers, hOpt: Option[Header]) =>
