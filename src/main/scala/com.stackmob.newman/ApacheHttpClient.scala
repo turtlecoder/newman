@@ -63,7 +63,7 @@ class ApacheHttpClient extends HttpClient {
           }
           val headers = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
           val body = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
-          HttpResponse(responseCode, headers.toNel, body | EmptyRawBody)
+          HttpResponse(responseCode, headers.toNel, body | RawBody.empty)
         } finally {
           client.getConnectionManager.shutdown()
         }

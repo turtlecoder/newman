@@ -54,16 +54,16 @@ class DSLSpecs extends Specification { def is =
 
   trait Context extends BaseContext {
     implicit protected val client = new DummyHttpClient
-    protected def ensureEmptyHeaders[T <: Transformer](t: T)(implicit m: Manifest[T]): SpecsResult = {
+    protected def ensureEmptyHeaders[T <: Builder](t: T)(implicit m: Manifest[T]): SpecsResult = {
       (t must beAnInstanceOf[T]) and
-      (t.headers must beNone)
+      (t.headers must beEqualTo(Headers.empty))
     }
   }
 
   case class GetTest() extends Context {
     private val t = GET(url)
     def returnsProperFunction: SpecsResult = {
-      (t must beAnInstanceOf[HeaderTransformer]) and ensureEmptyHeaders(t)
+      (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
     }
 
     def executesCorrectly: SpecsResult = {
@@ -75,7 +75,7 @@ class DSLSpecs extends Specification { def is =
   case class PostTest() extends Context {
     val t = POST(url)
     def returnsProperFunction: SpecsResult = {
-      (t must beAnInstanceOf[HeaderAndBodyTransformer]) and
+      (t must beAnInstanceOf[HeaderAndBodyBuilder]) and
       (ensureEmptyHeaders(t)) and
       (t.body.length must beEqualTo(0))
     }
@@ -89,7 +89,7 @@ class DSLSpecs extends Specification { def is =
   case class PutTest() extends Context {
     private val t = PUT(url)
     def returnsProperFunction: SpecsResult = {
-      (t must beAnInstanceOf[HeaderAndBodyTransformer]) and
+      (t must beAnInstanceOf[HeaderAndBodyBuilder]) and
       (ensureEmptyHeaders(PUT(url))) and
       (t.body.length must beEqualTo(0))
     }
@@ -104,7 +104,7 @@ class DSLSpecs extends Specification { def is =
     private val t = DELETE(url)
     def returnsProperFunction: SpecsResult = {
 
-      (t must beAnInstanceOf[HeaderTransformer]) and ensureEmptyHeaders(t)
+      (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
     }
 
     def executesCorrectly: SpecsResult = {
@@ -116,7 +116,7 @@ class DSLSpecs extends Specification { def is =
   case class HeadTest() extends Context {
     private val t = HEAD(url)
     def returnsProperFunction: SpecsResult = {
-      (t must beAnInstanceOf[HeaderTransformer]) and ensureEmptyHeaders(t)
+      (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
     }
 
     def executesCorrectly: SpecsResult = {
@@ -126,11 +126,11 @@ class DSLSpecs extends Specification { def is =
   }
 
   trait HeaderTransformerTestBase extends Context {
-    protected def transformer: Transformer
+    protected def transformer: Builder
 
-    protected def ensureEqualHeaders(t: Transformer, expected: Headers): SpecsResult = (t.headers must haveTheSameHeadersAs(expected))
-    protected def ensureEqualHeaders(t: Transformer, expected: HeaderList): SpecsResult = ensureEqualHeaders(t, Some(expected))
-    protected def ensureEqualHeaders(t: Transformer, expected: Header): SpecsResult = ensureEqualHeaders(t, nel(expected))
+    protected def ensureEqualHeaders(t: Builder, expected: Headers): SpecsResult = (t.headers must haveTheSameHeadersAs(expected))
+    protected def ensureEqualHeaders(t: Builder, expected: HeaderList): SpecsResult = ensureEqualHeaders(t, Headers(expected))
+    protected def ensureEqualHeaders(t: Builder, expected: Header): SpecsResult = ensureEqualHeaders(t, Headers(expected))
 
 
     protected val header1 = "testHeaderName" -> "testHeaderVal"
@@ -139,7 +139,7 @@ class DSLSpecs extends Specification { def is =
     def correctlyAddsAHeader = ensureEqualHeaders(transformer.addHeader(header1), header1)
     def correctlyAddsHeaders = ensureEqualHeaders(transformer.addHeaders(headers.some), headers)
     def correctlyPrependsHeaders: SpecsResult = {
-      ensureEqualHeaders(transformer.addHeader(header1).addHeader(header2), nel(header2, header1)) and
+      ensureEqualHeaders(transformer.addHeader(header1).addHeader(header2), Headers(header2, header1)) and
       ensureEqualHeaders(transformer.addHeaders(headers.some).addHeader(header2), nel(header2, headers.list))
     }
   }
