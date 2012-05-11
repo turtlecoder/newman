@@ -5,8 +5,6 @@ import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL
 import com.stackmob.newman.request.HttpRequest._
-import request.HttpRequestWithBody._
-import request.{HeadRequest, PutRequest, GetRequest}
 import scalaz._
 import Scalaz._
 
@@ -26,19 +24,20 @@ class DSLSpecs extends Specification { def is =
   The Newman DSL is intended to make it easy to construct and execute HTTP requests
   """                                                                                                                   ^
   "GET should"                                                                                                          ^
-    "return Headers => GetRequest"                                                                                      ! GetTest().returnsProperFunction ^
+    "return a HeaderTransformer"                                                                                        ! GetTest().returnsProperFunction ^
                                                                                                                         end ^
   "POST should"                                                                                                         ^
-    "return (Headers, RawBody) => PostRequest"                                                                          ! PostTest().returnsProperFunction ^
+    "return a HeaderAndBodyTransformer"                                                                                 ! PostTest().returnsProperFunction ^
                                                                                                                         end ^
   "PUT should"                                                                                                          ^
-    "return (Headers, RawBody) => PutRequest"                                                                           ! PutTest().returnsProperFunction ^
+    "return a HeaderAndBodyTransformer"                                                                                 ! PutTest().returnsProperFunction ^
                                                                                                                         end ^
   "DELETE should"                                                                                                       ^
-    "return Headers => DeleteRequest"                                                                                   ! DeleteTest().returnsProperFunction ^
+    "return a HeaderTransformer"                                                                                        ! DeleteTest().returnsProperFunction ^
                                                                                                                         end ^
   "HEAD should"                                                                                                         ^
-    "return Headers => HeadRequest"                                                                                     ! HeadTest().returnsProperFunction ^
+    "return a HeaderTransformer"                                                                                        ! HeadTest().returnsProperFunction ^
+    "execute a HEAD request"                                                                                            ! HeadTest().executesCorrectly ^
                                                                                                                         end ^
   "HeaderTransformer should"                                                                                            ^
     "correctly add a header"                                                                                            ! HeaderTransformerTest().correctlyAddsAHeader ^
@@ -51,12 +50,10 @@ class DSLSpecs extends Specification { def is =
     "correctly prepend headers"                                                                                         ! HeaderAndBodyTransformerTest().correctlyPrependsHeaders ^
     "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
                                                                                                                         end
-
-  implicit protected val client = new DummyHttpClient
   protected val url = new URL("http://stackmob.com")
 
   trait Context extends BaseContext {
-
+    implicit protected val client = new DummyHttpClient
     protected def ensureEmptyHeaders[T <: Transformer](t: T)(implicit m: Manifest[T]): SpecsResult = {
       (t must beAnInstanceOf[T]) and
       (t.headers must beNone)
@@ -64,23 +61,68 @@ class DSLSpecs extends Specification { def is =
   }
 
   case class GetTest() extends Context {
-    def returnsProperFunction = ensureEmptyHeaders(GET(url))
+    private val t = GET(url)
+    def returnsProperFunction: SpecsResult = {
+      (t must beAnInstanceOf[HeaderTransformer]) and ensureEmptyHeaders(t)
+    }
+
+    def executesCorrectly: SpecsResult = {
+      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (client.getRequests.size() must beEqualTo(1))
+    }
   }
 
   case class PostTest() extends Context {
-    def returnsProperFunction = ensureEmptyHeaders(POST(url))
+    val t = POST(url)
+    def returnsProperFunction: SpecsResult = {
+      (t must beAnInstanceOf[HeaderAndBodyTransformer]) and
+      (ensureEmptyHeaders(t)) and
+      (t.body.length must beEqualTo(0))
+    }
+
+    def executesCorrectly: SpecsResult = {
+      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (client.postRequests.size() must beEqualTo(1))
+    }
   }
 
   case class PutTest() extends Context {
-    def returnsProperFunction = ensureEmptyHeaders(PUT(url))
+    private val t = PUT(url)
+    def returnsProperFunction: SpecsResult = {
+      (t must beAnInstanceOf[HeaderAndBodyTransformer]) and
+      (ensureEmptyHeaders(PUT(url))) and
+      (t.body.length must beEqualTo(0))
+    }
+
+    def executesCorrecty: SpecsResult = {
+      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (client.putRequests.size() must beEqualTo(1))
+    }
   }
 
   case class DeleteTest() extends Context {
-    def returnsProperFunction = ensureEmptyHeaders(DELETE(url))
+    private val t = DELETE(url)
+    def returnsProperFunction: SpecsResult = {
+
+      (t must beAnInstanceOf[HeaderTransformer]) and ensureEmptyHeaders(t)
+    }
+
+    def executesCorrectly: SpecsResult = {
+      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (client.deleteRequests.size must beEqualTo(1))
+    }
   }
 
   case class HeadTest() extends Context {
-    def returnsProperFunction = ensureEmptyHeaders(HEAD(url))
+    private val t = HEAD(url)
+    def returnsProperFunction: SpecsResult = {
+      (t must beAnInstanceOf[HeaderTransformer]) and ensureEmptyHeaders(t)
+    }
+
+    def executesCorrectly: SpecsResult = {
+      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (client.headRequests.size must beEqualTo(1))
+    }
   }
 
   trait HeaderTransformerTestBase extends Context {
