@@ -18,58 +18,87 @@ import java.net.URL
  */
 
 object DSL {
-  private val HeadersPrependLens = Lens[Headers, Option[Header]](
+  private val HeaderPrependLens = Lens[Headers, Option[Header]](
     get = { h: Headers => h.map(_.head) },
     set = { (headers: Headers, hOpt: Option[Header]) =>
-      val listAndEltOpt: Option[(HeaderList, Header)] = headers <|*|> hOpt
-      listAndEltOpt.map { tup: (HeaderList, Header) =>
-        val (headerList, header) = tup
-        nel(header, headerList.list)
+      (headers, hOpt) match {
+        case (Some(h1), Some(h2)) => Some(nel(h2, h1.list))
+        case (Some(h1), None) => Some(h1)
+        case (None, Some(h2)) => Some(nel(h2))
+        case (None, None) => None
       }
     }
   )
 
-  case class HeaderTransformer(fn: Headers => HttpRequest) {
-    def withHeader(toAdd: Header): HeaderTransformer = { h: Headers => fn(HeadersPrependLens.set(h, toAdd.some)) }
-    def withHeaders(h: Headers) = fn(h)
-    def withNoHeaders = fn(none[HeaderList])
+  private val HeadersPrependLens = Lens[Headers, Headers](
+    get = {h: Headers => h },
+    set = { (existing: Headers, toPrepend: Headers) =>
+      (existing, toPrepend) match {
+        case (Some(e), Some(t)) => Some(t :::> e.list)
+        case (Some(e), None) => Some(e)
+        case (None, Some(t)) => Some(t)
+        case (None, None) => Option.empty[HeaderList]
+      }
+    }
+  )
+
+  private val BodyPrependLens = Lens[Array[Byte], Array[Byte]](
+    get = { b: Array[Byte] => b },
+    set = { (existing: Array[Byte], toPrepend: Array[Byte]) => toPrepend ++ existing }
+  )
+
+  sealed trait Transformer {
+    protected type T <: Transformer
+
+    def toRequest: HttpRequest
+    def headers: Headers = none
+    def addHeader(toAdd: Header): T
+    def addHeaders(toAdd: Headers): T
   }
 
-  case class BodyTransformer(fn: RawBody => HttpRequestWithBody) {
-    def withBody(a: RawBody) = fn(a)
-    def withEmptyBody = fn(EmptyRawBody)
+  case class HeaderTransformer(fn: Headers => HttpRequest, override val headers: Headers = none)
+    extends Transformer {
+    override type T = HeaderTransformer
+
+    override def addHeader(toAdd: Header) = HeaderTransformer(fn, HeaderPrependLens.set(headers, toAdd.some))
+    override def addHeaders(toAdd: Headers) = HeaderTransformer(fn, HeadersPrependLens.set(headers, toAdd))
+    override def toRequest = fn(headers)
   }
 
-  case class HeaderAndBodyTransformer(fn: (Headers, RawBody) => HttpRequestWithBody) {
-    def withBody(b: RawBody): HeaderTransformer = fn(_: Headers, b)
-    def withHeader(toAdd: Header): HeaderAndBodyTransformer = { (h: Headers, b: RawBody) => fn(HeadersPrependLens.set(h, toAdd.some), b) }
-    def withHeadersAndBody(h: Headers, b: RawBody) = fn(h, b)
+  case class HeaderAndBodyTransformer(fn: (Headers, RawBody) => HttpRequestWithBody,
+                                      override val headers: Headers = none,
+                                      body: RawBody = EmptyRawBody)
+    extends Transformer {
+
+    override type T = HeaderAndBodyTransformer
+    def addBody(b: RawBody) = HeaderAndBodyTransformer(fn, headers, BodyPrependLens.set(body, b))
+    override def addHeader(toAdd: Header) = HeaderAndBodyTransformer(fn, HeaderPrependLens.set(headers, toAdd.some), body)
+    override def addHeaders(toAdd: Headers) = HeaderAndBodyTransformer(fn, HeadersPrependLens.set(headers, toAdd), body)
+    override def toRequest = fn(headers, body)
   }
 
-  //implicit that goes from header function -> HeaderTransformer
-  implicit def headerFnToHttpRequest(fn: Headers => HttpRequest) = headerFnToTransformer(fn).withNoHeaders
-  implicit def headerFnToTransformer(fn: Headers => HttpRequest): HeaderTransformer = HeaderTransformer(fn)
-  implicit def bodyFnToTransformer(fn: RawBody => HttpRequestWithBody): BodyTransformer = BodyTransformer(fn)
-  implicit def headerAndBodyFnToTransformer(fn: (Headers, RawBody) => HttpRequestWithBody): HeaderAndBodyTransformer = HeaderAndBodyTransformer(fn)
+  //implicit that goes from HeaderTransformer to HttpRequest
+  implicit def headerTransformerToHttpRequest(h: HeaderTransformer) = h.fn(h.headers)
+  implicit def headerAndBodyTransformerToHttpRequest(h: HeaderAndBodyTransformer) = h.fn(h.headers, h.body)
 
 
-  def GET(url: URL)(implicit client: HttpClient): Headers => GetRequest = { h: Headers =>
+  def GET(url: URL)(implicit client: HttpClient) = HeaderTransformer { h: Headers =>
     client.get(url, h)
   }
 
-  def PUT(url: URL)(implicit client: HttpClient): (Headers, RawBody) => PutRequest = { (h: Headers, b: RawBody) =>
+  def PUT(url: URL)(implicit client: HttpClient) = HeaderAndBodyTransformer { (h: Headers, b: RawBody) =>
     client.put(url, h, b)
   }
 
-  def POST(url: URL)(implicit client: HttpClient): (Headers, RawBody) => PostRequest = { (h: Headers, b: RawBody) =>
+  def POST(url: URL)(implicit client: HttpClient) = HeaderAndBodyTransformer { (h: Headers, b: RawBody) =>
     client.post(url, h, b)
   }
 
-  def DELETE(url: URL)(implicit client: HttpClient): Headers => DeleteRequest = { h: Headers =>
+  def DELETE(url: URL)(implicit client: HttpClient) = HeaderTransformer { h: Headers =>
     client.delete(url, h)
   }
 
-  def HEAD(url: URL)(implicit client: HttpClient): Headers => HeadRequest = { h: Headers =>
+  def HEAD(url: URL)(implicit client: HttpClient) = HeaderTransformer { h: Headers =>
     client.head(url, h)
   }
 }
