@@ -20,18 +20,6 @@ import java.net.URL
 object DSL {
   implicit val client = new ApacheHttpClient
 
-  private val HeaderPrependLens = Lens[Headers, Option[Header]](
-    get = { h: Headers => h.map(_.head) },
-    set = { (headers: Headers, hOpt: Option[Header]) =>
-      (headers, hOpt) match {
-        case (Some(h1), Some(h2)) => Some(nel(h2, h1.list))
-        case (Some(h1), None) => Some(h1)
-        case (None, Some(h2)) => Some(nel(h2))
-        case (None, None) => None
-      }
-    }
-  )
-
   private val HeadersPrependLens = Lens[Headers, Headers](
     get = {h: Headers => h },
     set = { (existing: Headers, toPrepend: Headers) =>
@@ -54,8 +42,18 @@ object DSL {
 
     def toRequest: HttpRequest
     def headers: Headers = none
-    def addHeader(toAdd: Header): T
+
     def addHeaders(toAdd: Headers): T
+    def addHeaders(toAdd: Header): T
+    def addHeaders(h: Header, tail: Header*): T
+    def addHeaders(toAdd: HeaderList): T
+    def addHeaders(toAdd: List[Header]): T
+
+    def setHeaders(toSet: Headers): T
+    def setHeaders(toSet:Header): T
+    def setHeaders(h: Header, tail: Header*): T
+    def setHeaders(toSet: HeaderList): T
+    def setHeaders(toSet: List[Header]): T
   }
 
   case class HeaderBuilder(fn: Headers => HttpRequest, override val headers: Headers = none)
@@ -63,8 +61,18 @@ object DSL {
 
     override type T = HeaderBuilder
 
-    override def addHeader(toAdd: Header) = HeaderBuilder(fn, HeaderPrependLens.set(headers, toAdd.some))
     override def addHeaders(toAdd: Headers) = HeaderBuilder(fn, HeadersPrependLens.set(headers, toAdd))
+    override def addHeaders(h: Header, tail: Header*)= addHeaders(Headers(h, tail:_*))
+    override def addHeaders(toAdd: HeaderList) = addHeaders(Headers(toAdd))
+    override def addHeaders(toAdd: List[Header]) = addHeaders(Headers(toAdd))
+
+    override def setHeaders(toSet: Headers) = HeaderBuilder(fn, toSet)
+    override def setHeaders(toSet:Header) = setHeaders(Headers(toSet))
+    override def setHeaders(h: Header, tail: Header*) = setHeaders(Headers(h, tail:_*))
+    override def setHeaders(toSet: HeaderList) = setHeaders(Headers(toSet))
+    override def setHeaders(toSet: List[Header]) = setHeaders(Headers(toSet))
+    override def addHeaders(toAdd: Header) = addHeaders(Headers(toAdd))
+
     override def toRequest = fn(headers)
   }
 
@@ -75,8 +83,20 @@ object DSL {
 
     override type T = HeaderAndBodyBuilder
     def addBody(b: RawBody) = HeaderAndBodyBuilder(fn, headers, BodyPrependLens.set(body, b))
-    override def addHeader(toAdd: Header) = HeaderAndBodyBuilder(fn, HeaderPrependLens.set(headers, toAdd.some), body)
+    def setBody(b: RawBody) = HeaderAndBodyBuilder(fn, headers, b)
+
     override def addHeaders(toAdd: Headers) = HeaderAndBodyBuilder(fn, HeadersPrependLens.set(headers, toAdd), body)
+    override def addHeaders(toAdd: HeaderList) = addHeaders(Headers(toAdd))
+    override def addHeaders(toAdd: List[Header]) = addHeaders(Headers(toAdd))
+    override def addHeaders(toAdd: Header) = addHeaders(Headers(toAdd))
+    override def addHeaders(h: Header, tail: Header*) = addHeaders(Headers(h, tail:_*))
+
+    override def setHeaders(toSet: Headers) = HeaderAndBodyBuilder(fn, toSet, body)
+    override def setHeaders(toSet:Header) = setHeaders(Headers(toSet))
+    override def setHeaders(h: Header, tail: Header*) = setHeaders(Headers(h, tail:_*))
+    override def setHeaders(toSet: HeaderList) = setHeaders(Headers(toSet))
+    override def setHeaders(toSet: List[Header]) = setHeaders(Headers(toSet))
+
     override def toRequest = fn(headers, body)
   }
 

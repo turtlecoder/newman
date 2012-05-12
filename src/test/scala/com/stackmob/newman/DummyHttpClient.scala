@@ -58,7 +58,7 @@ class DummyHttpClient extends HttpClient {
 object DummyHttpClient {
   val CannedResponse = HttpResponse(HttpResponseCode.Ok, none, RawBody.empty)
   trait DummyExecutor extends HttpRequest {
-    override def execute = CannedResponse.pure[IO]
+    override def prepare = CannedResponse.pure[IO]
   }
 
   case class DummyGetRequest(override val url: URL, override val headers: Headers) extends GetRequest with DummyExecutor

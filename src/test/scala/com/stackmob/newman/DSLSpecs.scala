@@ -43,12 +43,21 @@ class DSLSpecs extends Specification { def is =
     "correctly add a header"                                                                                            ! HeaderTransformerTest().correctlyAddsAHeader ^
     "correctly add headers"                                                                                             ! HeaderTransformerTest().correctlyAddsHeaders ^
     "correctly prepend headers"                                                                                         ! HeaderTransformerTest().correctlyPrependsHeaders ^
+    "correctly set a header"                                                                                            ! HeaderTransformerTest().correctlySetsAHeader ^
+    "correctly set headers"                                                                                             ! HeaderTransformerTest().correctlySetsHeaders ^
+    "correctly replace headers"                                                                                         ! HeaderTransformerTest().correctlyReplacesHeaders ^
                                                                                                                         end ^
   "HeaderAndBodyTransformer should"                                                                                     ^
     "correctly add a header"                                                                                            ! HeaderAndBodyTransformerTest().correctlyAddsAHeader ^
     "correctly add headers"                                                                                             ! HeaderAndBodyTransformerTest().correctlyAddsHeaders ^
     "correctly prepend headers"                                                                                         ! HeaderAndBodyTransformerTest().correctlyPrependsHeaders ^
     "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
+    "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
+    "correctly set a body"                                                                                              ! HeaderAndBodyTransformerTest().correctlySetsBody ^
+    "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
+    "correctly set a header"                                                                                            ! HeaderTransformerTest().correctlySetsAHeader ^
+    "correctly set headers"                                                                                             ! HeaderTransformerTest().correctlySetsHeaders ^
+    "correctly replace headers"                                                                                         ! HeaderTransformerTest().correctlyReplacesHeaders ^
                                                                                                                         end
   protected val url = new URL("http://stackmob.com")
 
@@ -67,7 +76,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly: SpecsResult = {
-      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.getRequests.size() must beEqualTo(1))
     }
   }
@@ -81,7 +90,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly: SpecsResult = {
-      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.postRequests.size() must beEqualTo(1))
     }
   }
@@ -95,7 +104,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrecty: SpecsResult = {
-      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.putRequests.size() must beEqualTo(1))
     }
   }
@@ -108,7 +117,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly: SpecsResult = {
-      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.deleteRequests.size must beEqualTo(1))
     }
   }
@@ -120,7 +129,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly: SpecsResult = {
-      (t.execute.unsafePerformIO must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.headRequests.size must beEqualTo(1))
     }
   }
@@ -136,11 +145,22 @@ class DSLSpecs extends Specification { def is =
     protected val header1 = "testHeaderName" -> "testHeaderVal"
     protected val header2 = "testHeaderName2" -> "testHeaderVal2"
     protected val headers = nel(header1, header2)
-    def correctlyAddsAHeader = ensureEqualHeaders(transformer.addHeader(header1), header1)
-    def correctlyAddsHeaders = ensureEqualHeaders(transformer.addHeaders(headers.some), headers)
+    def correctlyAddsAHeader = ensureEqualHeaders(transformer.addHeaders(header1), header1)
+    def correctlyAddsHeaders = ensureEqualHeaders(transformer.addHeaders(headers), headers)
     def correctlyPrependsHeaders: SpecsResult = {
-      ensureEqualHeaders(transformer.addHeader(header1).addHeader(header2), Headers(header2, header1)) and
-      ensureEqualHeaders(transformer.addHeaders(headers.some).addHeader(header2), nel(header2, headers.list))
+      ensureEqualHeaders(transformer.addHeaders(header1).addHeaders(header2), Headers(header2, header1)) and
+      ensureEqualHeaders(transformer.addHeaders(headers).addHeaders(header2), nel(header2, headers.list))
+    }
+    def correctlySetsAHeader = {
+      ensureEqualHeaders(transformer.setHeaders(header1), nel(header1))
+    }
+    def correctlySetsHeaders = {
+      ensureEqualHeaders(transformer.setHeaders(headers), Headers(List(header1, header2)))
+    }
+    def correctlyReplacesHeaders: SpecsResult = {
+      ensureEqualHeaders(transformer.addHeaders(header1).setHeaders(header2), Headers(header2)) and
+        ensureEqualHeaders(transformer.addHeaders(headers).setHeaders(header1), nel(header1)) and
+        ensureEqualHeaders(transformer.addHeaders(header1).setHeaders(headers), Headers(header1, header2))
     }
   }
 
@@ -157,6 +177,19 @@ class DSLSpecs extends Specification { def is =
       val expected = b1 ++ b2
       val resultantBody: Array[Byte] = transformer.addBody(b2).addBody(b1).body
       resultantBody must beEqualTo(expected)
+    }
+
+    def correctlySetsBody: SpecsResult = {
+      val b1 = "set".getBytes
+      val resultantBody: Array[Byte] = transformer.setBody(b1).body
+      resultantBody must beEqualTo(b1)
+    }
+
+    def correctlyReplacesBody: SpecsResult = {
+      val b1 = "abc".getBytes
+      val b2 = "def".getBytes
+      val resultantBody: Array[Byte] = transformer.addBody(b1).setBody(b2).body
+      resultantBody must beEqualTo(b2)
     }
   }
 }

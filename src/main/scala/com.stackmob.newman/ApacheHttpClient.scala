@@ -43,7 +43,7 @@ class ApacheHttpClient extends HttpClient {
       client
     }
 
-    def execute = {
+    def prepare = {
       val client = getHttpClient
 
       headers.foreach { list: NonEmptyList[(String, String)] =>

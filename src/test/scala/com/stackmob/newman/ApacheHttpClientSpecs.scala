@@ -32,7 +32,7 @@ class ApacheHttpClientSpecs extends Specification { def is =
     protected def execute(t: Builder,
                           code: HttpResponseCode = HttpResponseCode.Ok)
                          (fn: HttpResponse => SpecsResult): SpecsResult = {
-      val r = t.execute.unsafePerformIO
+      val r = t.executeUnsafe
       r.code must beEqualTo(code) and fn(r)
     }
   }

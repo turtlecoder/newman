@@ -24,7 +24,9 @@ trait HttpRequest {
 
   def headers: Headers
 
-  def execute: IO[HttpResponse]
+  def prepare: IO[HttpResponse]
+
+  def executeUnsafe: HttpResponse = prepare.unsafePerformIO
 }
 
 object HttpRequest {

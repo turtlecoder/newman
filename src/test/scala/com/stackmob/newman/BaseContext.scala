@@ -26,7 +26,7 @@ trait BaseContext extends LoggingSugar {
         case (None, None) => true
         case _ => false
       }
-      result(res, "Headers are not equal", "Headers are equal", r)
+      result(res, "Headers are equal", expected + " does not equal " + other, r)
     }
   }
 
