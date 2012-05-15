@@ -38,7 +38,7 @@ case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody,
     compact(render(toJValue))
   }
 
-  def getEtag: Option[String] = headers.flatMap { headerList: HeaderList =>
+  lazy val etag: Option[String] = headers.flatMap { headerList: HeaderList =>
     headerList.list.find(h => h._1 === HttpHeaders.ETAG).map(h => h._2)
   }
 }
