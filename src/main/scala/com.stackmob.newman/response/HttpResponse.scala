@@ -8,7 +8,6 @@ import HttpRequestWithBody._
 import java.nio.charset.Charset
 import java.util.Date
 import com.stackmob.newman.Constants._
-import serialization.HttpResponseSerialization
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 import com.stackmob.common.validation._
@@ -27,8 +26,8 @@ case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody,
   def bodyString(charset: Charset = UTF8Charset) = new String(body, charset)
 
   def toJValue: JValue = {
-    import HttpResponseSerialization._
     import net.liftweb.json.scalaz.JsonScalaz.toJSON
+    import com.stackmob.newman.serialization.response.HttpResponseSerialization.writer
     toJSON(this)
   }
 
@@ -42,12 +41,14 @@ case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody,
 object HttpResponse {
   import net.liftweb.json.scalaz.JsonScalaz.Result
   def fromJValue(jValue: JValue): Result[HttpResponse] = {
-    import HttpResponseSerialization._
+    import com.stackmob.newman.serialization.response.HttpResponseSerialization._
     import net.liftweb.json.scalaz.JsonScalaz.fromJSON
     fromJSON(jValue)
   }
 
-  def fromJson(json: String): Result[HttpResponse] = validating(parse(json)).mapFailure({ t: Throwable =>
+  def fromJson(json: String): Result[HttpResponse] = validating({
+    parse(json)
+  }).mapFailure({ t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
   }).liftFailNel.flatMap(fromJValue(_))
 }

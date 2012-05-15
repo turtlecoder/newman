@@ -35,7 +35,6 @@ class HttpResponseSerializationSpecs extends Specification { def is =
   case class RoundTrip() extends Context {
     def succeeds: SpecsResult = {
       val json = resp.toJson(true)
-      println(json)
       HttpResponse.fromJson(json).fold(
         success = { deserialized: HttpResponse =>
           (deserialized.code must beEqualTo(resp.code)) and

@@ -1,6 +1,0 @@
-package com.stackmob.newman.request
-
-sealed trait HttpRequestWithoutBody extends HttpRequest
-trait DeleteRequest extends HttpRequestWithoutBody
-trait HeadRequest extends HttpRequestWithoutBody
-trait GetRequest extends HttpRequestWithoutBody
