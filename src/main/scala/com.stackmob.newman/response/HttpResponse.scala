@@ -11,6 +11,7 @@ import com.stackmob.newman.Constants._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 import com.stackmob.common.validation._
+import org.apache.http.HttpHeaders
 
 /**
  * Created by IntelliJ IDEA.
@@ -35,6 +36,10 @@ case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody,
     pretty(render(toJValue))
   } else {
     compact(render(toJValue))
+  }
+
+  def getEtag: Option[String] = headers.flatMap { headerList: HeaderList =>
+    headerList.list.find(h => h._1 === HttpHeaders.ETAG).map(h => h._2)
   }
 }
 
