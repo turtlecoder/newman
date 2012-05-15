@@ -28,7 +28,9 @@ sealed trait HttpRequest {
   def url: URL
   def requestType: HttpRequestType
   def headers: Headers
-  def execute: IO[HttpResponse]
+  def prepare: IO[HttpResponse]
+
+  def executeUnsafe: HttpResponse = prepare.unsafePerformIO
 
   def toJValue(implicit client: HttpClient): JValue = {
     import net.liftweb.json.scalaz.JsonScalaz.toJSON
