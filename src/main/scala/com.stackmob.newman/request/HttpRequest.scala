@@ -53,7 +53,8 @@ sealed trait HttpRequest {
     val headersString = headers some { headerList: HeaderList =>
       headerList.list.map(h => "%s=%s".format(h._1, h._2)).mkString("&")
     } none { "" }
-    val bodyString = new String(this.cast[HttpRequestWithBody].map(_.body) | (HttpRequestWithBody.RawBody.empty), Constants.UTF8Charset)
+    val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | HttpRequestWithBody.RawBody.empty
+    val bodyString = new String(bodyBytes, Constants.UTF8Charset)
     val bytes = "%s%s%s".format(url.toString, headersString, bodyString).getBytes(Constants.UTF8Charset)
     md5.digest(bytes)
   }
