@@ -1,6 +1,5 @@
 package com.stackmob.newman
 
-import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.params.HttpConnectionParams
 import response.HttpResponseCode
 import scalaz.effects._
@@ -16,6 +15,8 @@ import HttpRequest._
 import HttpRequestWithBody._
 import com.stackmob.newman.Exceptions.UnknownHttpStatusCodeException
 import com.stackmob.newman.response.HttpResponse
+import org.apache.http.impl.client.{AbstractHttpClient, DefaultHttpClient}
+import com.stackmob.common.util.casts._
 
 /**
  * Created by IntelliJ IDEA.
@@ -31,72 +32,74 @@ class ApacheHttpClient extends HttpClient {
   val connectionTimeout = 5000
   val socketTimeout = 30000
 
-  private[ApacheHttpClient] trait Executor {
-    protected def httpMessage: HttpRequestBase
-    protected def headers: Headers
+  private def getHttpClient: AbstractHttpClient = {
+    val client = new DefaultHttpClient
+    val httpParams = client.getParams
+    HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
+    HttpConnectionParams.setSoTimeout(httpParams, socketTimeout)
+    client
+  }
 
-    private[Executor] def getHttpClient = {
-      val client = new DefaultHttpClient
-      val httpParams = client.getParams
-      HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
-      HttpConnectionParams.setSoTimeout(httpParams, socketTimeout)
-      client
+  protected def executeRequest(httpMessage: HttpRequestBase, url: URL, headers: Headers, body: Option[RawBody] = none): IO[HttpResponse] = {
+    httpMessage.setURI(url.toURI)
+    headers.foreach { list: NonEmptyList[(String, String)] =>
+      list.foreach {tup: (String, String) =>
+        if(!tup._1.equalsIgnoreCase(CONTENT_LENGTH)) {
+          httpMessage.addHeader(tup._1, tup._2)
+        }
+      }
+    }
+    //if there's both a body and httpMessage is an entity enclosing request, then set the body
+    (body <|*|> httpMessage.cast[HttpEntityEnclosingRequestBase]).foreach { tup: (RawBody, HttpEntityEnclosingRequestBase) =>
+      val (body,req) = tup
+      req.setEntity(new ByteArrayEntity(body))
     }
 
-    def prepare = {
+    io {
       val client = getHttpClient
-
-      headers.foreach { list: NonEmptyList[(String, String)] =>
-        list.foreach {tup: (String, String) =>
-          if(!tup._1.equalsIgnoreCase(CONTENT_LENGTH)) {
-            httpMessage.addHeader(tup._1, tup._2)
-          }
+      try {
+        val apacheResponse = client.execute(httpMessage)
+        val responseCode = HttpResponseCode.fromInt(apacheResponse.getStatusLine.getStatusCode) | {
+          throw new UnknownHttpStatusCodeException(apacheResponse.getStatusLine.getStatusCode)
         }
-      }
-      httpMessage.setURI(httpMessage.getURI)
-
-      io {
-        try {
-          val apacheResponse = client.execute(httpMessage)
-          val responseCode = HttpResponseCode.fromInt(apacheResponse.getStatusLine.getStatusCode) | {
-            throw new UnknownHttpStatusCodeException(apacheResponse.getStatusLine.getStatusCode)
-          }
-          val headers = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
-          val body = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
-          HttpResponse(responseCode, headers.toNel, body | RawBody.empty)
-        } finally {
-          client.getConnectionManager.shutdown()
-        }
+        val headers = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
+        val body = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
+        HttpResponse(responseCode, headers.toNel, body | RawBody.empty)
+      } finally {
+        client.getConnectionManager.shutdown()
       }
     }
   }
 
-  case class Get(override val url: URL, override val headers: Headers)
-    extends GetRequest with Executor {
-    override protected val httpMessage = new HttpGet(url.toURI)
-  }
-  case class Post(override val url: URL, override val headers: Headers, override val body: RawBody)
-    extends PostRequest with Executor {
-    override protected val httpMessage = new HttpPost(url.toURI)
-    httpMessage.setEntity(new ByteArrayEntity(body))
-  }
-  case class Put(override val url: URL, override val headers: Headers, override val body: RawBody)
-    extends PutRequest with Executor {
-    override protected val httpMessage = new HttpPut(url.toURI)
-    httpMessage.setEntity(new ByteArrayEntity(body))
-  }
-  case class Delete(override val url: URL, override val headers: Headers)
-    extends DeleteRequest with Executor {
-    override protected val httpMessage = new HttpDelete(url.toURI)
-  }
-  case class Head(override val url: URL, override val headers: Headers)
-    extends HeadRequest with Executor {
-    override protected val httpMessage = new HttpHead(url.toURI)
+  override def get(u: URL, h: Headers) = new GetRequest {
+    override val headers = h
+    override val url = u
+    override def prepare = executeRequest(new HttpGet, url, headers)
   }
 
-  override def get(url: URL, headers: Headers) = Get(url, headers)
-  override def post(url: URL, headers: Headers, body: RawBody) = Post(url, headers, body)
-  override def put(url: URL, headers: Headers, body: RawBody) = Put(url, headers, body)
-  override def delete(url: URL, headers: Headers) = Delete(url, headers)
-  override def head(url: URL, headers: Headers) = Head(url, headers)
+  override def post(u: URL, h: Headers, b: RawBody) = new PostRequest {
+    override val url = u
+    override val headers = h
+    override val body = b
+    override def prepare = executeRequest(new HttpPost, url, headers, body.some)
+  }
+
+  override def put(u: URL, h: Headers, b: RawBody) = new PutRequest {
+    override val url = u
+    override val headers = h
+    override val body = b
+    override def prepare = executeRequest(new HttpPut, url, headers, body.some)
+  }
+
+  override def delete(u: URL, h: Headers) = new DeleteRequest {
+    override val url = u
+    override val headers = h
+    override def prepare = executeRequest(new HttpDelete, url, headers)
+  }
+
+  override def head(u: URL, h: Headers) = new HeadRequest {
+    override val url = u
+    override val headers = h
+    override def prepare: IO[HttpResponse] = executeRequest(new HttpHead, url, headers)
+  }
 }

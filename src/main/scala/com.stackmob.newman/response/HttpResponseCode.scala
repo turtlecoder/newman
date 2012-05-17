@@ -19,6 +19,10 @@ sealed abstract class HttpResponseCode(val code: Int, override val stringVal: St
 
 object HttpResponseCode {
 
+  implicit val HttpResponseCodeEqual = new Equal[HttpResponseCode] {
+    override def equal(h1: HttpResponseCode, h2: HttpResponseCode) = h1.code === h2.code
+  }
+
   object Accepted extends HttpResponseCode(202, "Accepted")
 
   object BadGateway extends HttpResponseCode(502, "Bad Gateway")

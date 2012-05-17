@@ -24,6 +24,8 @@ import org.apache.http.HttpHeaders
  */
 
 case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody, timeReceived: Date = new Date()) {
+  import HttpResponseCode.HttpResponseCodeEqual
+
   def bodyString(charset: Charset = UTF8Charset) = new String(body, charset)
 
   def toJValue: JValue = {
@@ -41,6 +43,8 @@ case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody,
   lazy val etag: Option[String] = headers.flatMap { headerList: HeaderList =>
     headerList.list.find(h => h._1 === HttpHeaders.ETAG).map(h => h._2)
   }
+
+  lazy val notModified: Boolean = code === HttpResponseCode.NotModified
 }
 
 object HttpResponse {

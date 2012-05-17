@@ -8,9 +8,11 @@ import com.stackmob.newman.response._
 import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
 import net.liftweb.json._
-import com.stackmob.newman.HttpClient
 import net.liftweb.json.scalaz.JsonScalaz._
 import com.stackmob.common.validation._
+import com.stackmob.common.util.casts._
+import com.stackmob.newman.{Constants, HttpClient}
+import java.security.MessageDigest
 
 /**
  * Created by IntelliJ IDEA.
@@ -44,6 +46,17 @@ sealed trait HttpRequest {
   } else {
     compact(render(toJValue))
   }
+
+  private lazy val md5 = MessageDigest.getInstance("MD5")
+
+  lazy val hash = {
+    val headersString = headers some { headerList: HeaderList =>
+      headerList.list.map(h => "%s=%s".format(h._1, h._2)).mkString("&")
+    } none { "" }
+    val bodyString = new String(this.cast[HttpRequestWithBody].map(_.body) | (HttpRequestWithBody.RawBody.empty), Constants.UTF8Charset)
+    val bytes = "%s%s%s".format(url.toString, headersString, bodyString).getBytes(Constants.UTF8Charset)
+    md5.digest(bytes)
+  }
 }
 
 object HttpRequest {
@@ -52,8 +65,16 @@ object HttpRequest {
   type Headers = Option[HeaderList]
 
   object Headers {
-    def apply(h: Header): Headers = nel(h).some
-    def apply(h: Header, tail: Header*): Headers = nel(h, tail.toList).some
+    implicit val HeadersEqual = new Equal[Headers] {
+      override def equal(headers1: Headers, headers2: Headers) = (headers1, headers2) match {
+        case (Some(h1), Some(h2)) => h1.list === h2.list
+        case (None, None) => true
+        case _ => false
+      }
+    }
+
+    def apply(h: Header): Headers = Headers(nel(h))
+    def apply(h: Header, tail: Header*): Headers = Headers(nel(h, tail.toList))
     def apply(h: HeaderList): Headers = h.some
     def apply(h: List[Header]): Headers = h.toNel
     def empty = Option.empty[HeaderList]
