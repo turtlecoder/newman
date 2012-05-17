@@ -27,6 +27,7 @@ import java.security.MessageDigest
 
 sealed trait HttpRequest {
   import HttpRequest._
+  import Headers._
   def url: URL
   def requestType: HttpRequestType
   def headers: Headers
@@ -50,9 +51,7 @@ sealed trait HttpRequest {
   private lazy val md5 = MessageDigest.getInstance("MD5")
 
   lazy val hash = {
-    val headersString = headers some { headerList: HeaderList =>
-      headerList.list.map(h => "%s=%s".format(h._1, h._2)).mkString("&")
-    } none { "" }
+    val headersString = headers.shows
     val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | HttpRequestWithBody.RawBody.empty
     val bodyString = new String(bodyBytes, Constants.UTF8Charset)
     val bytes = "%s%s%s".format(url.toString, headersString, bodyString).getBytes(Constants.UTF8Charset)
@@ -71,6 +70,15 @@ object HttpRequest {
         case (Some(h1), Some(h2)) => h1.list === h2.list
         case (None, None) => true
         case _ => false
+      }
+    }
+
+    implicit val HeadersShow = new Show[Headers] {
+      override def show(h: Headers) = {
+        val s = h.map { headerList: HeaderList =>
+          headerList.list.map(h => "%s=%s".format(h._1, h._2)).mkString("&")
+        } | ""
+        s.toList
       }
     }
 
