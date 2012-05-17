@@ -1,4 +1,10 @@
-This is StackMob's HTTP client. To add it to your project, use this for Maven:
+This is StackMob's HTTP client. It supports the following basic features:
+
+* Making requests and receiving responses
+* Serializing and deserializing requests and responses to/from Json
+* ETag HTTP caching
+
+To add it to your project, use this for Maven:
 
 	```xml
 	<dependency>
@@ -43,4 +49,34 @@ Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously
 * `def prepare: IO[HttpResponse]` - returns a `scalaz.effects.IO` that represents the result of executing the request. Remember that this method does not actually execute the request, and no network traffic will happen if you call this method. In order to actually execute the request, call `unsafePerformIO` on this method's result.
 * `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc… (hence the suffix `Unsafe`)
 
+# Serializing
+Newman comes with built in support for serializing `HttpRequest`s and `HttpRespons`es to Json.
 
+To serialize either, simply call the `toJson(prettyPrint: Boolean = false)` method on the `HttpRequest` or `HttpResponse`. And to deserialize, call `HttpRequest.fromJson(json: String)` or `HttpResponse.fromJson(json: String)` to deserialize the `HttpRequest` or `HttpResponse`, respectively.
+
+# ETag Support
+Newman comes with an implementation of `HttpClient` called `ETagAwareHttpClient`. This implementation requires an underlying "raw" `HttpClient` to execute requests to a server, but it also requires an implementation of `HttpResponseCacher`.
+
+It uses this `HttpResponseCacher` to check the cache for a response corresponding to a given request. If it finds one and that response has an `ETag` header in it, the `ETagAwareHttpClient` automatically sends an `If-None-Match` header to the server containing that `ETag`. In this case, if the server responds with a `304 NOT MODIFIED` response code, then `ETagAwareHttpClient` will return the cached version. In all other cases, `ETagAwareHttpClient` will cache and return the new response.
+
+## Usage With the DSL
+Using `ETagAwareHttpClient` is very similar to the basic usage above. Following demonstrates how to use the client with a (built-in) in-memory cache implementation.
+
+	```
+	import com.stackmob.newman.ETagAwareHttpClient
+	import com.stacmob.newman.caching.InMemoryHttpResponseCacher
+	import com.stackmob.newman.DSL._
+	import java.net.URL
+	
+	//change this implementation to your own if you want to use Memcached, Redis, etc…
+	val cache = new InMemoryHttpResponseCacher
+	//client is an ApacheHttpClient and comes from the DSL package,
+	//and eTagClient will be used in the DSL to construct & execute requests below
+	implicit val eTagClient = new ETagAwareHttpClient(client, cache)
+	
+	val url = new URL("http://stackmob.com")
+	//since the cacher is empty, this will issue a request to stackmob.com without an If-None-Match header
+	val res1 = GET(url) executeUnsafe
+	//assuming res1 contained an ETag and stackmob.com fully supports ETag headers,
+	//stackmob.com will return a 304 response code in this request and res2 will come from the cache
+	val res2 = GET(url) executeUnsafe
