@@ -7,6 +7,10 @@ import java.net.URL
 import com.stackmob.newman.request.HttpRequest._
 import scalaz._
 import Scalaz._
+import net.liftweb.json._
+import org.specs2.matcher.Matcher
+import org.specs2.matcher.MatchersImplicits
+
 
 /**
  * Created by IntelliJ IDEA.
@@ -50,14 +54,16 @@ class DSLSpecs extends Specification { def is =
   "HeaderAndBodyTransformer should"                                                                                     ^
     "correctly add a header"                                                                                            ! HeaderAndBodyTransformerTest().correctlyAddsAHeader ^
     "correctly add headers"                                                                                             ! HeaderAndBodyTransformerTest().correctlyAddsHeaders ^
+    "correctly set a header"                                                                                            ! HeaderAndBodyTransformerTest().correctlySetsAHeader ^
+    "correctly set headers"                                                                                             ! HeaderAndBodyTransformerTest().correctlySetsHeaders ^
+    "correctly replace headers"                                                                                         ! HeaderAndBodyTransformerTest().correctlyReplacesHeaders ^
     "correctly prepend headers"                                                                                         ! HeaderAndBodyTransformerTest().correctlyPrependsHeaders ^
     "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
     "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
     "correctly set a body"                                                                                              ! HeaderAndBodyTransformerTest().correctlySetsBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
-    "correctly set a header"                                                                                            ! HeaderTransformerTest().correctlySetsAHeader ^
-    "correctly set headers"                                                                                             ! HeaderTransformerTest().correctlySetsHeaders ^
-    "correctly replace headers"                                                                                         ! HeaderTransformerTest().correctlyReplacesHeaders ^
+    "when serializing"                                                                                                  ^
+      "correctly replace a body"                                                                                        ! SerializationTest().correctlySetsBody ^
                                                                                                                         end
   protected val url = new URL("http://stackmob.com")
 
@@ -190,6 +196,51 @@ class DSLSpecs extends Specification { def is =
       val b2 = "def".getBytes
       val resultantBody: Array[Byte] = transformer.addBody(b1).setBody(b2).body
       resultantBody must beEqualTo(b2)
+    }
+  }
+
+  case class SerializationTest() extends HeaderTransformerTestBase {
+    override protected val transformer = PUT(url)
+    case class SomeClass(a: String, b: Int, c:String)
+    import net.liftweb.json.scalaz.JsonScalaz._
+
+    def succeedWith[E, A](a: =>A) = validationWith[E, A](Success(a))
+
+    private def validationWith[E, A](f: =>Validation[E, A]): Matcher[Validation[E, A]] = (v: Validation[E, A]) => {
+        val expected = f
+        (expected == v, v+" is a "+expected, v+" is not a "+expected)
+     }
+
+
+    object SomeClass {
+      implicit def writer: JSONW[SomeClass] =
+        new JSONW[SomeClass] {
+          def write(obj: SomeClass): JValue = {
+            JObject(
+              JField("a", JString(obj.a)) ::
+              JField("b", JInt(obj.b)) ::
+              JField("c", JString(obj.c)) ::
+              Nil)
+          }
+        }
+
+      implicit def reader = new JSONR[SomeClass] {
+        def read(json: JValue): Result[SomeClass] = {
+          (field[String]("a")(json) |@|
+           field[Int]("b")(json) |@|
+           field[String]("c")(json)) {
+              SomeClass(_, _, _)
+            }
+        }
+      }
+
+
+    }
+
+    def correctlySetsBody: SpecsResult = {
+      val bcc = SomeClass("all", 4, "u")
+      val resultantBody: Array[Byte] = transformer.setBody(bcc).body
+      fromJSON(parse(new String(resultantBody)))(SomeClass.reader) must succeedWith(bcc)
     }
   }
 }
