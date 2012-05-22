@@ -20,7 +20,7 @@ import scalaz.effects._
  * Time: 3:38 PM
  */
 
-class DummyHttpClient(val responseToReturn: HttpResponse = DummyHttpClient.CannedResponse) extends HttpClient {
+class DummyHttpClient(var responseToReturn: HttpResponse = DummyHttpClient.CannedResponse) extends HttpClient {
   import DummyHttpClient._
 
   val getRequests = new CopyOnWriteArrayList[(URL, Headers)]()

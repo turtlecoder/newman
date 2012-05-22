@@ -86,8 +86,9 @@ object DSL {
     def addBody(b: RawBody) = HeaderAndBodyBuilder(fn, headers, BodyPrependLens.set(body, b))
     def setBody(b: RawBody) = HeaderAndBodyBuilder(fn, headers, b)
 
+    //todo: add default writer
     import net.liftweb.json.scalaz.JsonScalaz._
-    def setBody[A <: AnyRef](value: A)(implicit writer: JSONW[A]) = HeaderAndBodyBuilder(fn, headers, compact(render(toJSON(value)(writer))).getBytes("UTF-8"))
+    def setBody[A <: AnyRef](value: A)(implicit writer: JSONW[A]) = HeaderAndBodyBuilder(fn, headers, compact(render(toJSON(value)(writer))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
 
     override def addHeaders(toAdd: Headers) = HeaderAndBodyBuilder(fn, HeadersPrependLens.set(headers, toAdd), body)
     override def addHeaders(toAdd: HeaderList) = addHeaders(Headers(toAdd))
