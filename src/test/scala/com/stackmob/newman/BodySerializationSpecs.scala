@@ -11,6 +11,9 @@ import Scalaz._
 import net.liftweb.json._
 import org.specs2.matcher.Matcher
 import net.liftweb.json.scalaz.JsonScalaz._
+import com.stackmob.newman.Constants._
+import net.liftweb.json.scalaz.JsonScalaz.toJSON
+
 
 
 /**
@@ -23,8 +26,8 @@ import net.liftweb.json.scalaz.JsonScalaz._
  * Time: 3:30 PM
  */
 
-class SerializationSpecs extends Specification { def is =
-  "SerializationSpecs".title                                                                                                      ^
+class BodySerializationSpecs extends Specification { def is =
+  "BodySerializationSpecs".title                                                                                                      ^
   """
   The Newman DSL is intended to make it easy to construct and execute HTTP requests
   """                                                                                                                   ^
@@ -33,17 +36,12 @@ class SerializationSpecs extends Specification { def is =
     "Deerialization should"                                                                                             ^
         "deserialize with a provided JSONR"                                                                             ! DeserializationTest().deserializesWithJSONR ^
         "deserialize without a provided JSONR"                                                                          ! DeserializationTest().deserializesWithoutJSONR ^
-        "deserialize with an overriding JSONR"                                                                          ! DeserializationTest().deserializesWithSpecificJSONR ^
-//        "successfully deserialize against a partial function"                                                           ! DeserializationTest().successfullyDeserializesOnPartialFunction ^
+        "deserialize with a specific JSONR"                                                                             ! DeserializationTest().deserializesWithSpecificJSONR ^
+        "deserialize with an overriding JSONR"                                                                          ! skipped ^ //DeserializationTest().deserializesWithReplacedJSONR ^
                                                                                                                         end
   protected val url = new URL("http://stackmob.com")
 
   trait Context extends BaseContext {
-    implicit protected val client = new DummyHttpClient
-    protected def ensureEmptyHeaders[T <: Builder](t: T)(implicit m: Manifest[T]): SpecsResult = {
-      (t must beAnInstanceOf[T]) and
-      (t.headers must beEqualTo(Headers.empty))
-    }
 
     protected def transformer: Builder
 
@@ -58,6 +56,7 @@ class SerializationSpecs extends Specification { def is =
 
 
   case class SerializationTest() extends Context {
+    implicit val client = new DummyHttpClient
     override protected val transformer = PUT(url)
 
     def correctlySetsBody: SpecsResult = {
@@ -72,35 +71,20 @@ class SerializationSpecs extends Specification { def is =
     override protected val transformer = GET(url)
 
     def deserializesWithJSONR: SpecsResult = {
-      import net.liftweb.json.scalaz.JsonScalaz.toJSON
       val bodyObject = SomeClass("boyz", 2, "men")
-      client.responseToReturn = HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
+      val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
       transformer.executeUnsafe.as[SomeClass].body must succeedWith(bodyObject)
     }
 
     def deserializesWithoutJSONR: SpecsResult = {
-      import net.liftweb.json.scalaz.JsonScalaz.toJSON
       val bodyObject = AnotherClass(9.5, false)
-      client.responseToReturn = HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
+      val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
       transformer.executeUnsafe.as[AnotherClass].body must succeedWith(bodyObject)
     }
 
-    //    def successfullyDeserializesOnPartialFunction: SpecsResult = {
-    //      import net.liftweb.json.scalaz.JsonScalaz.toJSON
-    //      val bodyObject = SomeClass("me", 2, "u")
-    //      val notTheBodyObject = AnotherClass(9.5, false)
-    //      client.responseToReturn = HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
-    //      val pfResult = transformer.executeUnsafe{
-    //        case HttpResponseCode.Ok => classOf[SomeClass]
-    //        case HttpResponseCode.InternalServerError => classOf[AnotherClass]
-    //      }
-    //      pfResult must beEqualTo TypedHttpResponse(HttpResponseCode.Ok, Headers.empty, bodyObject)
-    //    }
-
     def deserializesWithSpecificJSONR: SpecsResult = {
-      import net.liftweb.json.scalaz.JsonScalaz.toJSON
       val bodyObject = SomeClass("boyz", 2, "men")
-      client.responseToReturn = HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
+      val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
 
       case class justStrings(a: String, c: String)
       implicit def reader: JSONR[justStrings] =
@@ -113,6 +97,25 @@ class SerializationSpecs extends Specification { def is =
             }
           }
       transformer.executeUnsafe.as[justStrings].body must succeedWith(justStrings("boyz", "men"))
+    }
+
+    def deserializesWithReplacedJSONR: SpecsResult = {
+      val bodyObject = SomeClass("boyz", 2, "men")
+      val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
+
+      def addAAA(aaa: String, b: Int, c: String): SomeClass = SomeClass("AAA" + aaa, b, c)
+
+      implicit def reader: JSONR[SomeClass] =
+        new JSONR[SomeClass] {
+          def read(json: JValue): Result[SomeClass] = {
+            (field[String]("a")(json) |@|
+              field[Int]("b")(json) |@|
+              field[String]("c")(json)) {
+              addAAA(_, _, _)
+            }
+          }
+        }
+      transformer.executeUnsafe.as[SomeClass].body must succeedWith(SomeClass("AAAboyz", 2, "men"))
     }
   }
 

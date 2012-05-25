@@ -24,11 +24,11 @@ import com.stackmob.newman.serialization.common.DefaultBodySerialization
  * Time: 11:54 PM
  */
 
-abstract class BaseHttpResponse() {
+trait BaseHttpResponse {
 
-  val code: HttpResponseCode
-  val headers: Headers
-  val timeReceived: Date = new Date()
+  def code: HttpResponseCode
+  def headers: Headers
+  def timeReceived: Date = new Date()
 
   import HttpResponseCode.HttpResponseCodeEqual
 
@@ -57,21 +57,19 @@ case class HttpResponse(code: HttpResponseCode, headers: Headers, body: RawBody,
   }
 
   //allow implicit conversion to be called directly
-  def as[A <: AnyRef](implicit m:Manifest[A]) = HttpResponse.rawToTyped[A](this)
-
-  //todo: make this actually work
-  //todo: partial function on range of codes
-  def apply[A <: AnyRef](pf: PartialFunction[HttpResponseCode, Class[_]])(implicit m:Manifest[A]): Result[A] = {
-    def theReader(implicit reader: JSONR[A] = DefaultBodySerialization.getReader) = reader
-    implicit val formats = DefaultFormats.withHints(ShortTypeHints(List(pf.apply(code))))
-     this.as[A].body
-  }
+  def as[A <: AnyRef : Manifest] = HttpResponse.rawToTyped[A](this)
 }
 
 //todo: add conversions from Result to Option & Box
-//maybe a more complicated conversion that returns a Validation/Box[HttpResponse], with serialization failure info
+//maybe a more complicated conversion that returns a Validation/Box[HttpResponse], with//return string of errors serialization failure info
 case class TypedHttpResponse[A](code: HttpResponseCode, headers: Headers, body: Result[A], override val timeReceived: Date = new Date()) extends BaseHttpResponse {
-  override def bodyString(charset: Charset = UTF8Charset) = body.toString
+  override def bodyString(charset: Charset = UTF8Charset) =
+    body.map(_.toString) |||
+      { errors: NonEmptyList[Error] => errors.map( _ match {
+        case UnexpectedJSONError(was, expected) => "UnexpectedJSONError: expected " + expected + ", was " + was
+        case NoSuchFieldError(name, json) => "NoSuchFieldError: no such field " + name + " in " + json
+        case UncategorizedError(key, desc, _) =>  "UncategorizedError: " + key + ", " + desc
+      } ).list.mkString("Errors: ", ",", "")     }
 }
 
 object HttpResponse {
@@ -89,8 +87,8 @@ object HttpResponse {
   }).liftFailNel.flatMap(fromJValue(_))
 
 
-   implicit def rawToTyped[A <: AnyRef](raw: HttpResponse)(implicit m:Manifest[A]): TypedHttpResponse[A] = {
+   implicit def rawToTyped[A <: AnyRef: Manifest](raw: HttpResponse): TypedHttpResponse[A] = {
      def theReader(implicit reader: JSONR[A] = DefaultBodySerialization.getReader) = reader
-     TypedHttpResponse[A](raw.code, raw.headers, fromJSON[A](parse(raw.bodyString()))(theReader))
+     TypedHttpResponse[A](raw.code, raw.headers, fromJSON[A](parse(raw.bodyString()))(theReader), raw.timeReceived)
    }
 }
