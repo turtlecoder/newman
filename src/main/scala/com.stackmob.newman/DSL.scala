@@ -7,6 +7,7 @@ import java.net.URL
 import scalaz._
 import Scalaz._
 import net.liftweb.json._
+import serialization.common.DefaultBodySerialization
 
 /**
  * Created by IntelliJ IDEA.
@@ -88,7 +89,7 @@ object DSL {
 
     //todo: add default writer
     import net.liftweb.json.scalaz.JsonScalaz._
-    def setBody[A <: AnyRef](value: A)(implicit writer: JSONW[A]) = HeaderAndBodyBuilder(fn, headers, compact(render(toJSON(value))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
+    def setBody[A <: AnyRef](value: A)(implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A]) = HeaderAndBodyBuilder(fn, headers, compact(render(toJSON(value))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
 
     override def addHeaders(toAdd: Headers) = HeaderAndBodyBuilder(fn, HeadersPrependLens.set(headers, toAdd), body)
     override def addHeaders(toAdd: HeaderList) = addHeaders(Headers(toAdd))

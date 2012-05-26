@@ -27,8 +27,11 @@ object DefaultBodySerialization {
     }
   }
 
-  //TODO
-//  def getWriter[A]: JSONW[A] = new JSONW[A]  {
-//    override def write(r: RawBody) = JString(new String(r, UTF8Charset))
-//  }
+  def getWriter[A <: AnyRef]: JSONW[A] = new JSONW[A] {
+    override def write(obj: A) = {
+
+      parse(Serialization.write(obj)(Serialization.formats(NoTypeHints)))
+    }
+  }
+
 }

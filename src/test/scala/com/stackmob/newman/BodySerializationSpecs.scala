@@ -32,12 +32,14 @@ class BodySerializationSpecs extends Specification { def is =
   The Newman DSL is intended to make it easy to construct and execute HTTP requests
   """                                                                                                                   ^
   "Serialization should"                                                                                                ^
-      "correctly replace a body"                                                                                        ! SerializationTest().correctlySetsBody ^
-    "Deerialization should"                                                                                             ^
-        "deserialize with a provided JSONR"                                                                             ! DeserializationTest().deserializesWithJSONR ^
-        "deserialize without a provided JSONR"                                                                          ! DeserializationTest().deserializesWithoutJSONR ^
-        "deserialize with a specific JSONR"                                                                             ! DeserializationTest().deserializesWithSpecificJSONR ^
-        "deserialize with an overriding JSONR"                                                                          ! skipped ^ //DeserializationTest().deserializesWithReplacedJSONR ^
+      "serialize with a provided JSONR"                                                                                 ! SerializationTest().serializesWithJSONW ^
+      "serialize without a provided JSONR"                                                                              ! SerializationTest().serializesWithoutJSONW ^
+      "serialize with a specific JSONR"                                                                                 ! SerializationTest().serializesWithSpecificJSONW ^
+   "Deserialization should"                                                                                             ^
+      "deserialize with a provided JSONR"                                                                               ! DeserializationTest().deserializesWithJSONR ^
+      "deserialize without a provided JSONR"                                                                            ! DeserializationTest().deserializesWithoutJSONR ^
+      "deserialize with a specific JSONR"                                                                               ! DeserializationTest().deserializesWithSpecificJSONR ^
+      "deserialize with an overriding JSONR"                                                                            ! skipped ^ //DeserializationTest().deserializesWithReplacedJSONR ^
                                                                                                                         end
   protected val url = new URL("http://stackmob.com")
 
@@ -59,11 +61,34 @@ class BodySerializationSpecs extends Specification { def is =
     implicit val client = new DummyHttpClient
     override protected val transformer = PUT(url)
 
-    def correctlySetsBody: SpecsResult = {
-      import net.liftweb.json.scalaz.JsonScalaz.fromJSON
-      val bcc = SomeClass("all", 4, "u")
-      val resultantBody: Array[Byte] = transformer.setBody(bcc).body
-      fromJSON[SomeClass](parse(new String(resultantBody))) must succeedWith(bcc)
+    def serializesWithJSONW: SpecsResult = {
+      val bodyObject = SomeClass("all", 4, "u")
+      val resultantBody: Array[Byte] = transformer.setBody(bodyObject).body
+      fromJSON[SomeClass](parse(new String(resultantBody))) must succeedWith(bodyObject)
+    }
+
+    def serializesWithoutJSONW: SpecsResult = {
+      val bodyObject = ClassWithoutWriter(1, 2, "check")
+      val resultantBody: String = new String(transformer.setBody(bodyObject).body, UTF8Charset)
+      resultantBody must beEqualTo("{\"j\":1,\"k\":2,\"l\":\"check\"}")
+    }
+
+    def serializesWithSpecificJSONW: SpecsResult = {
+
+      implicit def stringsWriter: JSONW[SomeClass] =
+        new JSONW[SomeClass] {
+          def write(obj: SomeClass): JValue = {
+            JObject(
+              JField("a", JString(obj.a)) ::
+                JField("c", JString(obj.c)) ::
+                Nil)
+          }
+        }
+
+      val bodyObject = SomeClass("boyz", 2, "men")
+      val resultantBody: String = new String(transformer.setBody(bodyObject).body, UTF8Charset)
+
+      resultantBody must beEqualTo("{\"a\":\"boyz\",\"c\":\"men\"}")
     }
   }
 
@@ -77,9 +102,9 @@ class BodySerializationSpecs extends Specification { def is =
     }
 
     def deserializesWithoutJSONR: SpecsResult = {
-      val bodyObject = AnotherClass(9.5, false)
+      val bodyObject = ClassWithoutReader(9.5, false)
       val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
-      transformer.executeUnsafe.as[AnotherClass].body must succeedWith(bodyObject)
+      transformer.executeUnsafe.as[ClassWithoutReader].body must succeedWith(bodyObject)
     }
 
     def deserializesWithSpecificJSONR: SpecsResult = {
@@ -147,16 +172,31 @@ object SomeClass {
     }
 }
 
-case class AnotherClass(x: Double, y: Boolean)
+case class ClassWithoutReader(x: Double, y: Boolean)
 
-object AnotherClass {
-  implicit def writer: JSONW[AnotherClass] =
-    new JSONW[AnotherClass] {
-      def write(obj: AnotherClass): JValue = {
+object ClassWithoutReader {
+  implicit def writer: JSONW[ClassWithoutReader] =
+    new JSONW[ClassWithoutReader] {
+      def write(obj: ClassWithoutReader): JValue = {
         JObject(
           JField("x", JDouble(obj.x)) ::
             JField("y", JBool(obj.y)) ::
             Nil)
+      }
+    }
+}
+
+case class ClassWithoutWriter(j: Int, k: Int, l: String)
+
+object ClassWithoutWriter {
+  implicit def reader: JSONR[ClassWithoutWriter] =
+    new JSONR[ClassWithoutWriter] {
+      def read(json: JValue): Result[ClassWithoutWriter] = {
+        (field[Int]("j")(json) |@|
+          field[Int]("k")(json) |@|
+          field[String]("l")(json)) {
+          ClassWithoutWriter(_, _, _)
+        }
       }
     }
 }
