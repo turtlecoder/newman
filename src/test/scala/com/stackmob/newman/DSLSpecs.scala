@@ -7,6 +7,10 @@ import java.net.URL
 import com.stackmob.newman.request.HttpRequest._
 import scalaz._
 import Scalaz._
+import net.liftweb.json._
+import org.specs2.matcher.Matcher
+import org.specs2.matcher.MatchersImplicits
+
 
 /**
  * Created by IntelliJ IDEA.
@@ -50,14 +54,14 @@ class DSLSpecs extends Specification { def is =
   "HeaderAndBodyTransformer should"                                                                                     ^
     "correctly add a header"                                                                                            ! HeaderAndBodyTransformerTest().correctlyAddsAHeader ^
     "correctly add headers"                                                                                             ! HeaderAndBodyTransformerTest().correctlyAddsHeaders ^
+    "correctly set a header"                                                                                            ! HeaderAndBodyTransformerTest().correctlySetsAHeader ^
+    "correctly set headers"                                                                                             ! HeaderAndBodyTransformerTest().correctlySetsHeaders ^
+    "correctly replace headers"                                                                                         ! HeaderAndBodyTransformerTest().correctlyReplacesHeaders ^
     "correctly prepend headers"                                                                                         ! HeaderAndBodyTransformerTest().correctlyPrependsHeaders ^
     "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
     "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
     "correctly set a body"                                                                                              ! HeaderAndBodyTransformerTest().correctlySetsBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
-    "correctly set a header"                                                                                            ! HeaderTransformerTest().correctlySetsAHeader ^
-    "correctly set headers"                                                                                             ! HeaderTransformerTest().correctlySetsHeaders ^
-    "correctly replace headers"                                                                                         ! HeaderTransformerTest().correctlyReplacesHeaders ^
                                                                                                                         end
   protected val url = new URL("http://stackmob.com")
 
