@@ -69,7 +69,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   case class CachedResponseWithETag() extends Context {
     override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.some, (), true)
 
-    override protected val rawClient = new DummyHttpClient()
+    override protected val rawClient = new DummyHttpClient
 
     def executesINMRequest: SpecsResult = {
       client.get(url, Headers.empty).prepare.unsafePerformIO
@@ -79,7 +79,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   }
 
   case class CachedResponseWithETagReturnsNotModified() extends Context {
-    override protected val rawClient = new DummyHttpClient(responseWithNotModified)
+    override protected val rawClient = new DummyHttpClient(responseWithNotModified.pure[Function0])
     override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.some, (), true)
 
     def returnsCachedResponse: SpecsResult = {
@@ -89,7 +89,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   }
 
   case class CachedResponseWithETagReturnsModified() extends Context {
-    override protected val rawClient = new DummyHttpClient(responseWithETag)
+    override protected val rawClient = new DummyHttpClient(responseWithETag.pure[Function0])
     override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.some, (), true)
 
     def returnsNewResponse: SpecsResult = {
@@ -99,7 +99,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   }
 
   case class CachedResponseWithoutETag() extends Context {
-    override protected val rawClient = new DummyHttpClient(responseWithETag)
+    override protected val rawClient = new DummyHttpClient(responseWithETag.pure[Function0])
     override protected val responseCacher = new DummyHttpResponseCacher(responseWithoutETag.some, (), true)
 
     def executesNormalRequest: SpecsResult = {
@@ -122,7 +122,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   }
 
   case class NoCachedResponsePresent() extends Context {
-    override protected val rawClient = new DummyHttpClient()
+    override protected val rawClient = new DummyHttpClient
     override protected val responseCacher = new DummyHttpResponseCacher(Option.empty[HttpResponse], (), true)
 
     def executesNormalRequest: SpecsResult = {
@@ -147,7 +147,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CacheGetFailed() extends Context {
     private val cacheException = new Exception("couldn't hit cache")
-    override protected val rawClient = new DummyHttpClient()
+    override protected val rawClient = new DummyHttpClient
     override protected val responseCacher = new DummyHttpResponseCacher((throw cacheException): Option[HttpResponse],
       (throw cacheException): Unit,
       (throw cacheException): Boolean)

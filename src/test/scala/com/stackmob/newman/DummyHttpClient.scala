@@ -20,7 +20,7 @@ import scalaz.effects._
  * Time: 3:38 PM
  */
 
-class DummyHttpClient(val responseToReturn: HttpResponse = DummyHttpClient.CannedResponse) extends HttpClient {
+class DummyHttpClient(val responseToReturn: () => HttpResponse = () => DummyHttpClient.CannedResponse) extends HttpClient {
   import DummyHttpClient._
 
   val getRequests = new CopyOnWriteArrayList[(URL, Headers)]()
@@ -59,30 +59,30 @@ class DummyHttpClient(val responseToReturn: HttpResponse = DummyHttpClient.Canne
 
 object DummyHttpClient {
   val CannedResponse = HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
-  trait DummyExecutor { this: HttpRequest =>
-    def responseToReturn: HttpResponse
-    def prepare = responseToReturn.pure[IO]
+  trait DummyExecutor extends HttpRequest { this: HttpRequest =>
+    def responseToReturn: () => HttpResponse
+    override def prepare = io(responseToReturn())
   }
 
   case class DummyGetRequest(override val url: URL,
                              override val headers: Headers,
-                             override val responseToReturn: HttpResponse) extends GetRequest with DummyExecutor
+                             override val responseToReturn: () => HttpResponse) extends GetRequest with DummyExecutor
 
   case class DummyPostRequest(override val url: URL,
                               override val headers: Headers,
                               override val body: RawBody,
-                              override val responseToReturn: HttpResponse) extends PostRequest with DummyExecutor
+                              override val responseToReturn: () => HttpResponse) extends PostRequest with DummyExecutor
 
   case class DummyPutRequest(override val url: URL,
                              override val headers: Headers,
                              override val body: RawBody,
-                             override val responseToReturn: HttpResponse) extends PutRequest with DummyExecutor
+                             override val responseToReturn: () => HttpResponse) extends PutRequest with DummyExecutor
 
   case class DummyDeleteRequest(override val url: URL,
                                 override val headers: Headers,
-                                override val responseToReturn: HttpResponse) extends DeleteRequest with DummyExecutor
+                                override val responseToReturn: () => HttpResponse) extends DeleteRequest with DummyExecutor
 
   case class DummyHeadRequest(override val url: URL,
                               override val headers: Headers,
-                              override val responseToReturn: HttpResponse) extends HeadRequest with DummyExecutor
+                              override val responseToReturn: () => HttpResponse) extends HeadRequest with DummyExecutor
 }

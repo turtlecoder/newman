@@ -63,7 +63,7 @@ class ETagAwareHttpClient(httpClient: HttpClient, httpResponseCacher: HttpRespon
 }
 
 object ETagAwareHttpClient {
-  trait CachingMixin { this: HttpRequest =>
+  trait CachingMixin extends HttpRequest { this: HttpRequest =>
     protected def cache: HttpResponseCacher
     protected def doHttpRequest(headers: Headers): IO[HttpResponse]
     private lazy val cacheResult = cache.get(this)
@@ -72,7 +72,7 @@ object ETagAwareHttpClient {
       nel(HttpHeaders.IF_NONE_MATCH -> eTag, headerList.list.filterNot(_._1 === HttpHeaders.IF_NONE_MATCH))
     } orElse { Headers(HttpHeaders.IF_NONE_MATCH -> eTag) }
 
-    def prepare: IO[HttpResponse] = cacheResult.flatMap { cachedResponseOpt: Option[HttpResponse] =>
+    override def prepare: IO[HttpResponse] = cacheResult.flatMap { cachedResponseOpt: Option[HttpResponse] =>
       cachedResponseOpt some { cachedResponse: HttpResponse =>
         cachedResponse.etag some { eTag: String =>
           val newHeaderList = addIfNoneMatch(this.headers, eTag)

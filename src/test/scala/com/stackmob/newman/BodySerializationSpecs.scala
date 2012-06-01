@@ -97,19 +97,19 @@ class BodySerializationSpecs extends Specification { def is =
 
     def deserializesWithJSONR: SpecsResult = {
       val bodyObject = SomeClass("boyz", 2, "men")
-      val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
+      val transformer = GET(url)( new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
       transformer.executeUnsafe.as[SomeClass].body must succeedWith(bodyObject)
     }
 
     def deserializesWithoutJSONR: SpecsResult = {
       val bodyObject = ClassWithoutReader(9.5, false)
-      val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
+      val transformer = GET(url)( new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
       transformer.executeUnsafe.as[ClassWithoutReader].body must succeedWith(bodyObject)
     }
 
     def deserializesWithSpecificJSONR: SpecsResult = {
       val bodyObject = SomeClass("boyz", 2, "men")
-      val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
+      val transformer = GET(url)( new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
 
       case class justStrings(a: String, c: String)
       implicit def reader: JSONR[justStrings] =
@@ -126,7 +126,7 @@ class BodySerializationSpecs extends Specification { def is =
 
     def deserializesWithReplacedJSONR: SpecsResult = {
       val bodyObject = SomeClass("boyz", 2, "men")
-      val transformer = GET(url)( new DummyHttpClient(HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
+      val transformer = GET(url)( new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, compact(render(toJSON(bodyObject))).getBytes(UTF8Charset))))
 
       def addAAA(aaa: String, b: Int, c: String): SomeClass = SomeClass("AAA" + aaa, b, c)
 
