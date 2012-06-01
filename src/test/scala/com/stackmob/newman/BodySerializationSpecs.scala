@@ -80,8 +80,8 @@ class BodySerializationSpecs extends Specification { def is =
           def write(obj: SomeClass): JValue = {
             JObject(
               JField("a", JString(obj.a)) ::
-                JField("c", JString(obj.c)) ::
-                Nil)
+              JField("c", JString(obj.c)) ::
+              Nil)
           }
         }
 
