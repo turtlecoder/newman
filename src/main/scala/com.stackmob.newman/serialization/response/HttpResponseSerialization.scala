@@ -21,9 +21,6 @@ import java.nio.charset.Charset
  * Time: 1:36 PM
  */
 
-
-//TODO: make this a class that takes in a charset: Charset = UTF8Charset param,
-//so that when converting to/from string we have a valid charset
 class HttpResponseSerialization(charset: Charset = UTF8Charset) extends SerializationBase[HttpResponse] {
   protected val CodeKey = "code"
   protected val HeadersKey = "headers"
