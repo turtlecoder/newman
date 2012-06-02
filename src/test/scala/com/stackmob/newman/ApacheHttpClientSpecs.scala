@@ -4,7 +4,7 @@ import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import DSL._
 import java.net.URL
-import response.{HttpResponse, HttpResponseCode}
+import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 
 /**
  * Created by IntelliJ IDEA.
@@ -25,9 +25,13 @@ class ApacheHttpClientSpecs extends Specification { def is =
     "Correctly do GET requests"                                                                                         ! Get().succeeds ^
     "Correctly do async GET requests"                                                                                   ! Get().succeedsAsync ^
     "Correctly do POST requests"                                                                                        ! Post().succeeds ^
+    "Correctly do async POST requests"                                                                                  ! Post().succeedsAsync ^
     "Correctly do PUT requests"                                                                                         ! Put().succeeds ^
+    "Correctly do async PUT requests"                                                                                   ! Put().succeedsAsync ^
     "Correctly do DELETE requests"                                                                                      ! Delete().succeeds ^
+    "Correctly do async DELETE requests"                                                                                ! Delete().succeedsAsync ^
     "Correctly do HEAD requests"                                                                                        ! Head().succeeds ^
+    "Correctly do async HEAD requests"                                                                                  ! Head().succeedsAsync ^
                                                                                                                         end
   trait Context extends BaseContext {
     protected def execute(t: Builder,
@@ -47,40 +51,45 @@ class ApacheHttpClientSpecs extends Specification { def is =
     }
 
     protected lazy val url = new URL("http://stackmob.com")
+
+    implicit private val encoding = Constants.UTF8Charset
+    protected def ensureHttpOK(h: HttpResponse): SpecsResult = h.code must beEqualTo(HttpResponseCode.Ok)
+    protected def ensureHtmlReturned(h: HttpResponse): SpecsResult = {
+      (h.bodyString() must contain("html")) and
+      (h.bodyString() must contain("/html"))
+    }
+
+    protected def ensureHtmlResponse(h: HttpResponse) = ensureHttpOK(h) and ensureHtmlReturned(h)
+
   }
 
   case class Get() extends Context {
-    def succeeds: SpecsResult = execute(GET(url)) { h: HttpResponse =>
-      h.bodyString() must contain("html")
-    }
-
-    def succeedsAsync: SpecsResult = executeAsync(GET(url)) { h: HttpResponse =>
-      h.bodyString() must contain("html")
-    }
+    def succeeds = execute(GET(url))(ensureHtmlResponse(_))
+    def succeedsAsync = executeAsync(GET(url))(ensureHtmlResponse(_))
   }
 
   case class Post() extends Context {
-    def succeeds: SpecsResult = {
-      success
-    }
+    private val post = POST(url)
+    def succeeds = execute(post)(ensureHtmlResponse(_))
+    def succeedsAsync = executeAsync(post)(ensureHtmlResponse(_))
   }
 
   case class Put() extends Context {
-    def succeeds: SpecsResult = {
-      success
-    }
+    private val put = PUT(url)
+    def succeeds = execute(put)(ensureHtmlResponse(_))
+    def succeedsAsync = executeAsync(put)(ensureHtmlResponse(_))
   }
 
   case class Delete() extends Context {
-    def succeeds: SpecsResult = {
-      success
-    }
+    private val delete = DELETE(url)
+    def succeeds = execute(delete)(ensureHtmlResponse(_))
+    def succeedsAsync = executeAsync(delete)(ensureHtmlResponse(_))
   }
 
   case class Head() extends Context {
-    def succeeds: SpecsResult = {
-      success
-    }
+    private val head = HEAD(url)
+    def succeeds = execute(head)(ensureHttpOK(_))
+    def succeedsAsync = executeAsync(head)(ensureHttpOK(_))
   }
 
 }
