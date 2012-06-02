@@ -21,6 +21,8 @@ import com.stackmob.newman.serialization.common._
  */
 
 
+//TODO: make this a class that takes in a charset: Charset = UTF8Charset param,
+//so that when converting to/from string we have a valid charset
 object HttpResponseSerialization extends SerializationBase[HttpResponse] {
   protected val CodeKey = "code"
   protected val HeadersKey = "headers"
@@ -33,11 +35,10 @@ object HttpResponseSerialization extends SerializationBase[HttpResponse] {
     import HttpResponseCodeSerialization.{writer => ResponseCodeWriter}
 
     override def write(h: HttpResponse): JValue = {
-      val bodyString = new String(h.body, UTF8Charset)
       JObject(
         JField(CodeKey, toJSON(h.code)(ResponseCodeWriter)) ::
         JField(HeadersKey, toJSON(h.headers)(HeadersWriter)) ::
-        JField(BodyKey, JString(bodyString)) ::
+        JField(BodyKey, JString(h.bodyString)) ::
         JField(TimeReceivedKey, JInt(h.timeReceived.getTime)) ::
         Nil
       )

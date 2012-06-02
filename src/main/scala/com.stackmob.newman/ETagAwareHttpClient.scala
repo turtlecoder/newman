@@ -72,35 +72,37 @@ object ETagAwareHttpClient {
       nel(HttpHeaders.IF_NONE_MATCH -> eTag, headerList.list.filterNot(_._1 === HttpHeaders.IF_NONE_MATCH))
     } orElse { Headers(HttpHeaders.IF_NONE_MATCH -> eTag) }
 
+    private def cachedAndETagPresent(cached: HttpResponse, eTag: String): IO[HttpResponse] = {
+      val newHeaderList = addIfNoneMatch(this.headers, eTag)
+      doHttpRequest(newHeaderList).flatMap { response: HttpResponse =>
+      //not modified returned - so return cached response
+        if(response.notModified) {
+          cached.pure[IO]
+        }
+        //not modified was not returned, so cache new response and return it
+        else {
+          cache.set(this, response).map(_ => response)
+        }
+      }
+    }
+
+    private def cachedAndETagNotPresent: IO[HttpResponse] = notCached
+
+    private def notCached: IO[HttpResponse] = {
+      doHttpRequest(headers).flatMap { response: HttpResponse =>
+        cache.set(this, response) >| response
+      }
+    }
+
     override def prepare: IO[HttpResponse] = cacheResult.flatMap { cachedResponseOpt: Option[HttpResponse] =>
       cachedResponseOpt some { cachedResponse: HttpResponse =>
-        cachedResponse.etag some { eTag: String =>
-          val newHeaderList = addIfNoneMatch(this.headers, eTag)
-          doHttpRequest(newHeaderList).flatMap { response: HttpResponse =>
-          //not modified returned - so return cached response
-            if(response.notModified) {
-              cachedResponse.pure[IO]
-            }
-            //not modified was not returned, so cache new response and return it
-            else {
-              for {
-                _ <- cache.set(this, response)
-              } yield response
-            }
-          }
+        cachedResponse.eTag some { eTag: String =>
+          cachedAndETagPresent(cachedResponse, eTag)
         } none {
-          //no etag was present so get the new response, cache it, and return it
-          for {
-            resp <- doHttpRequest(headers)
-            _ <- cache.set(this, resp)
-          } yield resp
+          cachedAndETagNotPresent
         }
       } none {
-        //no cached response was present, so get the new response, cache it, and return it
-        for {
-          resp <- doHttpRequest(headers)
-          _ <- cache.set(this, resp)
-        } yield resp
+        notCached
       }
     }
   }
