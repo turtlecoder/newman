@@ -1,20 +1,18 @@
 package com.stackmob.newman
 
-import com.stackmob.newman.DSL._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
-import java.net.URL
-import com.stackmob.newman.request.HttpRequest._
-import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import com.stackmob.newman.Constants._
 import scalaz._
 import Scalaz._
 import net.liftweb.json._
+import com.stackmob.newman.DSL._
+import java.net.URL
+import com.stackmob.newman.request.HttpRequest
+import com.stackmob.newman.request.HttpRequest.Headers
+import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
+import com.stackmob.newman.Constants.UTF8Charset
 import org.specs2.matcher.Matcher
 import net.liftweb.json.scalaz.JsonScalaz._
-import net.liftweb.json.scalaz.JsonScalaz.toJSON
-
-
 
 /**
  * Created by IntelliJ IDEA.
@@ -42,8 +40,21 @@ class BodySerializationSpecs extends Specification { def is =
     "deserialize with an overriding JSONR"                                                                              ! DeserializationTest().deserializesWithReplacedJSONR ^
                                                                                                                         end
   protected val url = new URL("http://stackmob.com")
+  import BodySerializationSpecs._
 
   trait Context extends BaseContext {
+    def ensureSucceedsWithReader[T](req: HttpRequest, expected: T)(implicit reader: JSONR[T]) = {
+      req.executeUnsafe.bodyAs[T].map { body: T =>
+        (body must beEqualTo(expected)): SpecsResult
+      } ||| (logAndFail(_))
+    }
+
+    def ensureSucceedsAsCaseClass[T <: AnyRef: Manifest](req: HttpRequest, expected: T) = {
+      req.executeUnsafe.bodyAsCaseClass[T].map { body: T =>
+        (body must beEqualTo(expected)): SpecsResult
+      } ||| (logAndFail(_))
+    }
+
     def succeedWith[E, A](a: =>A) = validationWith[E, A](Success(a))
 
     private def validationWith[E, A](f: =>Validation[E, A]): Matcher[Validation[E, A]] = (v: Validation[E, A]) => {
@@ -81,113 +92,108 @@ class BodySerializationSpecs extends Specification { def is =
 
       val bodyObject = SomeClass("boyz", 2, "men")
       val resultantBody: String = new String(transformer.setBody(bodyObject).body, UTF8Charset)
-
       resultantBody must beEqualTo("{\"a\":\"boyz\",\"c\":\"men\"}")
     }
   }
 
   case class DeserializationTest() extends Context {
 
+    private def getResponse(bodyString: String): HttpRequest = {
+      val bodyBytes = bodyString.getBytes(UTF8Charset)
+      implicit val client = new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes))
+      GET(url)
+    }
+
     def deserializesWithJSONR: SpecsResult = {
       val bodyObject = SomeClass("boyz", 2, "men")
-      val bodyBytes = compact(render(toJSON(bodyObject))).getBytes(UTF8Charset)
-      val transformer = GET(url)(new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes)))
-      transformer.executeUnsafe.bodyAs[SomeClass] must succeedWith(bodyObject)
+      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
     }
 
     def deserializesWithoutJSONR: SpecsResult = {
       val bodyObject = ClassWithoutReader(9.5, false)
-      val bodyBytes = compact(render(toJSON(bodyObject))).getBytes(UTF8Charset)
-      val transformer = GET(url)(new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes)))
-      transformer.executeUnsafe.bodyAsCaseClass[ClassWithoutReader] must succeedWith(bodyObject)
+      ensureSucceedsAsCaseClass(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
     }
 
     def deserializesWithSpecificJSONR: SpecsResult = {
       val bodyObject = SomeClass("boyz", 2, "men")
-      val bodyBytes = compact(render(toJSON(bodyObject))).getBytes(UTF8Charset)
-      val transformer = GET(url)(new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes)))
-
       implicit val reader = new JSONR[JustStrings] {
         def read(json: JValue): Result[JustStrings] = {
           (field[String]("first")(json) |@|
-          field[String]("second")(json)) {
+            field[String]("second")(json)) {
             JustStrings(_, _)
           }
         }
       }
-
-      transformer.executeUnsafe.bodyAs[JustStrings] must succeedWith(JustStrings("boyz", "men"))
+      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
     }
 
     def deserializesWithReplacedJSONR: SpecsResult = {
       val bodyObject = SomeClass("boyz", 2, "men")
-      val bodyBytes = compact(render(toJSON(bodyObject))).getBytes(UTF8Charset)
-      val transformer = GET(url)(new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes)))
-
+      val newBodyObject = SomeClass("AAAboyz", 2, "men")
       implicit val reader = new JSONR[SomeClass] {
         def read(json: JValue): Result[SomeClass] = {
           (field[String]("a")(json) |@|
           field[Int]("b")(json) |@|
-          field[String]("c")(json)) { (s1: String, s2: Int, s3: String) =>
-            SomeClass("AAA%s".format(s1), s2, s3)
+          field[String]("c")(json)) { (_, _, _) =>
+            newBodyObject
           }
         }
       }
-      transformer.executeUnsafe.bodyAs[SomeClass] must succeedWith(SomeClass("AAAboyz", 2, "men"))
+      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), newBodyObject)
     }
   }
 
 }
 
-case class SomeClass(a: String, b: Int, c: String)
+object BodySerializationSpecs {
+  case class SomeClass(a: String, b: Int, c: String)
 
-object SomeClass {
-  implicit val reader: JSONR[SomeClass] = new JSONR[SomeClass] {
-    def read(json: JValue): Result[SomeClass] = {
-      (field[String]("a")(json) |@|
-      field[Int]("b")(json) |@|
-      field[String]("c")(json)) {
-        SomeClass(_, _, _)
+  object SomeClass {
+    implicit val reader: JSONR[SomeClass] = new JSONR[SomeClass] {
+      def read(json: JValue): Result[SomeClass] = {
+        (field[String]("a")(json) |@|
+        field[Int]("b")(json) |@|
+        field[String]("c")(json)) {
+          SomeClass(_, _, _)
+        }
+      }
+    }
+
+    implicit val writer: JSONW[SomeClass] = new JSONW[SomeClass] {
+      def write(obj: SomeClass): JValue = {
+        JObject(
+          JField("a", JString(obj.a)) ::
+          JField("b", JInt(obj.b)) ::
+          JField("c", JString(obj.c)) ::
+          Nil)
       }
     }
   }
 
-  implicit val writer: JSONW[SomeClass] = new JSONW[SomeClass] {
-    def write(obj: SomeClass): JValue = {
-      JObject(
-        JField("a", JString(obj.a)) ::
-        JField("b", JInt(obj.b)) ::
-        JField("c", JString(obj.c)) ::
-        Nil)
-    }
-  }
-}
-
-case class ClassWithoutReader(x: Double, y: Boolean)
-
-object ClassWithoutReader {
-  implicit val writer: JSONW[ClassWithoutReader] = new JSONW[ClassWithoutReader] {
-    def write(obj: ClassWithoutReader): JValue = {
-      JObject(
-        JField("x", JDouble(obj.x)) ::
-        JField("y", JBool(obj.y)) ::
-        Nil)
-    }
-  }
-}
-
-case class ClassWithoutWriter(j: Int, k: Int, l: String)
-
-case class JustStrings(a: String, c: String)
-
-object ClassWithoutWriter {
-  implicit def reader: JSONR[ClassWithoutWriter] = new JSONR[ClassWithoutWriter] {
-    def read(json: JValue): Result[ClassWithoutWriter] = {
-      (field[Int]("j")(json) |@|
-      field[Int]("k")(json) |@|
-      field[String]("l")(json)) {
-        ClassWithoutWriter(_, _, _)
+  case class ClassWithoutReader(x: Double, y: Boolean)
+  object ClassWithoutReader {
+    implicit val writer: JSONW[ClassWithoutReader] = new JSONW[ClassWithoutReader] {
+      def write(obj: ClassWithoutReader): JValue = {
+        JObject(
+          JField("x", JDouble(obj.x)) ::
+          JField("y", JBool(obj.y)) ::
+          Nil)
       }
     }
   }
+
+  case class ClassWithoutWriter(j: Int, k: Int, l: String)
+  object ClassWithoutWriter {
+    implicit def reader: JSONR[ClassWithoutWriter] = new JSONR[ClassWithoutWriter] {
+      def read(json: JValue): Result[ClassWithoutWriter] = {
+        (field[Int]("j")(json) |@|
+        field[Int]("k")(json) |@|
+        field[String]("l")(json)) {
+          ClassWithoutWriter(_, _, _)
+        }
+      }
+    }
+  }
+
+  case class JustStrings(a: String, c: String)
 }
