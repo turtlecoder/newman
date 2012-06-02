@@ -23,6 +23,7 @@ class ApacheHttpClientSpecs extends Specification { def is =
   """                                                                                                                   ^
   "The Client Should"                                                                                                   ^
     "Correctly do GET requests"                                                                                         ! Get().succeeds ^
+    "Correctly do async GET requests"                                                                                   ! Get().succeedsAsync ^
     "Correctly do POST requests"                                                                                        ! Post().succeeds ^
     "Correctly do PUT requests"                                                                                         ! Put().succeeds ^
     "Correctly do DELETE requests"                                                                                      ! Delete().succeeds ^
@@ -30,15 +31,30 @@ class ApacheHttpClientSpecs extends Specification { def is =
                                                                                                                         end
   trait Context extends BaseContext {
     protected def execute(t: Builder,
-                          code: HttpResponseCode = HttpResponseCode.Ok)
+                          expectedCode: HttpResponseCode = HttpResponseCode.Ok)
                          (fn: HttpResponse => SpecsResult): SpecsResult = {
       val r = t.executeUnsafe
-      r.code must beEqualTo(code) and fn(r)
+      r.code must beEqualTo(expectedCode) and fn(r)
     }
+
+    protected def executeAsync(t: Builder,
+                               expectedCode: HttpResponseCode = HttpResponseCode.Ok)
+                              (fn: HttpResponse => SpecsResult): SpecsResult = {
+      val rPromise = t.executeAsyncUnsafe
+      rPromise.map { r: HttpResponse =>
+        r.code must beEqualTo(expectedCode) and fn(r)
+      }.get
+    }
+
+    protected lazy val url = new URL("http://stackmob.com")
   }
 
   case class Get() extends Context {
-    def succeeds: SpecsResult = execute(GET(new URL("http://stackmob.com"))) { h: HttpResponse =>
+    def succeeds: SpecsResult = execute(GET(url)) { h: HttpResponse =>
+      h.bodyString() must contain("html")
+    }
+
+    def succeedsAsync: SpecsResult = executeAsync(GET(url)) { h: HttpResponse =>
       h.bodyString() must contain("html")
     }
   }
