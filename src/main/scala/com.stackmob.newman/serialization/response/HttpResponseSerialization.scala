@@ -9,6 +9,7 @@ import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import java.util.Date
 import com.stackmob.newman.Constants._
 import com.stackmob.newman.serialization.common._
+import java.nio.charset.Charset
 
 /**
  * Created by IntelliJ IDEA.
@@ -23,7 +24,7 @@ import com.stackmob.newman.serialization.common._
 
 //TODO: make this a class that takes in a charset: Charset = UTF8Charset param,
 //so that when converting to/from string we have a valid charset
-object HttpResponseSerialization extends SerializationBase[HttpResponse] {
+class HttpResponseSerialization(charset: Charset = UTF8Charset) extends SerializationBase[HttpResponse] {
   protected val CodeKey = "code"
   protected val HeadersKey = "headers"
   protected val BodyKey = "body"
@@ -38,7 +39,7 @@ object HttpResponseSerialization extends SerializationBase[HttpResponse] {
       JObject(
         JField(CodeKey, toJSON(h.code)(ResponseCodeWriter)) ::
         JField(HeadersKey, toJSON(h.headers)(HeadersWriter)) ::
-        JField(BodyKey, JString(h.bodyString)) ::
+        JField(BodyKey, JString(h.bodyString(charset))) ::
         JField(TimeReceivedKey, JInt(h.timeReceived.getTime)) ::
         Nil
       )
@@ -58,7 +59,7 @@ object HttpResponseSerialization extends SerializationBase[HttpResponse] {
 
       (codeField |@| headersField |@| bodyField |@| timeReceivedField) {
         (code: HttpResponseCode, headers: Headers, body: String, timeReceivedMilliseconds: Long) =>
-          HttpResponse(code, headers, body.getBytes(UTF8Charset), new Date(timeReceivedMilliseconds))
+          HttpResponse(code, headers, body.getBytes(charset), new Date(timeReceivedMilliseconds))
       }
     }
   }

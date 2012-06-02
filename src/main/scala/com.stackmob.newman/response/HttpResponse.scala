@@ -30,9 +30,11 @@ case class HttpResponse(code: HttpResponseCode,
                         headers: Headers,
                         rawBody: RawBody,
                         timeReceived: Date = new Date()) {
+  import HttpResponse._
+
   def bodyString(implicit charset: Charset = UTF8Charset) = new String(rawBody, charset)
 
-  def toJValue: JValue = toJSON(this)(HttpResponseSerialization.writer)
+  def toJValue(implicit charset: Charset = UTF8Charset): JValue = toJSON(this)(getResponseSerialization.writer)
 
   def toJson(prettyPrint: Boolean = false) = if(prettyPrint) {
     pretty(render(toJValue))
@@ -56,11 +58,9 @@ case class HttpResponse(code: HttpResponseCode,
 }
 
 object HttpResponse {
-  import net.liftweb.json.scalaz.JsonScalaz.Result
-  def fromJValue(jValue: JValue): Result[HttpResponse] = {
-    import com.stackmob.newman.serialization.response.HttpResponseSerialization._
-    import net.liftweb.json.scalaz.JsonScalaz.fromJSON
-    fromJSON(jValue)
+  private def getResponseSerialization(implicit charset: Charset = UTF8Charset) = new HttpResponseSerialization(charset)
+  def fromJValue(jValue: JValue)(implicit charset: Charset = UTF8Charset): Result[HttpResponse] = {
+    fromJSON(jValue)(getResponseSerialization.reader)
   }
 
   def fromJson(json: String): Result[HttpResponse] = validating({
