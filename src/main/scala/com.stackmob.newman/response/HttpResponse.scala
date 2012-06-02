@@ -14,7 +14,7 @@ import com.stackmob.common.validation._
 import org.apache.http.HttpHeaders
 import com.stackmob.newman.response.HttpResponseCode.HttpResponseCodeEqual
 import com.stackmob.newman.serialization.response.HttpResponseSerialization
-import com.stackmob.newman.serialization.common.{RawBodySerialization, DefaultBodySerialization}
+import com.stackmob.newman.serialization.common.DefaultBodySerialization
 
 /**
  * Created by IntelliJ IDEA.
