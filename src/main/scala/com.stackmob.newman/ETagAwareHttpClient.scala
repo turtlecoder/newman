@@ -3,10 +3,11 @@ package com.stackmob.newman
 import com.stackmob.newman.request._
 import scalaz._
 import Scalaz._
+import scalaz.effects._
+import scalaz.concurrent._
 import com.stackmob.newman.caching.HttpResponseCacher
 import request.HttpRequest._
 import response.HttpResponse
-import scalaz.effects.IO
 import org.apache.http.HttpHeaders
 import java.net.URL
 import com.stackmob.newman.request.HttpRequestWithBody.RawBody
@@ -72,35 +73,36 @@ object ETagAwareHttpClient {
       nel(HttpHeaders.IF_NONE_MATCH -> eTag, headerList.list.filterNot(_._1 === HttpHeaders.IF_NONE_MATCH))
     } orElse { Headers(HttpHeaders.IF_NONE_MATCH -> eTag) }
 
-    override def prepare: IO[HttpResponse] = cacheResult.flatMap { cachedResponseOpt: Option[HttpResponse] =>
-      cachedResponseOpt some { cachedResponse: HttpResponse =>
-        cachedResponse.etag some { eTag: String =>
-          val newHeaderList = addIfNoneMatch(this.headers, eTag)
-          doHttpRequest(newHeaderList).flatMap { response: HttpResponse =>
+    private def cachedAndETagPresent(cached: HttpResponse, eTag: String): IO[Promise[HttpResponse]] = {
+      val newHeaderList = addIfNoneMatch(this.headers, eTag)
+      doHttpRequest(newHeaderList).flatMap { response: HttpResponse =>
+        if(response.notModified) {
           //not modified returned - so return cached response
-            if(response.notModified) {
-              cachedResponse.pure[IO]
-            }
-            //not modified was not returned, so cache new response and return it
-            else {
-              for {
-                _ <- cache.set(this, response)
-              } yield response
-            }
-          }
+          cached.pure[Promise].pure[IO]
+        } else {
+          //not modified was not returned, so cache new response and return it
+          cache.set(this, response).map(_ => response.pure[Promise])
+        }
+      }
+    }
+
+    private def cachedAndETagNotPresent: IO[Promise[HttpResponse]] = notCached
+
+    private def notCached: IO[Promise[HttpResponse]] = {
+      doHttpRequest(headers).flatMap { response: HttpResponse =>
+        cache.set(this, response) >| response.pure[Promise]
+      }
+    }
+
+    override def prepareAsync: IO[Promise[HttpResponse]] = cacheResult.flatMap { cachedResponseOpt: Option[HttpResponse] =>
+      cachedResponseOpt some { cachedResponse: HttpResponse =>
+        cachedResponse.eTag some { eTag: String =>
+          cachedAndETagPresent(cachedResponse, eTag)
         } none {
-          //no etag was present so get the new response, cache it, and return it
-          for {
-            resp <- doHttpRequest(headers)
-            _ <- cache.set(this, resp)
-          } yield resp
+          cachedAndETagNotPresent
         }
       } none {
-        //no cached response was present, so get the new response, cache it, and return it
-        for {
-          resp <- doHttpRequest(headers)
-          _ <- cache.set(this, resp)
-        } yield resp
+        notCached
       }
     }
   }
