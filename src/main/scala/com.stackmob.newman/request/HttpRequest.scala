@@ -44,11 +44,8 @@ trait HttpRequest {
    * prepares an IO that represents a promise that executes the HTTP request and returns the response
    * @return an IO representing the HTTP request that executes in a promise and returns the resulting HttpResponse
    */
-  def prepareAsync: IO[Promise[HttpResponse]] = {
-    //there is a way better way to do this, but it requires a larger refactor to make this
-    //method the abstract one, and prepare be defined as prepareAsync.map(_.get)
-    io(promise(executeUnsafe))
-  }
+  //this needs to be abstract - it is the "root" of the prepare* and execute*Unsafe functions
+  def prepareAsync: IO[Promise[HttpResponse]]
 
   /**
    * alias for prepare.unsafePerformIO. executes the HTTP request immediately in the calling thread
@@ -60,7 +57,7 @@ trait HttpRequest {
    * alias for prepareAsync.unsafePerformIO. executes the HTTP request in a Promise
    * @return a promise representing the HttpResponse that was returned from this HTTP request
    */
-  def executeAsyncUnsafe: Promise[HttpResponse] = promise(executeUnsafe)
+  def executeAsyncUnsafe: Promise[HttpResponse] = prepareAsync.unsafePerformIO
 
   def toJValue(implicit client: HttpClient): JValue = {
     import net.liftweb.json.scalaz.JsonScalaz.toJSON

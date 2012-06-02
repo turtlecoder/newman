@@ -9,6 +9,7 @@ import response.{HttpResponseCode, HttpResponse}
 import scalaz._
 import Scalaz._
 import scalaz.effects._
+import scalaz.concurrent._
 
 /**
  * Created by IntelliJ IDEA.
@@ -61,7 +62,7 @@ object DummyHttpClient {
   val CannedResponse = HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
   trait DummyExecutor extends HttpRequest { this: HttpRequest =>
     def responseToReturn: () => HttpResponse
-    override def prepare = io(responseToReturn())
+    override def prepareAsync = responseToReturn().pure[Promise].pure[IO]
   }
 
   case class DummyGetRequest(override val url: URL,

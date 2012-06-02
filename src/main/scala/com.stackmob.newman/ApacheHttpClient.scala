@@ -1,13 +1,14 @@
 package com.stackmob.newman
 
+import scalaz._
+import Scalaz._
+import scalaz.effects._
+import scalaz.concurrent._
 import org.apache.http.params.HttpConnectionParams
 import response.HttpResponseCode
-import scalaz.effects._
 import org.apache.http.util.EntityUtils
 import java.net.URL
 import org.apache.http.client.methods._
-import scalaz._
-import Scalaz._
 import org.apache.http.entity.{ByteArrayEntity, BufferedHttpEntity}
 import org.apache.http.HttpHeaders._
 import com.stackmob.newman.request._
@@ -29,8 +30,8 @@ import com.stackmob.common.util.casts._
  */
 
 class ApacheHttpClient extends HttpClient {
-  val connectionTimeout = 5000
-  val socketTimeout = 30000
+  private val connectionTimeout = 5000
+  private val socketTimeout = 30000
 
   private def getHttpClient: AbstractHttpClient = {
     val client = new DefaultHttpClient
@@ -40,22 +41,25 @@ class ApacheHttpClient extends HttpClient {
     client
   }
 
-  protected def executeRequest(httpMessage: HttpRequestBase, url: URL, headers: Headers, body: Option[RawBody] = none): IO[HttpResponse] = {
-    httpMessage.setURI(url.toURI)
-    headers.foreach { list: NonEmptyList[(String, String)] =>
-      list.foreach {tup: (String, String) =>
-        if(!tup._1.equalsIgnoreCase(CONTENT_LENGTH)) {
-          httpMessage.addHeader(tup._1, tup._2)
+  protected def executeRequest(httpMessage: HttpRequestBase,
+                               url: URL,
+                               headers: Headers,
+                               body: Option[RawBody] = none): IO[Promise[HttpResponse]] = io {
+    promise {
+      httpMessage.setURI(url.toURI)
+      headers.foreach { list: NonEmptyList[(String, String)] =>
+        list.foreach {tup: (String, String) =>
+          if(!tup._1.equalsIgnoreCase(CONTENT_LENGTH)) {
+            httpMessage.addHeader(tup._1, tup._2)
+          }
         }
       }
-    }
-    //if there's both a body and httpMessage is an entity enclosing request, then set the body
-    (body <|*|> httpMessage.cast[HttpEntityEnclosingRequestBase]).foreach { tup: (RawBody, HttpEntityEnclosingRequestBase) =>
-      val (body,req) = tup
-      req.setEntity(new ByteArrayEntity(body))
-    }
+      //if there's both a body and httpMessage is an entity enclosing request, then set the body
+      (body <|*|> httpMessage.cast[HttpEntityEnclosingRequestBase]).foreach { tup: (RawBody, HttpEntityEnclosingRequestBase) =>
+        val (body,req) = tup
+        req.setEntity(new ByteArrayEntity(body))
+      }
 
-    io {
       val client = getHttpClient
       try {
         val apacheResponse = client.execute(httpMessage)
@@ -74,32 +78,32 @@ class ApacheHttpClient extends HttpClient {
   override def get(u: URL, h: Headers) = new GetRequest {
     override val headers = h
     override val url = u
-    override def prepare = executeRequest(new HttpGet, url, headers)
+    override def prepareAsync = executeRequest(new HttpGet, url, headers)
   }
 
   override def post(u: URL, h: Headers, b: RawBody) = new PostRequest {
     override val url = u
     override val headers = h
     override val body = b
-    override def prepare = executeRequest(new HttpPost, url, headers, body.some)
+    override def prepareAsync = executeRequest(new HttpPost, url, headers, body.some)
   }
 
   override def put(u: URL, h: Headers, b: RawBody) = new PutRequest {
     override val url = u
     override val headers = h
     override val body = b
-    override def prepare = executeRequest(new HttpPut, url, headers, body.some)
+    override def prepareAsync = executeRequest(new HttpPut, url, headers, body.some)
   }
 
   override def delete(u: URL, h: Headers) = new DeleteRequest {
     override val url = u
     override val headers = h
-    override def prepare = executeRequest(new HttpDelete, url, headers)
+    override def prepareAsync = executeRequest(new HttpDelete, url, headers)
   }
 
   override def head(u: URL, h: Headers) = new HeadRequest {
     override val url = u
     override val headers = h
-    override def prepare: IO[HttpResponse] = executeRequest(new HttpHead, url, headers)
+    override def prepareAsync = executeRequest(new HttpHead, url, headers)
   }
 }
