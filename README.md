@@ -6,13 +6,13 @@ This is StackMob's HTTP client. It supports the following basic features:
 
 To add it to your project, use this for Maven:
 
-	```xml
-	<dependency>
-		<groupId>com.stackmob</groupId>
-		<artifactId>newman_2.9.1</artifactId>
-		<version>0.1.0-SNAPSHOT</version>
-	</dependency>
-	```
+```xml
+<dependency>
+  <groupId>com.stackmob</groupId>
+  <artifactId>newman_2.9.1</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
 
 … or the equivalent for sbt
 
