@@ -77,7 +77,7 @@ trait HttpRequest {
     toJSON(this)(requestSerialization.writer)
   }
 
-  def toJson(prettyPrint: Boolean = false)(implicit client: HttpClient) = if(prettyPrint) {
+  def toJson(prettyPrint: Boolean = false)(implicit client: HttpClient): String = if(prettyPrint) {
     pretty(render(toJValue))
   } else {
     compact(render(toJValue))
@@ -140,9 +140,9 @@ object HttpRequest {
     fromJSON(jValue)(requestSerialization.reader)
   }
 
-  def fromJson(json: String)(implicit client: HttpClient) = validating({
+  def fromJson(json: String)(implicit client: HttpClient): Result[HttpRequest] = (validating {
     parse(json)
-  }).mapFailure({ t: Throwable =>
+  } mapFailure { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
   }).liftFailNel.flatMap(fromJValue(_))
 }

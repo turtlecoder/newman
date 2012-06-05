@@ -56,7 +56,7 @@ Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously
 # Serializing
 Newman comes with built in support for serializing `HttpRequest`s and `HttpRespons`es to Json.
 
-To serialize either, simply call the `toJson(prettyPrint: Boolean = false)` method on the `HttpRequest` or `HttpResponse`. And to deserialize, call `HttpRequest.fromJson(json: String)` or `HttpResponse.fromJson(json: String)` to deserialize the `HttpRequest` or `HttpResponse`, respectively.
+To serialize either, simply call the `toJson(prettyPrint: Boolean = false): String` method on the `HttpRequest` or `HttpResponse`. And to deserialize, call `HttpRequest.fromJson(json: String): Result[HttpRequest]` or `HttpResponse.fromJson(json: String): Result[HttpResponse]` to deserialize the `HttpRequest` or `HttpResponse`, respectively.
 
 # ETag Support
 Newman comes with an implementation of `HttpClient` called `ETagAwareHttpClient`. This implementation requires an underlying "raw" `HttpClient` to execute requests to a server, but it also requires an implementation of `HttpResponseCacher`.
