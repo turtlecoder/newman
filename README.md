@@ -6,28 +6,32 @@ This is StackMob's HTTP client. It supports the following basic features:
 
 To add it to your project, use this for Maven:
 
-	```xml
-	<dependency>
-		<groupId>com.stackmob</groupId>
-		<artifactId>newman_2.9.1</artifactId>
-		<version>0.1.0-SNAPSHOT</version>
-	</dependency>
-	```
+```xml
+<dependency>
+  <groupId>com.stackmob</groupId>
+  <artifactId>newman_2.9.1</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
 
 … or the equivalent for sbt
 
+```scala
+libraryDependencies += "com.stackmob" %% "newman" % "0.1.0-SNAPSHOT"
+```
+
 # Basic Usage
 	
-	```scala
-	import com.stackmob.newman.DSL._
-	import java.net.URL
+```scala
+import com.stackmob.newman.DSL._
+import java.net.URL
 	
-	//execute a GET request
-	val url = new URL("http://google.com")
-	val response = GET(url).executeUnsafe
-	println("Response returned from %s with code %d, body %s".format(url.toString,response.code,response.bodyString)
-	)
-	```
+//execute a GET request
+val url = new URL("http://google.com")
+val response = GET(url).executeUnsafe
+println("Response returned from %s with code %d, body %s".format(url.toString,response.code,response.bodyString))
+```
+
 #The DSL
 Newman comes with a DSL which is inspired by [Dispatch](http://dispatch.databinder.net/Dispatch.html), but aims to be much simpler to understand and use. This DSL is the recommended way to build requests, and the above example in "Basic Usage" uses the DSL to construct a GET request.
 
@@ -62,21 +66,22 @@ It uses this `HttpResponseCacher` to check the cache for a response correspondin
 ## Usage With the DSL
 Using `ETagAwareHttpClient` is very similar to the basic usage above. Following demonstrates how to use the client with a (built-in) in-memory cache implementation.
 
-	```
-	import com.stackmob.newman.ETagAwareHttpClient
-	import com.stacmob.newman.caching.InMemoryHttpResponseCacher
-	import com.stackmob.newman.DSL._
-	import java.net.URL
+```scala
+import com.stackmob.newman.ETagAwareHttpClient
+import com.stacmob.newman.caching.InMemoryHttpResponseCacher
+import com.stackmob.newman.DSL._
+import java.net.URL
 	
-	//change this implementation to your own if you want to use Memcached, Redis, etc…
-	val cache = new InMemoryHttpResponseCacher
-	//client is an ApacheHttpClient and comes from the DSL package,
-	//and eTagClient will be used in the DSL to construct & execute requests below
-	implicit val eTagClient = new ETagAwareHttpClient(client, cache)
+//change this implementation to your own if you want to use Memcached, Redis, etc…
+val cache = new InMemoryHttpResponseCacher
+//client is an ApacheHttpClient and comes from the DSL package,
+//and eTagClient will be used in the DSL to construct & execute requests below
+implicit val eTagClient = new ETagAwareHttpClient(client, cache)
 	
-	val url = new URL("http://stackmob.com")
-	//since the cacher is empty, this will issue a request to stackmob.com without an If-None-Match header
-	val res1 = GET(url) executeUnsafe
-	//assuming res1 contained an ETag and stackmob.com fully supports ETag headers,
-	//stackmob.com will return a 304 response code in this request and res2 will come from the cache
-	val res2 = GET(url) executeUnsafe
+val url = new URL("http://stackmob.com")
+//since the cacher is empty, this will issue a request to stackmob.com without an If-None-Match header
+val res1 = GET(url) executeUnsafe
+//assuming res1 contained an ETag and stackmob.com fully supports ETag headers,
+//stackmob.com will return a 304 response code in this request and res2 will come from the cache
+val res2 = GET(url) executeUnsafe
+```
