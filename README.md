@@ -16,6 +16,10 @@ To add it to your project, use this for Maven:
 
 … or the equivalent for sbt
 
+```scala
+libraryDependencies += "com.stackmob" %% "newman" % "0.1.0-SNAPSHOT"
+```
+
 # Basic Usage
 	
 ```scala
