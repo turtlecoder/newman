@@ -86,10 +86,10 @@ object DSL {
     extends Builder {
 
     override type T = HeaderAndBodyBuilder
-    def addBody(b: RawBody) = HeaderAndBodyBuilder(fn, headers, BodyPrependLens.set(body, b))
-    def addBody(s: String)(implicit charset: Charset = UTF8Charset) = addBody(s.getBytes(charset))
-    def setBody(b: RawBody) = HeaderAndBodyBuilder(fn, headers, b)
-    def setBody(s: String)(implicit charset: Charset = UTF8Charset) = setBody(s.getBytes[charset])
+    def addBody(b: RawBody): HeaderAndBodyBuilder = HeaderAndBodyBuilder(fn, headers, BodyPrependLens.set(body, b))
+    def addBodyString(s: String)(implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = addBody(s.getBytes(charset))
+    def setBody(b: RawBody): HeaderAndBodyBuilder = HeaderAndBodyBuilder(fn, headers, b)
+    def setBodyString(s: String)(implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = setBody(s.getBytes(charset))
 
     import net.liftweb.json.scalaz.JsonScalaz._
     def setBody[A <: AnyRef](value: A)(implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A]) = HeaderAndBodyBuilder(fn, headers, compact(render(toJSON(value))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
