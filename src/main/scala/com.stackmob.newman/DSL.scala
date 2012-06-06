@@ -3,11 +3,13 @@ package com.stackmob.newman
 import request._
 import request.HttpRequest._
 import request.HttpRequestWithBody._
+import com.stackmob.newman.Constants._
 import java.net.URL
 import scalaz._
 import Scalaz._
 import net.liftweb.json._
 import serialization.common.DefaultBodySerialization
+import java.nio.charset.Charset
 
 /**
  * Created by IntelliJ IDEA.
@@ -85,7 +87,9 @@ object DSL {
 
     override type T = HeaderAndBodyBuilder
     def addBody(b: RawBody) = HeaderAndBodyBuilder(fn, headers, BodyPrependLens.set(body, b))
+    def addBody(s: String)(implicit charset: Charset = UTF8Charset) = addBody(s.getBytes(charset))
     def setBody(b: RawBody) = HeaderAndBodyBuilder(fn, headers, b)
+    def setBody(s: String)(implicit charset: Charset = UTF8Charset) = setBody(s.getBytes[charset])
 
     import net.liftweb.json.scalaz.JsonScalaz._
     def setBody[A <: AnyRef](value: A)(implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A]) = HeaderAndBodyBuilder(fn, headers, compact(render(toJSON(value))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
