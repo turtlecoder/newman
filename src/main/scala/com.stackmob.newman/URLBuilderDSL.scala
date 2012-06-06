@@ -13,6 +13,11 @@ import java.net.URL
  */
 
 trait URLBuilderDSL {
+  val DefaultPort = 80
+  implicit def stringToQueryStringEltBuilder(s: String) = QueryStringEltBuilder(s)
+  implicit def protocolToHostBuilder(protocol: Protocol) = HostBuilder(protocol)
+  implicit def urlCapableToURL(c: URLCapable) = c.toURL
+
   sealed trait Protocol {
     def name: String
   }
@@ -24,10 +29,9 @@ trait URLBuilderDSL {
   }
 
   case class HostBuilder(protocol: Protocol) {
-    def |://|(host: String): PortBuilder = PortBuilder(protocol, host)
+    def |:/|(host: String): PortBuilder = PortBuilder(protocol, host)
   }
 
-  val DefaultPort = 80
   case class PortBuilder(protocol: Protocol,
                          host: String) extends URLCapable {
     def |:|(port: Int) = PathBuilder(protocol, host, port)
@@ -82,8 +86,4 @@ trait URLBuilderDSL {
       new URL("%s://%s:%d/%s%s".format(protocol.name, host, port, pathElts.mkString("/"), queryString))
     }
   }
-
-  implicit def stringToQueryStringEltBuilder(s: String) = QueryStringEltBuilder(s)
-  implicit def protocolToHostBuilder(protocol: Protocol) = HostBuilder(protocol)
-  implicit def urlCapableToURL(c: URLCapable) = c.toURL
 }
