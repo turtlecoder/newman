@@ -7,9 +7,6 @@ import java.net.URL
 import com.stackmob.newman.request.HttpRequest._
 import scalaz._
 import Scalaz._
-import net.liftweb.json._
-import org.specs2.matcher.Matcher
-import org.specs2.matcher.MatchersImplicits
 
 
 /**
@@ -63,7 +60,7 @@ class DSLSpecs extends Specification { def is =
     "correctly set a body"                                                                                              ! HeaderAndBodyTransformerTest().correctlySetsBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
                                                                                                                         end
-  protected val url = new URL("http://stackmob.com")
+  protected val url: URL = Http |:/| "stackmob.com"
 
   trait Context extends BaseContext {
     implicit protected val client = new DummyHttpClient
