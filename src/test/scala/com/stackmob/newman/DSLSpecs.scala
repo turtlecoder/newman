@@ -61,6 +61,7 @@ class DSLSpecs extends Specification { def is =
     "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
     "correctly prepend a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyPrependsBody ^
     "correctly set a body"                                                                                              ! HeaderAndBodyTransformerTest().correctlySetsBody ^
+    "correctly set a body when passed a string"                                                                         ! HeaderAndBodyTransformerTest().correctlySetsStringBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
                                                                                                                         end
   protected val url = new URL("http://stackmob.com")
@@ -187,6 +188,12 @@ class DSLSpecs extends Specification { def is =
       val b1 = "set".getBytes
       val resultantBody: Array[Byte] = transformer.setBody(b1).body
       resultantBody must beEqualTo(b1)
+    }
+
+    def correctlySetsStringBody: SpecsResult = {
+      val b1 = "set"
+      val resultantBody = transformer.setBody(b1).body
+      resultantBody must beEqualTo(b1.getBytes(Constants.UTF8Charset))
     }
 
     def correctlyReplacesBody: SpecsResult = {

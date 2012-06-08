@@ -10,6 +10,7 @@ import Scalaz._
 import net.liftweb.json._
 import serialization.common.DefaultBodySerialization
 import java.nio.charset.Charset
+import com.stackmob.common.util.casts._
 
 /**
  * Created by IntelliJ IDEA.
@@ -87,12 +88,18 @@ object DSL {
 
     override type T = HeaderAndBodyBuilder
     def addBody(b: RawBody): HeaderAndBodyBuilder = HeaderAndBodyBuilder(fn, headers, BodyPrependLens.set(body, b))
-    def addBodyString(s: String)(implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = addBody(s.getBytes(charset))
+    def addBody(s: String)(implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = addBody(s.getBytes(charset))
     def setBody(b: RawBody): HeaderAndBodyBuilder = HeaderAndBodyBuilder(fn, headers, b)
     def setBodyString(s: String)(implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = setBody(s.getBytes(charset))
 
     import net.liftweb.json.scalaz.JsonScalaz._
-    def setBody[A <: AnyRef](value: A)(implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A]) = HeaderAndBodyBuilder(fn, headers, compact(render(toJSON(value))).getBytes(com.stackmob.newman.Constants.UTF8Charset))
+    def setBody[A <: AnyRef](value: A)
+                            (implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A],
+                             charset: Charset = UTF8Charset): HeaderAndBodyBuilder = {
+      //if it's a string, don't JSON encode it
+      val bodyString = value.cast[String].map(s => s) | compact(render(toJSON(value)))
+      setBodyString(bodyString)
+    }
 
     override def addHeaders(toAdd: Headers) = HeaderAndBodyBuilder(fn, HeadersPrependLens.set(headers, toAdd), body)
     override def addHeaders(toAdd: HeaderList) = addHeaders(Headers(toAdd))

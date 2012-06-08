@@ -28,7 +28,6 @@ object DefaultBodySerialization {
 
   def getWriter[A <: AnyRef]: JSONW[A] = new JSONW[A] {
     override def write(obj: A) = {
-
       parse(Serialization.write(obj)(Serialization.formats(NoTypeHints)))
     }
   }
