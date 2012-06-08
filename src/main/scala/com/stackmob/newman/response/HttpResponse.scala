@@ -39,7 +39,7 @@ case class HttpResponse(code: HttpResponseCode,
 
   def toJValue(implicit charset: Charset = UTF8Charset): JValue = toJSON(this)(getResponseSerialization.writer)
 
-  def toJson(prettyPrint: Boolean = false) = if(prettyPrint) {
+  def toJson(prettyPrint: Boolean = false): String = if(prettyPrint) {
     pretty(render(toJValue))
   } else {
     compact(render(toJValue))
@@ -93,9 +93,9 @@ object HttpResponse {
     fromJSON(jValue)(getResponseSerialization.reader)
   }
 
-  def fromJson(json: String): Result[HttpResponse] = validating({
+  def fromJson(json: String): Result[HttpResponse] = (validating {
     parse(json)
-  }).mapFailure({ t: Throwable =>
+  } mapFailure { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
   }).liftFailNel.flatMap(fromJValue(_))
 
