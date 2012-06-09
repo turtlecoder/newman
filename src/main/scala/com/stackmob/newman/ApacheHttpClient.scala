@@ -85,14 +85,14 @@ class ApacheHttpClient extends HttpClient {
     override val url = u
     override val headers = h
     override val body = b
-    override def prepareAsync = executeRequest(new HttpPost, url, headers, body.some)
+    override def prepareAsync = executeRequest(new HttpPost, url, headers, Option(body))
   }
 
   override def put(u: URL, h: Headers, b: RawBody) = new PutRequest {
     override val url = u
     override val headers = h
     override val body = b
-    override def prepareAsync = executeRequest(new HttpPut, url, headers, body.some)
+    override def prepareAsync = executeRequest(new HttpPut, url, headers, Option(body))
   }
 
   override def delete(u: URL, h: Headers) = new DeleteRequest {
