@@ -7,9 +7,6 @@ import java.net.URL
 import com.stackmob.newman.request.HttpRequest._
 import scalaz._
 import Scalaz._
-import net.liftweb.json._
-import org.specs2.matcher.Matcher
-import org.specs2.matcher.MatchersImplicits
 
 
 /**
@@ -64,7 +61,7 @@ class DSLSpecs extends Specification { def is =
     "correctly set a body when passed a string"                                                                         ! HeaderAndBodyTransformerTest().correctlySetsStringBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
                                                                                                                         end
-  protected val url = new URL("http://stackmob.com")
+  protected val u: URL = url(http, "stackmob.com")
 
   trait Context extends BaseContext {
     implicit protected val client = new DummyHttpClient
@@ -75,7 +72,7 @@ class DSLSpecs extends Specification { def is =
   }
 
   case class GetTest() extends Context {
-    private val t = GET(url)
+    private val t = GET(u)
     def returnsProperFunction: SpecsResult = {
       (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
     }
@@ -87,7 +84,7 @@ class DSLSpecs extends Specification { def is =
   }
 
   case class PostTest() extends Context {
-    val t = POST(url)
+    val t = POST(u)
     def returnsProperFunction: SpecsResult = {
       (t must beAnInstanceOf[HeaderAndBodyBuilder]) and
       (ensureEmptyHeaders(t)) and
@@ -101,10 +98,10 @@ class DSLSpecs extends Specification { def is =
   }
 
   case class PutTest() extends Context {
-    private val t = PUT(url)
+    private val t = PUT(u)
     def returnsProperFunction: SpecsResult = {
       (t must beAnInstanceOf[HeaderAndBodyBuilder]) and
-      (ensureEmptyHeaders(PUT(url))) and
+      (ensureEmptyHeaders(PUT(u))) and
       (t.body.length must beEqualTo(0))
     }
 
@@ -115,7 +112,7 @@ class DSLSpecs extends Specification { def is =
   }
 
   case class DeleteTest() extends Context {
-    private val t = DELETE(url)
+    private val t = DELETE(u)
     def returnsProperFunction: SpecsResult = {
 
       (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
@@ -128,7 +125,7 @@ class DSLSpecs extends Specification { def is =
   }
 
   case class HeadTest() extends Context {
-    private val t = HEAD(url)
+    private val t = HEAD(u)
     def returnsProperFunction: SpecsResult = {
       (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
     }
@@ -170,11 +167,11 @@ class DSLSpecs extends Specification { def is =
   }
 
   case class HeaderTransformerTest() extends HeaderTransformerTestBase {
-    override protected val transformer = GET(url)
+    override protected val transformer = GET(u)
   }
 
   case class HeaderAndBodyTransformerTest() extends HeaderTransformerTestBase {
-    override protected val transformer = POST(url)
+    override protected val transformer = POST(u)
 
     def correctlyPrependsBody: SpecsResult = {
       val b1 = "abc".getBytes

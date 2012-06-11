@@ -22,7 +22,7 @@ import com.stackmob.common.util.casts._
  * Time: 3:18 PM
  */
 
-object DSL {
+object DSL extends URLBuilderDSL {
   implicit val client = new ApacheHttpClient
 
   private val HeadersPrependLens = Lens[Headers, Headers](
