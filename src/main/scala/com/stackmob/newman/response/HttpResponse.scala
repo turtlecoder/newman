@@ -1,7 +1,7 @@
 package com.stackmob.newman.response
 
 import scalaz._
-import effects.IO
+import effects._
 import Scalaz._
 import com.stackmob.newman.request._
 import HttpRequest._
@@ -64,7 +64,9 @@ case class HttpResponse(code: HttpResponseCode,
           (UnexpectedResponseCode(expected, resp.code): Throwable).fail[Unit].pure[IO]
         }
       }
-      body <- validationT[IO, Throwable, T](decoder(resp).pure[IO])
+      body <- validationT[IO, Throwable, T] {
+        io(decoder(resp)).except(t => t.fail[T].pure[IO])
+      }
     } yield body
     valT.run.unsafePerformIO
   }

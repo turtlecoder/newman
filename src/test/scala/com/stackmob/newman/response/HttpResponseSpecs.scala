@@ -28,6 +28,7 @@ class HttpResponseSpecs extends Specification { def is =
     "correctly return an UnexpectedResponseCode if the returned code was not expected"                                  ! UnexpectedResponseCode().correctlyFails ^
     "correctly return the exception returned from the decoder"                                                          ! FailureDecodingBody().correctlyFails ^
     "correectly return the value returned from the decoder"                                                             ! SuccessDecodingBody().succeeds ^
+    "correctly return a failure if the decoder threw"                                                                   ! ThrowsDecodingBody().fails ^
                                                                                                                         end
 
   trait Context extends BaseContext
@@ -69,5 +70,15 @@ class HttpResponseSpecs extends Specification { def is =
     def succeeds: SpecsResult = resp.bodyAsIfResponseCode(HttpResponseCode.Ok, r => decodedBody.success).map { s: String =>
       (s must beEqualTo(decodedBody)): SpecsResult
     } ||| (logAndFail(_))
+  }
+
+  case class ThrowsDecodingBody() extends Context {
+    private val ex = new Exception("test exception")
+    private val resp = HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
+    def fails: SpecsResult = resp.bodyAsIfResponseCode(resp.code, (_ => throw ex)).map { n: Nothing =>
+      SpecsFailure("method succeeded when it should not have")
+    } ||| { t: Throwable =>
+      t must beEqualTo(ex)
+    }
   }
 }
