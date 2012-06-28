@@ -2,7 +2,7 @@ name := "newman"
 
 organization := "com.stackmob"
 
-version := "0.2.0-SNAPSHOT"
+version := "0.3.0-SNAPSHOT"
 
 scalaVersion := "2.9.1"
 

@@ -34,6 +34,8 @@ class ApacheHttpClientSpecs extends Specification { def is =
     "Correctly do async HEAD requests"                                                                                  ! Head().succeedsAsync ^
                                                                                                                         end
   trait Context extends BaseContext {
+    implicit protected val httpClient = new ApacheHttpClient
+
     protected def execute(t: Builder,
                           expectedCode: HttpResponseCode = HttpResponseCode.Ok)
                          (fn: HttpResponse => SpecsResult): SpecsResult = {

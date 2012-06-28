@@ -23,7 +23,6 @@ import com.stackmob.common.util.casts._
  */
 
 object DSL extends URLBuilderDSL {
-  implicit val client = new ApacheHttpClient
 
   private val HeadersPrependLens = Lens[Headers, Headers](
     get = {h: Headers => h },

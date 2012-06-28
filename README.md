@@ -43,7 +43,7 @@ To start using the DSL, simply `import com.stackmob.newman.DSL._`. The methods o
 * `def DELETE(url: URL)(implicit client: HttpClient)`
 * `def HEAD(url: URL)(implicit client: HttpClient)`
 
-Notice that each method takes an implicit `HttpClient`. The `DSL` package defaults this to `ApacheHttpClient`. If you have your own implementation, simply define it as an implicit after `import`ing, or pass one explicitly.
+Notice that each method takes an implicit `HttpClient`, so you must declare your own implicit before you use any of the above listed DSL methods, or pass one explicitly.
 
 Each method listed above returns a Builder, which works in concert with the implicit methods defined in teh `DSL` package to let you build up a request and then execute it.
 
