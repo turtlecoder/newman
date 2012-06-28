@@ -45,7 +45,7 @@ To start using the DSL, simply `import com.stackmob.newman.DSL._`. The methods o
 
 Notice that each method takes an implicit `HttpClient`, so you must declare your own implicit before you use any of the above listed DSL methods, or pass one explicitly.
 
-Each method listed above returns a Builder, which works in concert with the implicit methods defined in teh `DSL` package to let you build up a request and then execute it.
+Each method listed above returns a Builder, which works in concert with the implicit methods defined in the `DSL` package to let you build up a request and then execute it.
 
 # Executing Requests
 Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously want to execute it. There are 2 methods defined on all `HttpRequest`s that execute requests differently:
