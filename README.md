@@ -23,9 +23,11 @@ libraryDependencies += "com.stackmob" %% "newman" % "0.1.0-SNAPSHOT"
 # Basic Usage
 	
 ```scala
-import com.stackmob.newman.DSL._
+import com.stackmob.newman._
+import DSL._
 import java.net.URL
-	
+
+implicit val httpClient = new ApacheHttpClient
 //execute a GET request
 val url = new URL("http://google.com")
 val response = GET(url).executeUnsafe
@@ -67,16 +69,16 @@ It uses this `HttpResponseCacher` to check the cache for a response correspondin
 Using `ETagAwareHttpClient` is very similar to the basic usage above. Following demonstrates how to use the client with a (built-in) in-memory cache implementation.
 
 ```scala
-import com.stackmob.newman.ETagAwareHttpClient
+import com.stackmob.newman.{ETagAwareHttpClient, ApacheHttpClient}
 import com.stacmob.newman.caching.InMemoryHttpResponseCacher
 import com.stackmob.newman.DSL._
 import java.net.URL
 	
 //change this implementation to your own if you want to use Memcached, Redis, etc…
 val cache = new InMemoryHttpResponseCacher
-//client is an ApacheHttpClient and comes from the DSL package,
-//and eTagClient will be used in the DSL to construct & execute requests below
-implicit val eTagClient = new ETagAwareHttpClient(client, cache)
+val rawHttpClient = new ApacheHttpClient
+//eTagClient will be used in the DSL to construct & execute requests below
+implicit val eTagClient = new ETagAwareHttpClient(rawHttpClient, cache)
 	
 val url = new URL("http://stackmob.com")
 //since the cacher is empty, this will issue a request to stackmob.com without an If-None-Match header
