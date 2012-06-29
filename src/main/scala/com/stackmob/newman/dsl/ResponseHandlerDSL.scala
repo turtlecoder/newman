@@ -59,7 +59,7 @@ import net.liftweb.json._
  *    .addHeaders(acceptHeader)
  *    .prepare
  *    .expectJSONBody[(Long,EnvironmentType)] // if called in any other position in the chain the type parameter should not need to be specified
- *    .handleCode(HttpResponseCode.NotFound, (_: HttpResponse) => none.success)
+ *    .handleCode(HttpResponseCode.NotFound, (_: HttpResponse) => ...)
  *
  * }}}
  *
