@@ -131,6 +131,9 @@ object DSL extends URLBuilderDSL {
    * can be added by using handleCode`, which returns a new instance. After all desired handlers have been added calling `sealHandlers`
    * or using the implicit provided in [[com.stackmob.newman.DSL]] will return an `IO[Validation[Throwable,T]`.
    *
+   * For response codes without a "catchall" handler always `scalaz.Failure` with a [[com.stackmob.newman.DSL.UnhandledResponseCode]]
+   * as its value.
+   *
    * To begin using `ResponseHandler` call [[com.stackmob.newman.request.HttpRequest]]'s `prepare` method and then begin changing
    * calls to `handleCode`.
    *
