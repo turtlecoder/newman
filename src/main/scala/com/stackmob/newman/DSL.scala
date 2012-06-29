@@ -138,21 +138,20 @@ object DSL extends URLBuilderDSL {
    *
    * {{{
    *   GET(genURL("cnames", cName))
-   *  .addHeaders(acceptHeader)
-   *  .prepare
-   *  .handleCode(HttpResponseCode.Ok, (resp: HttpResponse) => {
+   *    .addHeaders(acceptHeader)
+   *    .prepare
+   *    .handleCode(HttpResponseCode.Ok, (resp: HttpResponse) => {
    *      val json = parse(resp.bodyString)
-   *       (json \ "app-id", json \ "env") match {
+   *      (json \ "app-id", json \ "env") match {
    *        case (JInt(appID), JString(env)) => (appID.longValue(), env.toEnum[EnvironmentType]).some.success[Throwable]
    *         case _ => (UnexpectedLookupBody(resp.bodyString): Throwable).fail[Option[(Long,EnvironmentType)]]
    *       }
-   *   })
-   *  .handleCode(HttpResponseCode.NotFound, (_: HttpResponse) => none.success)
-   *  .handleCode(HttpResponseCode.InternalServerError, (resp: HttpResponse) => {
-   *    // TODO: make better
-   *    (new Exception("arcee server error: %s" format resp.bodyString)).fail
-   *  })
-   *  .sealHandlers // this can typically be omitted
+   *     })
+   *    .handleCode(HttpResponseCode.NotFound, (_: HttpResponse) => none.success)
+   *    .handleCode(HttpResponseCode.InternalServerError, (resp: HttpResponse) => {
+   *      (new Exception("server error: %s" format resp.bodyString)).fail
+   *    })
+   *    .sealHandlers // this can typically be omitted
    * }}}
    *
    * If the response is expected to be considered a success when it its code is `200 OK`
@@ -165,14 +164,10 @@ object DSL extends URLBuilderDSL {
    * {{{
    *   implicit def jsonrForBody: JSONR[(Long,EnvironmentType) = ...
    *   GET(genURL("cnames", cName))
-   *  .addHeaders(acceptHeader)
-   *  .prepare
-   *  .expectJSONBody[(Long,EnvironmentType)] // if called in any other position in the chain the type parameter should not need to be specified
-   *  .handleCode(HttpResponseCode.NotFound, (_: HttpResponse) => none.success)
-   *  .handleCode(HttpResponseCode.InternalServerError, (resp: HttpResponse) => {
-   *    // TODO: make better
-   *    (new Exception("arcee server error: %s" format resp.bodyString)).fail
-   *  })
+   *    .addHeaders(acceptHeader)
+   *    .prepare
+   *    .expectJSONBody[(Long,EnvironmentType)] // if called in any other position in the chain the type parameter should not need to be specified
+   *    .handleCode(HttpResponseCode.NotFound, (_: HttpResponse) => none.success)
    *
    * }}}
    *
