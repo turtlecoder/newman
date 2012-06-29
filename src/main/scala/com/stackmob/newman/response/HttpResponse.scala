@@ -51,7 +51,13 @@ case class HttpResponse(code: HttpResponseCode,
   }
 
   def bodyAs[T](implicit reader: JSONR[T],
-                charset: Charset = UTF8Charset) = fromJSON[T](parse(bodyString(charset)))
+                charset: Charset = UTF8Charset): Result[T] = validating {
+    parse(bodyString(charset))
+  } mapFailure { t: Throwable =>
+    nel(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
+  } flatMap { jValue: JValue =>
+    fromJSON[T](jValue)
+  }
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode,
                               decoder: HttpResponse => ThrowableValidation[T]): ThrowableValidation[T] = {
