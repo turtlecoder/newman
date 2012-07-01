@@ -1,29 +1,21 @@
 package com.stackmob.newman
+package dsl
 
-import request._
-import request.HttpRequest._
-import request.HttpRequestWithBody._
-import com.stackmob.newman.Constants._
-import java.net.URL
 import scalaz._
 import Scalaz._
-import net.liftweb.json._
-import serialization.common.DefaultBodySerialization
+import request._
+import HttpRequest._
+import HttpRequestWithBody._
+import response._
+import java.net.URL
 import java.nio.charset.Charset
+import com.stackmob.newman.serialization.common.DefaultBodySerialization
+import Constants._
 import com.stackmob.common.util.casts._
+import net.liftweb.json._
 
-/**
- * Created by IntelliJ IDEA.
- *
- * com.stackmob.newman
- *
- * User: aaron
- * Date: 5/10/12
- * Time: 3:18 PM
- */
 
-object DSL extends URLBuilderDSL {
-
+trait RequestBuilderDSL {
   private val HeadersPrependLens = Lens[Headers, Headers](
     get = {h: Headers => h },
     set = { (existing: Headers, toPrepend: Headers) =>
@@ -81,8 +73,8 @@ object DSL extends URLBuilderDSL {
   }
 
   case class HeaderAndBodyBuilder(fn: (Headers, RawBody) => HttpRequestWithBody,
-                                      override val headers: Headers = none,
-                                      body: RawBody = RawBody.empty)
+                                  override val headers: Headers = none,
+                                  body: RawBody = RawBody.empty)
     extends Builder {
 
     override type T = HeaderAndBodyBuilder

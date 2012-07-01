@@ -1,4 +1,5 @@
 package com.stackmob.newman
+package dsl
 
 import java.net.URL
 
