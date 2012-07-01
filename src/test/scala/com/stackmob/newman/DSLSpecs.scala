@@ -1,6 +1,6 @@
 package com.stackmob.newman
 
-import com.stackmob.newman.DSL._
+import com.stackmob.newman.dsl._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL

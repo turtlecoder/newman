@@ -2,7 +2,7 @@ package com.stackmob.newman
 
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
-import DSL._
+import dsl._
 import java.net.URL
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 

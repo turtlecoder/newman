@@ -5,7 +5,7 @@ import org.specs2.execute.{Result => SpecsResult}
 import scalaz._
 import Scalaz._
 import net.liftweb.json._
-import com.stackmob.newman.DSL._
+import com.stackmob.newman.dsl._
 import java.net.URL
 import com.stackmob.newman.request.HttpRequest
 import com.stackmob.newman.request.HttpRequest.Headers

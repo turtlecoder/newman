@@ -1,5 +1,6 @@
 package com.stackmob.newman
 
+import dsl.URLBuilderDSL
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL
