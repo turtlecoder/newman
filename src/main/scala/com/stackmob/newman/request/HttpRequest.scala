@@ -47,17 +47,6 @@ trait HttpRequest {
   //this needs to be abstract - it is the "root" of the prepare* and execute*Unsafe functions
   def prepareAsync: IO[Promise[HttpResponse]]
 
-  def prepareAndDecodeIfResponseCode[T](expected: HttpResponseCode,
-                                        decoder: HttpResponse => ThrowableValidation[T]): IO[ThrowableValidation[T]] = {
-    prepare.map(_.bodyAsIfResponseCode[T](expected, decoder))
-  }
-
-  def prepareAndDecodeIfResponseCode[T](expected: HttpResponseCode)
-                                       (implicit reader: JSONR[T],
-                                        charset: Charset = UTF8Charset): IO[ThrowableValidation[T]] = {
-    prepare.map(_.bodyAsIfResponseCode[T](expected))
-  }
-
   /**
    * alias for prepare.unsafePerformIO. executes the HTTP request immediately in the calling thread
    * @return the HttpResponse that was returned from this HTTP request
