@@ -120,6 +120,10 @@ trait ResponseHandlerDSL {
                          (implicit reader: JSONR[T], charset: Charset = UTF8Charset) = {
       handleCode(code, (resp: HttpResponse) => resp.bodyAs[T].mapFailure(JSONParsingError(_): Throwable))
     }
+
+    def expectNoContent[T](successValue: T) = {
+      handleCode[T](HttpResponseCode.NoContent, (_: HttpResponse) => successValue.success)
+    }
   }
 
   case class UnhandledResponseCode(code: HttpResponseCode)
