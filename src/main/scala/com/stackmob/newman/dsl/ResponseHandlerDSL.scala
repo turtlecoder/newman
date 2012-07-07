@@ -86,7 +86,7 @@ trait ResponseHandlerDSL {
      * a JSONR for the type of this ResponseHandler. A Response can only return
      * one successful type per request so multiple calls to this method should not be
      * made, however, if there are there is no effect on the handling of the response.
-     * @return a new [[com.stackmob.newman.DSL.ResponseHandler]]
+     * @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
     def expectJSONBody(implicit reader: JSONR[T],
                        charset: Charset = UTF8Charset): ResponseHandler[T] = {
@@ -106,9 +106,9 @@ trait ResponseHandlerDSL {
     }
 
     def sealHandlers: IO[ThrowableValidation[T]] = {
-      respIO.map{ response =>
+      respIO.map { response =>
         handlers.find(_._1 === response.code).map(_._2 apply response) | UnhandledResponseCode(response.code).fail[T]
-      }
+      }.except(t => t.fail[T].pure[IO])
     }
   }
 
