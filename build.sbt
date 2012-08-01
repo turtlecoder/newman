@@ -45,3 +45,6 @@ libraryDependencies ++= {
 }
 
 logBuffered := false
+
+net.virtualvoid.sbt.graph.Plugin.graphSettings
+
