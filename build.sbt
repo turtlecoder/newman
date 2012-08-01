@@ -30,7 +30,7 @@ libraryDependencies ++= {
     val mockitoVersion = "1.9.0"
     val specs2ScalazCoreVersion = "6.0.1"
     val scalazVersion = "6.0.3"
-    val stackmobCommonVersion = "0.3.0-SNAPSHOT"
+    val stackmobCommonVersion = "0.4.0-SNAPSHOT"
     Seq(
         "org.scalaz" %% "scalaz-core" % scalazVersion withSources(),
         "com.stackmob" %% "stackmob-common" % stackmobCommonVersion  withSources() changing(),
