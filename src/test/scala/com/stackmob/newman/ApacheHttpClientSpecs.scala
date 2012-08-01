@@ -52,7 +52,7 @@ class ApacheHttpClientSpecs extends Specification { def is =
       }.get
     }
 
-    protected lazy val url = new URL("http://stackmob.com")
+    protected lazy val url = new URL("https://stackmob.com")
 
     implicit private val encoding = Constants.UTF8Charset
     protected def ensureHttpOK(h: HttpResponse): SpecsResult = h.code must beEqualTo(HttpResponseCode.Ok)
