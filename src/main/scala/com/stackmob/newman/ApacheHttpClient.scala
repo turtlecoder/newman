@@ -30,8 +30,8 @@ import com.stackmob.common.util.casts._
  */
 
 class ApacheHttpClient extends HttpClient {
-  private val connectionTimeout = 5000
-  private val socketTimeout = 30000
+  val connectionTimeout = 5000
+  val socketTimeout = 30000
 
   private def getHttpClient: AbstractHttpClient = {
     val client = new DefaultHttpClient
