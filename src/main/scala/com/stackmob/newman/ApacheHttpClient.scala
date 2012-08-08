@@ -29,9 +29,8 @@ import com.stackmob.common.util.casts._
  * Time: 6:28 PM
  */
 
-class ApacheHttpClient extends HttpClient {
-  val connectionTimeout = 5000
-  val socketTimeout = 30000
+class ApacheHttpClient(val socketTimeout: Int = 30000,
+                       val connectionTimeout: Int = 5000) extends HttpClient {
 
   private def getHttpClient: AbstractHttpClient = {
     val client = new DefaultHttpClient
