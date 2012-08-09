@@ -70,7 +70,16 @@ import net.liftweb.json._
  */
 
 trait ResponseHandlerDSL {
-  case class ResponseHandler[T](handlers: List[(HttpResponseCode, HttpResponse => ThrowableValidation[T])], respIO: IO[HttpResponse]) {
+  case class ResponseHandler[T](handlers: List[(HttpResponseCode => Boolean, HttpResponse => ThrowableValidation[T])], respIO: IO[HttpResponse]) {
+
+    /**
+     * Adds a handler (a function that is called when the code matches the given function) and returns a new ResponseHandler
+     * @param code response code this handler is for
+     * @param handler function to call when response with given code is encountered
+     * @return
+     */
+    def handleCodesSuchThat(check: HttpResponseCode => Boolean, handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
+      copy(handlers = (check, handler) :: handlers)
 
     /**
      * Adds a handler (a function that is called when the given code is matched) and returns a new ResponseHandler
@@ -79,7 +88,35 @@ trait ResponseHandlerDSL {
      * @return
      */
     def handleCode(code: HttpResponseCode, handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
-      copy(handlers = (code,handler) :: handlers)
+      handleCodesSuchThat({c: HttpResponseCode => c === code}, handler)
+
+    /**
+     * Adds a handler (a function that is called when any of the given codes are matched) and returns a new ResponseHandler
+     * @param codes response code this handler matches
+     * @param handler function to call when response with given code is encountered
+     * @return
+     */
+    def handleCodes(codes: List[HttpResponseCode], handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
+      handleCodesSuchThat(codes.contains(_), handler)
+    
+    /**
+     * Adds a handler (a function that is called when an error result is returned) and returns a new ResponseHandler
+     * @param handler function to call when response with given code is encountered
+     * @return
+     */
+    def handleErrors(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
+      handleCodesSuchThat({c: HttpResponseCode => c.code >= 400}, handler)
+
+    /**
+     * Adds a handler that expects the specified response code and a JSON body readable by
+     * a JSONR for the type of this ResponseHandler. A Response can only return
+     * one successful type per request so multiple calls to this method should not be
+     * made, however, if there are there is no effect on the handling of the response.
+     * @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
+     */
+    def expectJSONBodyForCode(code: HttpResponseCode) (implicit reader: JSONR[T], charset: Charset = UTF8Charset): ResponseHandler[T] = {
+      handleCode(code, (resp: HttpResponse) => resp.bodyAs[T].mapFailure(JSONParsingError(_): Throwable))
+    }
 
     /**
      * Adds a handler that expects a 200 response and a JSON body readable by
@@ -88,11 +125,9 @@ trait ResponseHandlerDSL {
      * made, however, if there are there is no effect on the handling of the response.
      * @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
-    def expectJSONBody(implicit reader: JSONR[T],
-                       charset: Charset = UTF8Charset): ResponseHandler[T] = {
-      handleCode(HttpResponseCode.Ok, (resp: HttpResponse) => resp.bodyAs[T].mapFailure(JSONParsingError(_): Throwable))
+    def expectJSONBody(implicit reader: JSONR[T], charset: Charset = UTF8Charset): ResponseHandler[T] = {
+      expectJSONBodyForCode(HttpResponseCode.Ok)(reader, charset)
     }
-
 
     /**
      * Adds a handler that expects a 204 response. If encountered, the value passed to this method
@@ -105,24 +140,28 @@ trait ResponseHandlerDSL {
       handleCode(HttpResponseCode.NoContent, (_: HttpResponse) => successValue.success)
     }
 
+    /**
+     * Force to an IO[ThrowableValidation[T]. Only use when scala fails to implicitly do this
+     */
     def sealHandlers: IO[ThrowableValidation[T]] = {
       respIO.map { response =>
-        handlers.find(_._1 === response.code).map(_._2 apply response) | UnhandledResponseCode(response.code).fail[T]
+        handlers.find(_._1(response.code)).map(_._2 apply response) | UnhandledResponseCode(response.code).fail[T]
       }.except(t => t.fail[T].pure[IO])
     }
   }
 
   trait IOResponseW extends NewType[IO[HttpResponse]] {
     def handleCode[T](code: HttpResponseCode, handler: HttpResponse => ThrowableValidation[T]) =
-      ResponseHandler((code, handler) :: Nil, value)
+      ResponseHandler(Nil, value).handleCode(code,handler)
 
+    //Inconsistently named. Should fix if backwards compatibility isn't an issue
     def expectJSONBody[T](code: HttpResponseCode)
                          (implicit reader: JSONR[T], charset: Charset = UTF8Charset) = {
-      handleCode(code, (resp: HttpResponse) => resp.bodyAs[T].mapFailure(JSONParsingError(_): Throwable))
+      ResponseHandler(Nil, value).expectJSONBodyForCode(code)(reader, charset)
     }
 
     def expectNoContent[T](successValue: T) = {
-      handleCode[T](HttpResponseCode.NoContent, (_: HttpResponse) => successValue.success)
+      ResponseHandler(Nil, value).expectNoContent(successValue)
     }
   }
 
