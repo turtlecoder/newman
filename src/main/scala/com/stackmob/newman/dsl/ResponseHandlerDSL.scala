@@ -151,8 +151,18 @@ trait ResponseHandlerDSL {
   }
 
   trait IOResponseW extends NewType[IO[HttpResponse]] {
+
+    def handleCodesSuchThat[T](check: HttpResponseCode => Boolean, handler: HttpResponse => ThrowableValidation[T]) =
+      ResponseHandler(Nil, value).handleCodesSuchThat(check,handler)
+
     def handleCode[T](code: HttpResponseCode, handler: HttpResponse => ThrowableValidation[T]) =
       ResponseHandler(Nil, value).handleCode(code,handler)
+
+    def handleCodes[T](codes: List[HttpResponseCode], handler: HttpResponse => ThrowableValidation[T]) =
+      ResponseHandler(Nil, value).handleCodes(codes,handler)
+
+    def handleErrors[T](handler: HttpResponse => ThrowableValidation[T]) =
+      ResponseHandler(Nil, value).handleErrors(handler)
 
     //Inconsistently named. Should fix if backwards compatibility isn't an issue
     def expectJSONBody[T](code: HttpResponseCode)
