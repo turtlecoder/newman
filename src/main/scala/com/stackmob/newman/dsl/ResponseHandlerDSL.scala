@@ -145,7 +145,7 @@ trait ResponseHandlerDSL {
      */
     def sealHandlers: IO[ThrowableValidation[T]] = {
       respIO.map { response =>
-        handlers.find(_._1(response.code)).map(_._2 apply response) | UnhandledResponseCode(response.code).fail[T]
+        handlers.reverse.find(_._1(response.code)).map(_._2 apply response) | UnhandledResponseCode(response.code).fail[T]
       }.except(t => t.fail[T].pure[IO])
     }
   }
