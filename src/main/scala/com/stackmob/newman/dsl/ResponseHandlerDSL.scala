@@ -162,7 +162,7 @@ trait ResponseHandlerDSL {
       ResponseHandler(Nil, value).handleCodes(codes,handler)
 
     def handleRemainingCodes[T](handler: HttpResponse => ThrowableValidation[T]) =
-      ResponseHandler(Nil, value).handleErrors(handler)
+      ResponseHandler(Nil, value).handleRemainingCodes(handler)
 
     //Inconsistently named. Should fix if backwards compatibility isn't an issue
     def expectJSONBody[T](code: HttpResponseCode)
