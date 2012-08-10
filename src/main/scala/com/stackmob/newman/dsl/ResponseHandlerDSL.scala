@@ -100,12 +100,12 @@ trait ResponseHandlerDSL {
       handleCodesSuchThat(codes.contains(_), handler)
     
     /**
-     * Adds a handler (a function that is called when an error result is returned) and returns a new ResponseHandler
+     * Adds a handler (a function that is called when none of the other handlers match) and returns a new ResponseHandler
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleErrors(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
-      handleCodesSuchThat({c: HttpResponseCode => c.code >= 400}, handler)
+    def handleRemainingCodes(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
+      handleCodesSuchThat({c: HttpResponseCode => true}, handler)
 
     /**
      * Adds a handler that expects the specified response code and a JSON body readable by
@@ -161,7 +161,7 @@ trait ResponseHandlerDSL {
     def handleCodes[T](codes: List[HttpResponseCode], handler: HttpResponse => ThrowableValidation[T]) =
       ResponseHandler(Nil, value).handleCodes(codes,handler)
 
-    def handleErrors[T](handler: HttpResponse => ThrowableValidation[T]) =
+    def handleRemainingCodes[T](handler: HttpResponse => ThrowableValidation[T]) =
       ResponseHandler(Nil, value).handleErrors(handler)
 
     //Inconsistently named. Should fix if backwards compatibility isn't an issue
