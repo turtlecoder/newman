@@ -17,12 +17,15 @@ import HttpRequestWithBody._
 import com.stackmob.newman.Exceptions.UnknownHttpStatusCodeException
 import com.stackmob.newman.response.HttpResponse
 import org.apache.http.impl.client.{AbstractHttpClient, DefaultHttpClient}
+import org.apache.http.conn.ClientConnectionManager
+import org.apache.http.impl.conn.PoolingClientConnectionManager
 import com.stackmob.common.util.casts._
+
 
 /**
  * Created by IntelliJ IDEA.
  *
- * com.stackmob.barney.service.filters.proxy
+ * com.stackmob.newman.ApacheHttpClient
  *
  * User: aaron
  * Date: 4/24/12
@@ -30,10 +33,20 @@ import com.stackmob.common.util.casts._
  */
 
 class ApacheHttpClient(val socketTimeout: Int = 30000,
-                       val connectionTimeout: Int = 5000) extends HttpClient {
+                       val connectionTimeout: Int = 5000,
+                       val connManager: ClientConnectionManager = new PoolingClientConnectionManager(),
+                       val maxConnsPerRoute: Int = 20,
+                       val maxConnsTotal: Int = 100) extends HttpClient {
 
-  private def getHttpClient: AbstractHttpClient = {
-    val client = new DefaultHttpClient
+  private val httpClient: AbstractHttpClient = {
+
+    //configure PoolingClientConnectionManager
+    connManager.cast[PoolingClientConnectionManager].foreach(c => {
+      c.setDefaultMaxPerRoute(maxConnsPerRoute)
+      c.setMaxTotal(maxConnsTotal)
+    })
+
+    val client = new DefaultHttpClient(connManager)
     val httpParams = client.getParams
     HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
     HttpConnectionParams.setSoTimeout(httpParams, socketTimeout)
@@ -59,18 +72,13 @@ class ApacheHttpClient(val socketTimeout: Int = 30000,
         req.setEntity(new ByteArrayEntity(body))
       }
 
-      val client = getHttpClient
-      try {
-        val apacheResponse = client.execute(httpMessage)
-        val responseCode = HttpResponseCode.fromInt(apacheResponse.getStatusLine.getStatusCode) | {
-          throw new UnknownHttpStatusCodeException(apacheResponse.getStatusLine.getStatusCode)
-        }
-        val headers = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
-        val body = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
-        HttpResponse(responseCode, headers.toNel, body | RawBody.empty)
-      } finally {
-        client.getConnectionManager.shutdown()
+      val apacheResponse = httpClient.execute(httpMessage)
+      val responseCode = HttpResponseCode.fromInt(apacheResponse.getStatusLine.getStatusCode) | {
+        throw new UnknownHttpStatusCodeException(apacheResponse.getStatusLine.getStatusCode)
       }
+      val responseHeaders = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
+      val responseBody = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
+      HttpResponse(responseCode, responseHeaders.toNel, responseBody | RawBody.empty)
     }
   }
 

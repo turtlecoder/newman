@@ -2,7 +2,7 @@ name := "newman"
 
 organization := "com.stackmob"
 
-version := "0.4.0-SNAPSHOT"
+version := "0.4.1-SNAPSHOT"
 
 scalaVersion := "2.9.1"
 
@@ -23,8 +23,8 @@ publishTo <<= (version) { version: String =>
 resolvers ++= Seq("StackMob Nexus" at "http://nexus/nexus/content/groups/public")
 
 libraryDependencies ++= {
-    val httpCoreVersion = "4.2-beta1"
-    val httpClientVersion = "4.1.2"
+    val httpCoreVersion = "4.2.1"
+    val httpClientVersion = "4.2.1"
     val scalaCheckVersion = "1.9"
     val specs2Version = "1.9"
     val mockitoVersion = "1.9.0"
