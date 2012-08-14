@@ -20,6 +20,7 @@ import org.apache.http.impl.client.{AbstractHttpClient, DefaultHttpClient}
 import org.apache.http.conn.ClientConnectionManager
 import org.apache.http.impl.conn.PoolingClientConnectionManager
 import com.stackmob.common.util.casts._
+import java.util.concurrent.Executors
 
 
 /**
@@ -36,7 +37,8 @@ class ApacheHttpClient(val socketTimeout: Int = 30000,
                        val connectionTimeout: Int = 5000,
                        val connManager: ClientConnectionManager = new PoolingClientConnectionManager(),
                        val maxConnsPerRoute: Int = 20,
-                       val maxConnsTotal: Int = 100) extends HttpClient {
+                       val maxConnsTotal: Int = 100,
+                       val strategy: Strategy = Strategy.Executor(Executors.newCachedThreadPool())) extends HttpClient {
 
   private val httpClient: AbstractHttpClient = {
 
@@ -53,33 +55,33 @@ class ApacheHttpClient(val socketTimeout: Int = 30000,
     client
   }
 
+  private def wrapIOPromise[T](t: => T): IO[Promise[T]] = io(promise(t)(strategy))
+
   protected def executeRequest(httpMessage: HttpRequestBase,
                                url: URL,
                                headers: Headers,
-                               body: Option[RawBody] = none): IO[Promise[HttpResponse]] = io {
-    promise {
-      httpMessage.setURI(url.toURI)
-      headers.foreach { list: NonEmptyList[(String, String)] =>
-        list.foreach {tup: (String, String) =>
-          if(!tup._1.equalsIgnoreCase(CONTENT_LENGTH)) {
-            httpMessage.addHeader(tup._1, tup._2)
-          }
+                               body: Option[RawBody] = none): IO[Promise[HttpResponse]] = wrapIOPromise {
+    httpMessage.setURI(url.toURI)
+    headers.foreach { list: NonEmptyList[(String, String)] =>
+      list.foreach {tup: (String, String) =>
+        if(!tup._1.equalsIgnoreCase(CONTENT_LENGTH)) {
+          httpMessage.addHeader(tup._1, tup._2)
         }
       }
-      //if there's both a body and httpMessage is an entity enclosing request, then set the body
-      (body <|*|> httpMessage.cast[HttpEntityEnclosingRequestBase]).foreach { tup: (RawBody, HttpEntityEnclosingRequestBase) =>
-        val (body,req) = tup
-        req.setEntity(new ByteArrayEntity(body))
-      }
-
-      val apacheResponse = httpClient.execute(httpMessage)
-      val responseCode = HttpResponseCode.fromInt(apacheResponse.getStatusLine.getStatusCode) | {
-        throw new UnknownHttpStatusCodeException(apacheResponse.getStatusLine.getStatusCode)
-      }
-      val responseHeaders = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
-      val responseBody = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
-      HttpResponse(responseCode, responseHeaders.toNel, responseBody | RawBody.empty)
     }
+    //if there's both a body and httpMessage is an entity enclosing request, then set the body
+    (body <|*|> httpMessage.cast[HttpEntityEnclosingRequestBase]).foreach { tup: (RawBody, HttpEntityEnclosingRequestBase) =>
+      val (body,req) = tup
+      req.setEntity(new ByteArrayEntity(body))
+    }
+
+    val apacheResponse = httpClient.execute(httpMessage)
+    val responseCode = HttpResponseCode.fromInt(apacheResponse.getStatusLine.getStatusCode) | {
+      throw new UnknownHttpStatusCodeException(apacheResponse.getStatusLine.getStatusCode)
+    }
+    val responseHeaders = apacheResponse.getAllHeaders.map(h => (h.getName, h.getValue)).toList
+    val responseBody = Option(apacheResponse.getEntity).map(new BufferedHttpEntity(_)).map(EntityUtils.toByteArray(_))
+    HttpResponse(responseCode, responseHeaders.toNel, responseBody | RawBody.empty)
   }
 
   override def get(u: URL, h: Headers) = new GetRequest {
