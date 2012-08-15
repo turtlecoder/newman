@@ -121,7 +121,7 @@ object ApacheHttpClient {
   lazy val newmanThreadPool = Executors.newCachedThreadPool(new ThreadFactory() {
 
     override def newThread(r: Runnable): Thread = {
-      new Thread(null, r, "newman-" + threadNumber.getAndIncrement)
+      new Thread(r, "newman-" + threadNumber.getAndIncrement)
     }
   })
 }
