@@ -32,7 +32,7 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
   case class ThrowingIO() extends Context {
     def returnsFailure: SpecsResult = {
       val ex = new Exception("test exception")
-      val respIO = io((throw ex): HttpResponse).handleCode(HttpResponseCode.Ok, _ => ().success)
+      val respIO = io((throw ex): HttpResponse).handleCode(HttpResponseCode.Ok)(_ => ().success)
       respIO.unsafePerformIO.either must beLeft.like {
         case e => e must beEqualTo(ex)
       }
