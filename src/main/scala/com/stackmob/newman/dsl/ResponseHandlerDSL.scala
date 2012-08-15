@@ -96,7 +96,7 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCodes(codes: List[HttpResponseCode])(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
+    def handleCodes(codes: Seq[HttpResponseCode])(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
       handleCodesSuchThat(codes.contains(_))(handler)
     
     /**
@@ -152,7 +152,7 @@ trait ResponseHandlerDSL {
     def handleCode[T](code: HttpResponseCode)(handler: HttpResponse => ThrowableValidation[T]) =
       ResponseHandler(Nil, value).handleCode(code)(handler)
 
-    def handleCodes[T](codes: List[HttpResponseCode])(handler: HttpResponse => ThrowableValidation[T]) =
+    def handleCodes[T](codes: Seq[HttpResponseCode])(handler: HttpResponse => ThrowableValidation[T]) =
       ResponseHandler(Nil, value).handleCodes(codes)(handler)
 
     def expectJSONBody[T](code: HttpResponseCode)(implicit reader: JSONR[T], charset: Charset = UTF8Charset) = {
