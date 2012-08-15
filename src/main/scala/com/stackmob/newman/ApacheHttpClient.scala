@@ -20,7 +20,9 @@ import org.apache.http.impl.client.{AbstractHttpClient, DefaultHttpClient}
 import org.apache.http.conn.ClientConnectionManager
 import org.apache.http.impl.conn.PoolingClientConnectionManager
 import com.stackmob.common.util.casts._
-import java.util.concurrent.Executors
+import java.util.concurrent.{ThreadFactory, Executors}
+import ApacheHttpClient._
+import java.util.concurrent.atomic.AtomicInteger
 
 
 /**
@@ -35,19 +37,16 @@ import java.util.concurrent.Executors
 
 class ApacheHttpClient(val socketTimeout: Int = 30000,
                        val connectionTimeout: Int = 5000,
-                       val connManager: ClientConnectionManager = new PoolingClientConnectionManager(),
-                       val maxConnsPerRoute: Int = 20,
-                       val maxConnsTotal: Int = 100,
-                       val strategy: Strategy = Strategy.Executor(Executors.newCachedThreadPool())) extends HttpClient {
+                       val strategy: Strategy = Strategy.Executor(newmanThreadPool)) extends HttpClient {
+
+  val connManager: ClientConnectionManager = {
+    val cm = new PoolingClientConnectionManager()
+    cm.setDefaultMaxPerRoute(20)
+    cm.setMaxTotal(100)
+    cm
+  }
 
   private val httpClient: AbstractHttpClient = {
-
-    //configure PoolingClientConnectionManager
-    connManager.cast[PoolingClientConnectionManager].foreach(c => {
-      c.setDefaultMaxPerRoute(maxConnsPerRoute)
-      c.setMaxTotal(maxConnsTotal)
-    })
-
     val client = new DefaultHttpClient(connManager)
     val httpParams = client.getParams
     HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
@@ -115,4 +114,14 @@ class ApacheHttpClient(val socketTimeout: Int = 30000,
     override val headers = h
     override def prepareAsync = executeRequest(new HttpHead, url, headers)
   }
+}
+
+object ApacheHttpClient {
+  private val threadNumber = new AtomicInteger(1)
+  lazy val newmanThreadPool = Executors.newCachedThreadPool(new ThreadFactory() {
+
+    override def newThread(r: Runnable): Thread = {
+      new Thread(null, r, "newman-" + threadNumber.getAndIncrement)
+    }
+  })
 }
