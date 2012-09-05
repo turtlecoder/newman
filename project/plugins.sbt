@@ -11,4 +11,3 @@ addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.7.3")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.6.0")
 
-addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.6.0")
