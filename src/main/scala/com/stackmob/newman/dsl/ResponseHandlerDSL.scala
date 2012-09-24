@@ -18,9 +18,9 @@ import net.liftweb.json._
  * Facilitates the handling of various response codes per response, where each handler for a given code may fail or may succeed with
  * a value of some type `T`. `ResponseHandler` is an immutable wrapper; handlers, a `HTTPResponse => Validation[Throwable,T].
  * can be added by using handleCode`, which returns a new instance. After all desired handlers have been added calling `sealHandlers`
- * or using the implicit provided in [[com.stackmob.newman.DSL]] will return an `IO[Validation[Throwable,T]`.
+ * or using the implicit provided in [[com.stackmob.newman.dsl]] will return an `IO[Validation[Throwable,T]`.
  *
- * For response codes without a "catchall" handler always `scalaz.Failure` with a [[com.stackmob.newman.DSL.UnhandledResponseCode]]
+ * For response codes without a "catchall" handler always `scalaz.Failure` with a [[com.stackmob.newman.dsl.UnhandledResponseCode]]
  * as its value.
  *
  * To begin using `ResponseHandler` call [[com.stackmob.newman.request.HttpRequest]]'s `prepare` method and then begin changing
@@ -74,7 +74,7 @@ trait ResponseHandlerDSL {
 
     /**
      * Adds a handler (a function that is called when the code matches the given function) and returns a new ResponseHandler
-     * @param code response code this handler is for
+     * @param check response code this handler is for
      * @param handler function to call when response with given code is encountered
      * @return
      */
