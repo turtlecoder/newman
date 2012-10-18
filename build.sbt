@@ -32,15 +32,15 @@ libraryDependencies ++= {
     val scalazVersion = "6.0.3"
     val stackmobCommonVersion = "0.6.0-SNAPSHOT"
     Seq(
-        "org.scalaz" %% "scalaz-core" % scalazVersion withSources(),
-        "com.stackmob" %% "stackmob-common" % stackmobCommonVersion  withSources() changing(),
-        "org.apache.httpcomponents" % "httpcore" % httpCoreVersion withSources(),
-        "org.apache.httpcomponents" % "httpclient" % httpClientVersion withSources(),
-        "org.scala-tools.testing" %% "scalacheck" % scalaCheckVersion % "test" withSources(),
-        "org.specs2" %% "specs2" % specs2Version % "test" withSources(),
-        "org.pegdown" % "pegdown" % "1.0.2" % "test" withSources(),
-        "org.mockito" % "mockito-all" % mockitoVersion % "test" withSources(),
-        "org.specs2" %% "specs2-scalaz-core" % specs2ScalazCoreVersion % "test" withSources()
+        "org.scalaz" %% "scalaz-core" % scalazVersion,
+        "com.stackmob" %% "stackmob-common" % stackmobCommonVersion changing(),
+        "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
+        "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
+        "org.scala-tools.testing" %% "scalacheck" % scalaCheckVersion % "test",
+        "org.specs2" %% "specs2" % specs2Version % "test",
+        "org.pegdown" % "pegdown" % "1.0.2" % "test",
+        "org.mockito" % "mockito-all" % mockitoVersion % "test",
+        "org.specs2" %% "specs2-scalaz-core" % specs2ScalazCoreVersion % "test" 
     )
 }
 
