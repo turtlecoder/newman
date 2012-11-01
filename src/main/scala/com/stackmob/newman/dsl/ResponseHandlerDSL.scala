@@ -168,14 +168,14 @@ trait ResponseHandlerDSL {
     }
   }
 
-  case class UnhandledResponseCode(code: HttpResponseCode)
-    extends Exception("undhandled response code %d" format code.code)
+  case class UnhandledResponseCode(code: HttpResponseCode, body: String)
+    extends Exception("undhandled response code %d and body %s".format(code.code, body))
 
 
   implicit def ioRespToW(ioResp: IO[HttpResponse]): IOResponseW = new IOResponseW {
     val value = ioResp
   }
 
-  implicit def ResponseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = handler.default {resp => UnhandledResponseCode(resp.code).fail[T]}
+  implicit def ResponseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = handler.default {resp => UnhandledResponseCode(resp.code, resp.body).fail[T]}
 
 }
