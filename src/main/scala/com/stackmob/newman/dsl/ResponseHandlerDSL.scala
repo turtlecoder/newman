@@ -176,6 +176,6 @@ trait ResponseHandlerDSL {
     val value = ioResp
   }
 
-  implicit def ResponseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = handler.default {resp => UnhandledResponseCode(resp.code, resp.body).fail[T]}
+  implicit def ResponseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = handler.default {resp => UnhandledResponseCode(resp.code, resp.bodyString).fail[T]}
 
 }
