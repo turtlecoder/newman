@@ -50,8 +50,10 @@ trait URLBuilderDSL {
       } else {
         ""
       }
-      val pathWithSlash = if(path.toString.isEmpty) "" else "/" + path.toString
-      new URL("%s://%s:%d%s%s".format(protocol.name, host, port, pathWithSlash, queryString))
+      val pathString = path.toString
+      // add a slash if the path exists and doesn't already have one
+      val slash = if(pathString.isEmpty || pathString.startsWith("/")) "" else "/"
+      new URL("%s://%s:%d%s%s%s".format(protocol.name, host, port, slash, pathString, queryString))
     }
   }
 
