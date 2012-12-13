@@ -2,8 +2,6 @@ name := "newman"
 
 organization := "com.stackmob"
 
-version := "0.4.1-SNAPSHOT"
-
 scalaVersion := "2.9.1"
 
 crossScalaVersions := Seq("2.9.1")
@@ -30,10 +28,10 @@ libraryDependencies ++= {
     val mockitoVersion = "1.9.0"
     val specs2ScalazCoreVersion = "6.0.1"
     val scalazVersion = "6.0.3"
-    val stackmobCommonVersion = "0.6.0-SNAPSHOT"
+    val commonVersion = "0.7.0"
     Seq(
         "org.scalaz" %% "scalaz-core" % scalazVersion,
-        "com.stackmob" %% "stackmob-common" % stackmobCommonVersion changing(),
+        "com.stackmob" %% "stackmob-common" % commonVersion,
         "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
         "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
         "org.scala-tools.testing" %% "scalacheck" % scalaCheckVersion % "test",
@@ -46,5 +44,6 @@ libraryDependencies ++= {
 
 logBuffered := false
 
-net.virtualvoid.sbt.graph.Plugin.graphSettings
+releaseSettings
 
+net.virtualvoid.sbt.graph.Plugin.graphSettings
