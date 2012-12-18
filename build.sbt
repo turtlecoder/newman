@@ -28,7 +28,7 @@ libraryDependencies ++= {
     val mockitoVersion = "1.9.0"
     val specs2ScalazCoreVersion = "6.0.1"
     val scalazVersion = "6.0.3"
-    val commonVersion = "0.7.0"
+    val commonVersion = "0.13.0"
     Seq(
         "org.scalaz" %% "scalaz-core" % scalazVersion,
         "com.stackmob" %% "stackmob-common" % commonVersion,
@@ -47,3 +47,6 @@ logBuffered := false
 releaseSettings
 
 net.virtualvoid.sbt.graph.Plugin.graphSettings
+
+org.scalastyle.sbt.ScalastylePlugin.Settings
+
