@@ -1,4 +1,5 @@
-package com.stackmob.newman.response
+package com.stackmob.newman
+package response
 
 import scalaz._
 import effects._
