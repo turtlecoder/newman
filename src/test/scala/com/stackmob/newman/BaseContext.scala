@@ -8,7 +8,6 @@ import org.specs2.execute.{Failure => SpecsFailure, Result => SpecsResult}
 import scalaz._
 import Scalaz._
 import net.liftweb.json.scalaz.JsonScalaz._
-import org.slf4j.LoggerFactory
 
 /**
  * Created by IntelliJ IDEA.
@@ -21,8 +20,6 @@ import org.slf4j.LoggerFactory
  */
 
 trait BaseContext {
-
-  private lazy val logger = LoggerFactory.getLogger(classOf[BaseContext])
 
   protected class HeadersAreEqualMatcher(expected: Headers) extends Matcher[Headers] {
     override def apply[S <: Headers](r: Expectable[S]): MatchResult[S] = {
@@ -46,7 +43,6 @@ trait BaseContext {
   protected def beTheSameResponseAs(h: HttpResponse) = new HttpResponsesAreEqualMatcher(h)
 
   protected def logAndFail(t: Throwable): SpecsResult = {
-    logger.warn(t.getMessage, t)
     SpecsFailure("failed with exception %s".format(t.getMessage))
   }
 
@@ -58,7 +54,6 @@ trait BaseContext {
 
   protected def logAndFail(errs: NonEmptyList[Error]): SpecsResult = {
     val totalErrString = errs.map(errorString(_)).list.mkString("\n")
-    logger.warn("JSON errors:\n%s".format(totalErrString))
     SpecsFailure("JSON errors occurred: %s".format(totalErrString))
   }
 }

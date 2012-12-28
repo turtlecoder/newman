@@ -29,16 +29,11 @@ libraryDependencies ++= {
     val specs2ScalazCoreVersion = "6.0.1"
     val scalazVersion = "6.0.3"
     val liftJsonVersion = "2.4"
-    val slf4jVersion = "1.7.1"
     Seq(
         "org.scalaz" %% "scalaz-core" % scalazVersion,
         "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
         "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
         "net.liftweb" %% "lift-json-scalaz" % liftJsonVersion,
-        "org.slf4j" % "slf4j-api" % slf4jVersion,
-        "org.slf4j" % "jul-to-slf4j" % slf4jVersion,
-        "org.slf4j" % "jcl-over-slf4j" % slf4jVersion,
-        "org.slf4j" % "log4j-over-slf4j" % slf4jVersion,
         "org.scala-tools.testing" %% "scalacheck" % scalaCheckVersion % "test",
         "org.specs2" %% "specs2" % specs2Version % "test",
         "org.pegdown" % "pegdown" % "1.0.2" % "test",

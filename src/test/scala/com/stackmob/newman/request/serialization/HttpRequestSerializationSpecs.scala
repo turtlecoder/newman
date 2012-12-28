@@ -20,7 +20,6 @@ import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 import com.stackmob.newman.{DummyHttpClient, BaseContext}
 import java.net.URL
 import com.stackmob.newman.request.{HttpRequestWithoutBody, HttpRequest, HttpRequestWithBody}
-import org.slf4j.LoggerFactory
 
 class HttpRequestSerializationSpecs extends Specification { def is =
   "HttpRequestSerializationSpecs".title                                                                                 ^
@@ -33,7 +32,6 @@ class HttpRequestSerializationSpecs extends Specification { def is =
   end
 
   trait Context extends BaseContext {
-    private val logger = LoggerFactory.getLogger(classOf[Context])
 
     protected lazy val url = new URL("http://stackmob.com")
     protected lazy val headers = Headers("header1" -> "header1")
@@ -54,7 +52,6 @@ class HttpRequestSerializationSpecs extends Specification { def is =
           (extra(deser))
         },
         failure = { eNel =>
-          eNel.foreach(e => logger.warn(e.toString))
           SpecsFailure("deserialization failed with %d errors".format(eNel.list.length)): SpecsResult
         }
       )
