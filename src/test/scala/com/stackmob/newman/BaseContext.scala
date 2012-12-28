@@ -1,6 +1,5 @@
 package com.stackmob.newman
 
-import com.stackmob.common.logging.LoggingSugar
 import com.stackmob.newman.request.HttpRequest.Headers
 import com.stackmob.newman.request.HttpRequest.Headers.HeadersEqual
 import com.stackmob.newman.response.HttpResponse
@@ -9,6 +8,7 @@ import org.specs2.execute.{Failure => SpecsFailure, Result => SpecsResult}
 import scalaz._
 import Scalaz._
 import net.liftweb.json.scalaz.JsonScalaz._
+import org.slf4j.LoggerFactory
 
 /**
  * Created by IntelliJ IDEA.
@@ -20,9 +20,9 @@ import net.liftweb.json.scalaz.JsonScalaz._
  * Time: 3:30 PM
  */
 
-trait BaseContext extends LoggingSugar {
+trait BaseContext {
 
-  private val logger = getLogger[BaseContext]
+  private lazy val logger = LoggerFactory.getLogger(classOf[BaseContext])
 
   protected class HeadersAreEqualMatcher(expected: Headers) extends Matcher[Headers] {
     override def apply[S <: Headers](r: Expectable[S]): MatchResult[S] = {

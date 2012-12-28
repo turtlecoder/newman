@@ -1,4 +1,5 @@
-package com.stackmob.newman.response
+package com.stackmob.newman
+package response
 
 import scalaz._
 import Scalaz._
@@ -7,7 +8,6 @@ import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
 import com.stackmob.newman.request.HttpRequest.Headers
 import com.stackmob.newman.BaseContext
 import com.stackmob.newman.request.HttpRequestWithBody.RawBody
-import com.stackmob.common.util.casts._
 
 /**
  * Created by IntelliJ IDEA.

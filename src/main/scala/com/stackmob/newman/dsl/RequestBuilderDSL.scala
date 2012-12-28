@@ -6,12 +6,10 @@ import Scalaz._
 import request._
 import HttpRequest._
 import HttpRequestWithBody._
-import response._
 import java.net.URL
 import java.nio.charset.Charset
 import com.stackmob.newman.serialization.common.DefaultBodySerialization
 import Constants._
-import com.stackmob.common.util.casts._
 import net.liftweb.json._
 
 

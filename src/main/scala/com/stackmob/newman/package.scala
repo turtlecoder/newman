@@ -13,6 +13,30 @@ import Scalaz._
  * Time: 9:54 PM
  */
 package object newman {
+
+  trait Identity[Id] {
+    def value: Id
+    def cast[T](implicit target: Manifest[T]): Option[T] = {
+      Option(value).flatMap { _ =>
+        val source = value match {
+          case _: Boolean => manifest[Boolean]
+          case _: Byte => manifest[Byte]
+          case _: Char => manifest[Char]
+          case _: Short => manifest[Short]
+          case _: Int => manifest[Int]
+          case _: Long => manifest[Long]
+          case _: Float => manifest[Float]
+          case _: Double => manifest[Double]
+          case _ => Manifest.classType(value.getClass)
+        }
+        (target.erasure.isAssignableFrom(source.erasure)).option(value.asInstanceOf[T])
+      }
+    }
+  }
+  implicit def tToIdentity[T](t: T) = new Identity[T] {
+    override lazy val value = t
+  }
+
   type ThrowableValidation[T] = Validation[Throwable, T]
 
   sealed trait ValidationW[Fail, Success] {

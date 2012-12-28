@@ -1,4 +1,5 @@
-package com.stackmob.newman.request.serialization
+package com.stackmob.newman
+package request.serialization
 
 /**
  * Created by IntelliJ IDEA.
@@ -18,8 +19,8 @@ import com.stackmob.newman.request.HttpRequest.Headers
 import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 import com.stackmob.newman.{DummyHttpClient, BaseContext}
 import java.net.URL
-import com.stackmob.common.util.casts._
 import com.stackmob.newman.request.{HttpRequestWithoutBody, HttpRequest, HttpRequestWithBody}
+import org.slf4j.LoggerFactory
 
 class HttpRequestSerializationSpecs extends Specification { def is =
   "HttpRequestSerializationSpecs".title                                                                                 ^
@@ -32,7 +33,7 @@ class HttpRequestSerializationSpecs extends Specification { def is =
   end
 
   trait Context extends BaseContext {
-    private val logger = getLogger[Context]
+    private val logger = LoggerFactory.getLogger(classOf[Context])
 
     protected lazy val url = new URL("http://stackmob.com")
     protected lazy val headers = Headers("header1" -> "header1")
