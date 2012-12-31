@@ -24,7 +24,7 @@ libraryDependencies += "com.stackmob" %% "newman" % "0.1.0-SNAPSHOT"
 	
 ```scala
 import com.stackmob.newman._
-import DSL._
+import com.stackmob.newman.dsl._
 import java.net.URL
 
 implicit val httpClient = new ApacheHttpClient
