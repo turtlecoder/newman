@@ -12,6 +12,14 @@ testOptions in Test += Tests.Argument("html", "console")
 
 publishArtifact in Test := true
 
+publishTo <<= (version) { version: String =>
+    val stackmobNexus = "http://nexus/nexus/content/repositories/"
+    if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at stackmobNexus + "snapshots/")
+    else                                   Some("releases"  at stackmobNexus + "releases/")
+}
+
+resolvers ++= Seq("StackMob Nexus" at "http://nexus/nexus/content/groups/public")
+
 libraryDependencies ++= {
     val httpCoreVersion = "4.2.1"
     val httpClientVersion = "4.2.1"
