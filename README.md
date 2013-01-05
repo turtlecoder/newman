@@ -24,7 +24,7 @@ libraryDependencies += "com.stackmob" %% "newman" % "0.1.0-SNAPSHOT"
 	
 ```scala
 import com.stackmob.newman._
-import DSL._
+import com.stackmob.newman.dsl._
 import java.net.URL
 
 implicit val httpClient = new ApacheHttpClient
@@ -37,7 +37,7 @@ println("Response returned from %s with code %d, body %s".format(url.toString,re
 #The DSL
 Newman comes with a DSL which is inspired by [Dispatch](http://dispatch.databinder.net/Dispatch.html), but aims to be much simpler to understand and use. This DSL is the recommended way to build requests, and the above example in "Basic Usage" uses the DSL to construct a GET request.
 
-To start using the DSL, simply `import com.stackmob.newman.DSL._`. The methods of interest in the DSL are uppercase representations of the HTTP verbs: 
+To start using the DSL, simply `import com.stackmob.newman.dsl._`. The methods of interest in the DSL are uppercase representations of the HTTP verbs: 
 
 * `def GET(url: URL)(implicit client: HttpClient)`
 * `def POST(url: URL)(implicit client: HttpClient)`
