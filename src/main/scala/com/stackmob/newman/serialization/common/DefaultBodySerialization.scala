@@ -23,7 +23,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
 object DefaultBodySerialization {
 
   def getReader[A <: AnyRef](implicit m:Manifest[A]): JSONR[A] = new JSONR[A] {
-    override def read(json: JValue) = {
+    override def read(json: JValue): Result[A] = {
       validating {
         json.extract[A](Serialization.formats(NoTypeHints), m)
       }.mapFailure{ t: Throwable =>
@@ -33,7 +33,7 @@ object DefaultBodySerialization {
   }
 
   def getWriter[A <: AnyRef]: JSONW[A] = new JSONW[A] {
-    override def write(obj: A) = {
+    override def write(obj: A): JValue = {
       parse(Serialization.write(obj)(Serialization.formats(NoTypeHints)))
     }
   }

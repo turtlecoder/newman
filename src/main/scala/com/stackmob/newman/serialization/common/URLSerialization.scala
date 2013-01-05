@@ -24,11 +24,11 @@ import java.net.URL
 
 object URLSerialization extends SerializationBase[URL] {
   implicit override val writer = new JSONW[URL] {
-    override def write(u: URL) = JString(u.toString)
+    override def write(u: URL): JValue = JString(u.toString)
   }
 
   implicit override val reader = new JSONR[URL] {
-    override def read(jValue: JValue) = jValue match {
+    override def read(jValue: JValue): Result[URL] = jValue match {
       case JString(s) => new URL(s).successNel[Error]
       case j => UnexpectedJSONError(j, classOf[JString]).failNel[URL]
     }

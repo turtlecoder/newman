@@ -25,13 +25,13 @@ import com.stackmob.newman.Constants._
 
 object RawBodySerialization extends SerializationBase[RawBody] {
   implicit override val reader = new JSONR[RawBody] {
-    override def read(json: JValue) = json match {
+    override def read(json: JValue): Result[RawBody] = json match {
       case JString(s) => s.getBytes(UTF8Charset).successNel[Error]
       case j => UnexpectedJSONError(j, classOf[JString]).failNel[RawBody]
     }
   }
 
   implicit override val writer = new JSONW[RawBody] {
-    override def write(r: RawBody) = JString(new String(r, UTF8Charset))
+    override def write(r: RawBody): JValue = JString(new String(r, UTF8Charset))
   }
 }

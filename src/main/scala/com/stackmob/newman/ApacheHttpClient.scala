@@ -39,14 +39,14 @@ import java.util.concurrent.{ThreadFactory, Executors}
 import ApacheHttpClient._
 import java.util.concurrent.atomic.AtomicInteger
 
-class ApacheHttpClient(val socketTimeout: Int = 30000,
-                       val connectionTimeout: Int = 5000,
+class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTimeout,
+                       val connectionTimeout: Int = ApacheHttpClient.DefaultConnectionTimeout,
                        val strategy: Strategy = Strategy.Executor(newmanThreadPool)) extends HttpClient {
 
   val connManager: ClientConnectionManager = {
     val cm = new PoolingClientConnectionManager()
-    cm.setDefaultMaxPerRoute(20)
-    cm.setMaxTotal(100)
+    cm.setDefaultMaxPerRoute(ApacheHttpClient.DefaultMaxConnectionsPerRoute)
+    cm.setMaxTotal(ApacheHttpClient.DefaultMaxTotalConnections)
     cm
   }
 
@@ -87,40 +87,44 @@ class ApacheHttpClient(val socketTimeout: Int = 30000,
     HttpResponse(responseCode, responseHeaders.toNel, responseBody | RawBody.empty)
   }
 
-  override def get(u: URL, h: Headers) = new GetRequest {
+  override def get(u: URL, h: Headers): GetRequest = new GetRequest {
     override val headers = h
     override val url = u
-    override def prepareAsync = executeRequest(new HttpGet, url, headers)
+    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpGet, url, headers)
   }
 
-  override def post(u: URL, h: Headers, b: RawBody) = new PostRequest {
+  override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest {
     override val url = u
     override val headers = h
     override val body = b
-    override def prepareAsync = executeRequest(new HttpPost, url, headers, Option(body))
+    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpPost, url, headers, Option(body))
   }
 
-  override def put(u: URL, h: Headers, b: RawBody) = new PutRequest {
+  override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest {
     override val url = u
     override val headers = h
     override val body = b
-    override def prepareAsync = executeRequest(new HttpPut, url, headers, Option(body))
+    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpPut, url, headers, Option(body))
   }
 
-  override def delete(u: URL, h: Headers) = new DeleteRequest {
+  override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest {
     override val url = u
     override val headers = h
-    override def prepareAsync = executeRequest(new HttpDelete, url, headers)
+    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpDelete, url, headers)
   }
 
-  override def head(u: URL, h: Headers) = new HeadRequest {
+  override def head(u: URL, h: Headers): HeadRequest = new HeadRequest {
     override val url = u
     override val headers = h
-    override def prepareAsync = executeRequest(new HttpHead, url, headers)
+    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpHead, url, headers)
   }
 }
 
 object ApacheHttpClient {
+  private[ApacheHttpClient] val DefaultSocketTimeout = 30000
+  private[ApacheHttpClient] val DefaultConnectionTimeout = 5000
+  private[ApacheHttpClient] val DefaultMaxConnectionsPerRoute = 20
+  private[ApacheHttpClient] val DefaultMaxTotalConnections = 100
   private val threadNumber = new AtomicInteger(1)
   lazy val newmanThreadPool = Executors.newCachedThreadPool(new ThreadFactory() {
 

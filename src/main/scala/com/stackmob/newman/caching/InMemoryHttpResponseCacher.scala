@@ -24,11 +24,11 @@ import scalaz.effects._
 class InMemoryHttpResponseCacher extends HttpResponseCacher {
   private val cache = new ConcurrentHashMap[Array[Byte], HttpResponse]()
 
-  override def get(req: HttpRequest) = io(Option(cache.get(req.hash)))
-  override def set(req: HttpRequest, resp: HttpResponse) = io {
+  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io(Option(cache.get(req.hash)))
+  override def set(req: HttpRequest, resp: HttpResponse): IO[Unit] = io {
     cache.put(req.hash, resp)
     ()
   }
 
-  override def exists(req: HttpRequest) = io(cache.containsKey(req.hash))
+  override def exists(req: HttpRequest): IO[Boolean] = io(cache.containsKey(req.hash))
 }

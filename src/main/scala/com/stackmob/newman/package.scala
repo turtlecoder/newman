@@ -33,7 +33,7 @@ package object newman {
       }
     }
   }
-  implicit def tToIdentity[T](t: T) = new Identity[T] {
+  implicit def tToIdentity[T](t: T): Identity[T] = new Identity[T] {
     override lazy val value = t
   }
 
@@ -47,7 +47,7 @@ package object newman {
       case Failure(f) => transform(f).fail[Success]
     }
   }
-  implicit def validationToW[T, U](validation: Validation[T, U]) = new ValidationW[T, U] {
+  implicit def validationToW[T, U](validation: Validation[T, U]): ValidationW[T, U] = new ValidationW[T, U] {
     override lazy val v = validation
   }
 
@@ -92,8 +92,6 @@ package object newman {
       F.fmap(run, (_: Validation[E,A]) ||| f)
 
     def |(default: => A)(implicit F: Functor[F]): F[A] = getOr(_ => default)
-
-    def applyTransform[T[_[_],_]](implicit T: ({type K[X]=ValidationT[F,E,X]})#K~> ({type L[X]=T[F,X]})#L): T[F,A] = T(this)
   }
 
   def validationT[F[_],E,A](a: F[Validation[E,A]]): ValidationT[F,E,A] = new ValidationT[F,E,A] {

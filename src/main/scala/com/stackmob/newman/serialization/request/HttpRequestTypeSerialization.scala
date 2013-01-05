@@ -30,6 +30,6 @@ object HttpRequestTypeSerialization extends SerializationBase[HttpRequestType] {
   }
 
   implicit override val writer = new JSONW[HttpRequestType] {
-    override def write(t: HttpRequestType) = JString(t.stringVal)
+    override def write(t: HttpRequestType): JValue = JString(t.stringVal)
   }
 }

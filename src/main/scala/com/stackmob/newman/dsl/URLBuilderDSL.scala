@@ -31,10 +31,10 @@ trait URLBuilderDSL {
     def name: String
   }
   case object http extends Protocol {
-    override val name = "http"
+    override lazy val name = "http"
   }
   case object https extends Protocol {
-    override val name = "https"
+    override lazy val name = "https"
   }
 
   def url(protocol: Protocol, host: String, port: Int, path: Path): PathBuilder = PathBuilder(protocol, host, port, path)
@@ -67,9 +67,9 @@ trait URLBuilderDSL {
                          host: String,
                          port: Int,
                          path: Path = Path.empty) extends URLCapable {
-    def /(pathElt: String) = PathBuilder(protocol, host, port, path / pathElt)
-    def /(path: Path) = PathBuilder(protocol, host, port, path)
-    def ?(queryStringElts: (String, String)*) = {
+    def /(pathElt: String): PathBuilder = PathBuilder(protocol, host, port, path / pathElt)
+    def /(path: Path): PathBuilder = PathBuilder(protocol, host, port, path)
+    def ?(queryStringElts: (String, String)*): QueryStringBuilder = {
       QueryStringBuilder(protocol, host, port, path, queryStringElts.toList)
     }
   }
@@ -86,9 +86,9 @@ trait URLBuilderDSL {
 }
 
 case class Path(list: List[String]) {
-  def /(s: String) = copy(list :+ s)
-  def /(p: Path) = copy(list ++ p.list)
-  override def toString = list.mkString("/")
+  def /(s: String): Path = copy(list :+ s)
+  def /(p: Path): Path = copy(list ++ p.list)
+  override def toString: String = list.mkString("/")
 }
 
 object Path {

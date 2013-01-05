@@ -16,14 +16,13 @@ package object jsonscalaz {
 
     def fold[T](unexpected: UnexpectedJSONError => T,
                 noSuchField: NoSuchFieldError => T,
-                uncategorized: UncategorizedError => T) = error match {
+                uncategorized: UncategorizedError => T): T = error match {
       case u@UnexpectedJSONError(_, _) => unexpected(u)
       case n@NoSuchFieldError(_, _) => noSuchField(n)
       case u@UncategorizedError(_, _, _) => uncategorized(u)
     }
   }
-
-  implicit def errorToW(e: Error) = new ErrorW {
+  implicit def errorToW(e: Error): ErrorW = new ErrorW {
     override lazy val error = e
   }
 

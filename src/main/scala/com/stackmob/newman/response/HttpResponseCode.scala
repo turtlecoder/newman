@@ -21,13 +21,12 @@ import scalaz._
 import Scalaz._
 import enumeration._
 
-
 sealed abstract class HttpResponseCode(val code: Int, override val stringVal: String) extends Enumeration
 
 object HttpResponseCode {
 
-  implicit val HttpResponseCodeEqual = new Equal[HttpResponseCode] {
-    override def equal(h1: HttpResponseCode, h2: HttpResponseCode) = h1.code === h2.code
+  implicit val HttpResponseCodeEqual: Equal[HttpResponseCode] = new Equal[HttpResponseCode] {
+    override def equal(h1: HttpResponseCode, h2: HttpResponseCode): Boolean = h1.code === h2.code
   }
 
   implicit def httpResponseCodeToInt(h: HttpResponseCode): Int = h.code
@@ -102,7 +101,7 @@ object HttpResponseCode {
 
   object HttpVersionNotSupported extends HttpResponseCode(505, "HTTP Version Not Supported")
 
-  def fromInt(i: Int) = i match {
+  def fromInt(i: Int): Option[HttpResponseCode] = i match {
     case Accepted.code => Accepted.some
     case BadGateway.code => BadGateway.some
     case MethodNotAllowed.code => MethodNotAllowed.some

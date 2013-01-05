@@ -18,7 +18,7 @@ package com.stackmob.newman
 package request
 
 import java.net.URL
-import _root_.scalaz._
+import scalaz._
 import Scalaz._
 import scalaz.effects._
 import scalaz.concurrent._
@@ -87,9 +87,13 @@ trait HttpRequest {
     md5.digest(bytes)
   }
 
-  def andThen(remainingRequests: NonEmptyList[HttpResponse => HttpRequest]) = chainedRequests(this, remainingRequests)
+  def andThen(remainingRequests: NonEmptyList[HttpResponse => HttpRequest]): IO[RequestResponsePairList] = {
+    chainedRequests(this, remainingRequests)
+  }
 
-  def concurrentlyWith(otherRequests: NonEmptyList[HttpRequest]) = concurrentRequests(nel(this, otherRequests.list))
+  def concurrentlyWith(otherRequests: NonEmptyList[HttpRequest]): IO[RequestPromiseResponsePairList] = {
+    concurrentRequests(nel(this, otherRequests.list))
+  }
 }
 
 object HttpRequest {
@@ -100,7 +104,7 @@ object HttpRequest {
 
   object Headers {
     implicit val HeadersEqual = new Equal[Headers] {
-      override def equal(headers1: Headers, headers2: Headers) = (headers1, headers2) match {
+      override def equal(headers1: Headers, headers2: Headers): Boolean = (headers1, headers2) match {
         case (Some(h1), Some(h2)) => h1.list === h2.list
         case (None, None) => true
         case _ => false
@@ -112,7 +116,7 @@ object HttpRequest {
     }
 
     implicit val HeadersShow = new Show[Headers] {
-      override def show(h: Headers) = {
+      override def show(h: Headers): List[Char] = {
         val s = h.map { headerList: HeaderList =>
           headerList.list.map(h => "%s=%s".format(h._1, h._2)).mkString("&")
         } | ""
@@ -124,7 +128,7 @@ object HttpRequest {
     def apply(h: Header, tail: Header*): Headers = Headers(nel(h, tail.toList))
     def apply(h: HeaderList): Headers = h.some
     def apply(h: List[Header]): Headers = h.toNel
-    def empty = Option.empty[HeaderList]
+    def empty: Option[HeaderList] = Option.empty[HeaderList]
   }
 
   def fromJValue(jValue: JValue)(implicit client: HttpClient): Result[HttpRequest] = {
@@ -155,9 +159,9 @@ object HttpRequestWithBody {
       override val zero = RawBody.empty
     }
 
-    def empty = emptyBytes
-    def apply(s: String, charset: Charset = UTF8Charset) = s.getBytes(charset)
-    def apply(b: Array[Byte]) = b
+    def empty: Array[Byte] = emptyBytes
+    def apply(s: String, charset: Charset = UTF8Charset): Array[Byte] = s.getBytes(charset)
+    def apply(b: Array[Byte]): Array[Byte] = b
   }
 
 }

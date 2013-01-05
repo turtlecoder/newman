@@ -40,7 +40,7 @@ case class HttpResponse(code: HttpResponseCode,
                         timeReceived: Date = new Date()) {
   import HttpResponse._
 
-  def bodyString(implicit charset: Charset = UTF8Charset) = new String(rawBody, charset)
+  def bodyString(implicit charset: Charset = UTF8Charset): String = new String(rawBody, charset)
 
   def toJValue(implicit charset: Charset = UTF8Charset): JValue = toJSON(this)(getResponseSerialization.writer)
 
@@ -50,8 +50,8 @@ case class HttpResponse(code: HttpResponseCode,
     compact(render(toJValue))
   }
 
-  def bodyAsCaseClass[T <: AnyRef](implicit m: Manifest[T], charset: Charset = UTF8Charset) = {
-    def theReader(implicit reader: JSONR[T] = DefaultBodySerialization.getReader) = reader
+  def bodyAsCaseClass[T <: AnyRef](implicit m: Manifest[T], charset: Charset = UTF8Charset): Result[T] = {
+    def theReader(implicit reader: JSONR[T] = DefaultBodySerialization.getReader): JSONR[T] = reader
     fromJSON[T](parse(bodyString(charset)))(theReader)
   }
 

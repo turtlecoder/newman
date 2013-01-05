@@ -40,7 +40,7 @@ class HttpRequestSerialization(client: HttpClient) extends SerializationBase[Htt
 
   implicit override val writer = new JSONW[HttpRequest] {
 
-    override def write(req: HttpRequest) = {
+    override def write(req: HttpRequest): JValue = {
       val baseFields: List[JField] = JField(RequestTypeKey, toJSON(req.requestType)(HttpRequestTypeWriter)) ::
         JField(URLKey, toJSON(req.url)(URLWriter)) ::
         JField(HeadersKey, toJSON(req.headers)(HeadersWriter)) ::
@@ -57,7 +57,7 @@ class HttpRequestSerialization(client: HttpClient) extends SerializationBase[Htt
 
   implicit override val reader = new JSONR[HttpRequest] {
     import com.stackmob.newman.request.HttpRequestType._
-    override def read(json: JValue) = {
+    override def read(json: JValue): Result[HttpRequest] = {
       val typeField = field[HttpRequestType](RequestTypeKey)(json)(HttpRequestTypeReader)
       typeField.flatMap { reqType: HttpRequestType =>
         val urlField = field[URL](URLKey)(json)(URLReader)

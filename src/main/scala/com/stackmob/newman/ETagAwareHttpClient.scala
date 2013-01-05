@@ -31,14 +31,14 @@ import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 class ETagAwareHttpClient(httpClient: HttpClient, httpResponseCacher: HttpResponseCacher) extends HttpClient {
   import ETagAwareHttpClient._
 
-  override def get(u: URL, h: Headers) = new GetRequest with CachingMixin {
+  override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.get(u, h).prepare
     override val url = u
     override val headers = h
   }
 
-  override def post(u: URL, h: Headers, b: RawBody) = new PostRequest with CachingMixin {
+  override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest with CachingMixin {
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.post(u, h, b).prepare
     override val url = u
@@ -46,7 +46,7 @@ class ETagAwareHttpClient(httpClient: HttpClient, httpResponseCacher: HttpRespon
     override val body = b
   }
 
-  override def put(u: URL, h: Headers, b: RawBody) = new PutRequest with CachingMixin {
+  override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest with CachingMixin {
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.put(u, h, b).prepare
     override val url = u
@@ -54,14 +54,14 @@ class ETagAwareHttpClient(httpClient: HttpClient, httpResponseCacher: HttpRespon
     override val body = b
   }
 
-  override def delete(u: URL, h: Headers) = new DeleteRequest with CachingMixin {
+  override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest with CachingMixin {
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.delete(u, h).prepare
     override val url = u
     override val headers = h
   }
 
-  override def head(u: URL, h: Headers) = new HeadRequest with CachingMixin {
+  override def head(u: URL, h: Headers): HeadRequest = new HeadRequest with CachingMixin {
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.head(u, h).prepare
     override val url = u

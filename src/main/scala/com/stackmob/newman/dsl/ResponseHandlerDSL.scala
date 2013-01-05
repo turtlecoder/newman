@@ -92,8 +92,10 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCodesSuchThat(check: HttpResponseCode => Boolean)(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
+    def handleCodesSuchThat(check: HttpResponseCode => Boolean)
+                           (handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
       copy(handlers = (check, handler) :: handlers)
+    }
 
     /**
      * Adds a handler (a function that is called when the given code is matched) and returns a new ResponseHandler
@@ -101,8 +103,9 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCode(code: HttpResponseCode)(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
+    def handleCode(code: HttpResponseCode)(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
       handleCodesSuchThat({c: HttpResponseCode => c === code})(handler)
+    }
 
     /**
      * Adds a handler (a function that is called when any of the given codes are matched) and returns a new ResponseHandler
@@ -110,9 +113,10 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCodes(codes: Seq[HttpResponseCode])(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] =
+    def handleCodes(codes: Seq[HttpResponseCode])(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
       handleCodesSuchThat(codes.contains(_))(handler)
-    
+    }
+
     /**
      * Adds a handler that expects the specified response code and a JSON body readable by
      * a JSONR for the type of this ResponseHandler. A Response can only return
@@ -133,7 +137,9 @@ trait ResponseHandlerDSL {
      * however, if there are there is no effect on the handling of the
      * response.  @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
-    def handleJSONBody[S](code: HttpResponseCode)(handler: S => ThrowableValidation[T])(implicit reader: JSONR[S], charset: Charset = UTF8Charset): ResponseHandler[T] = {
+    def handleJSONBody[S](code: HttpResponseCode)
+                         (handler: S => ThrowableValidation[T])
+                         (implicit reader: JSONR[S], charset: Charset = UTF8Charset): ResponseHandler[T] = {
       handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].mapFailure { t =>
         JSONParsingError(t): Throwable
       }.flatMap(handler))
@@ -146,7 +152,7 @@ trait ResponseHandlerDSL {
      * @param successValue - the value to return successfully when a 204 is encountered
      * @return a new ResponseHandler
      */
-    def expectNoContent(successValue: T) = {
+    def expectNoContent(successValue: T): ResponseHandler[T] = {
       handleCode(HttpResponseCode.NoContent)((_: HttpResponse) => successValue.success)
     }
 
@@ -162,24 +168,35 @@ trait ResponseHandlerDSL {
 
   trait IOResponseW extends NewType[IO[HttpResponse]] {
 
-    def handleCodesSuchThat[T](check: HttpResponseCode => Boolean)(handler: HttpResponse => ThrowableValidation[T]) =
+    def handleCodesSuchThat[T](check: HttpResponseCode => Boolean)
+                              (handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
       ResponseHandler(Nil, value).handleCodesSuchThat(check)(handler)
+    }
 
-    def handleCode[T](code: HttpResponseCode)(handler: HttpResponse => ThrowableValidation[T]) =
+    def handleCode[T](code: HttpResponseCode)
+                     (handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
       ResponseHandler(Nil, value).handleCode(code)(handler)
+    }
 
-    def handleCodes[T](codes: Seq[HttpResponseCode])(handler: HttpResponse => ThrowableValidation[T]) =
+    def handleCodes[T](codes: Seq[HttpResponseCode])
+                      (handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
       ResponseHandler(Nil, value).handleCodes(codes)(handler)
+    }
 
-    def expectJSONBody[T](code: HttpResponseCode)(implicit reader: JSONR[T], charset: Charset = UTF8Charset) = {
+    def expectJSONBody[T](code: HttpResponseCode)
+                         (implicit reader: JSONR[T],
+                          charset: Charset = UTF8Charset): ResponseHandler[T] = {
       ResponseHandler(Nil, value).expectJSONBody(code)(reader, charset)
     }
 
-    def handleJSONBody[S, T](code: HttpResponseCode)(handler: S => ThrowableValidation[T])(implicit reader: JSONR[S], charset: Charset = UTF8Charset) = {
+    def handleJSONBody[S, T](code: HttpResponseCode)
+                            (handler: S => ThrowableValidation[T])
+                            (implicit reader: JSONR[S],
+                             charset: Charset = UTF8Charset): ResponseHandler[T] = {
       ResponseHandler(Nil, value).handleJSONBody(code)(handler)(reader, charset)
     }
 
-    def expectNoContent[T](successValue: T) = {
+    def expectNoContent[T](successValue: T): ResponseHandler[T] = {
       ResponseHandler(Nil, value).expectNoContent(successValue)
     }
   }
@@ -192,6 +209,10 @@ trait ResponseHandlerDSL {
     val value = ioResp
   }
 
-  implicit def ResponseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = handler.default {resp => UnhandledResponseCode(resp.code, resp.bodyString).fail[T]}
+  implicit def ResponseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = {
+    handler.default { resp =>
+      UnhandledResponseCode(resp.code, resp.bodyString).fail[T]
+    }
+  }
 
 }
