@@ -1,7 +1,5 @@
 package com.stackmob.newman
 
-import com.stackmob.newman.request.HttpRequest.Headers
-import com.stackmob.newman.request.HttpRequest.Headers.HeadersEqual
 import com.stackmob.newman.response.HttpResponse
 import org.specs2.matcher.{MatchResult, Expectable, Matcher}
 import org.specs2.execute.{Failure => SpecsFailure, Result => SpecsResult}

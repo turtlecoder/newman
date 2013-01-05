@@ -1,4 +1,5 @@
-package com.stackmob.newman.response.serialization
+package com.stackmob.newman
+package response.serialization
 
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}

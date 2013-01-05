@@ -8,9 +8,7 @@ import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
 import java.net.URL
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import com.stackmob.newman.request.HttpRequest.Headers
 import com.stackmob.newman.{DummyHttpClient, BaseContext}
-import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 import com.stackmob.newman.request.HttpRequestExecution._
 
 /**

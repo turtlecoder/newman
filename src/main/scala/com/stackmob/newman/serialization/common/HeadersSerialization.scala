@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.serialization.common
+package com.stackmob.newman
+package serialization.common
 
-import com.stackmob.newman.request.HttpRequest._
 import scalaz._
 import Scalaz._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
-import com.stackmob.newman.request.HttpRequest.Headers
 
 object HeadersSerialization extends SerializationBase[Headers] {
 

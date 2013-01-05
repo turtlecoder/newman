@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.serialization.request
+package com.stackmob.newman
+package serialization.request
 
 import scalaz._
 import Scalaz._
 import com.stackmob.newman.serialization.common.SerializationBase
 import com.stackmob.newman.request._
-import com.stackmob.newman.request.HttpRequest.Headers
-import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 import java.net.URL

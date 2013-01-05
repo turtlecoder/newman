@@ -8,7 +8,6 @@ import net.liftweb.json._
 import com.stackmob.newman.dsl._
 import java.net.URL
 import com.stackmob.newman.request.HttpRequest
-import com.stackmob.newman.request.HttpRequest.Headers
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.Constants.UTF8Charset
 import org.specs2.matcher.Matcher

@@ -9,7 +9,6 @@ import java.net.URL
 import com.stackmob.newman.caching.{HttpResponseCacher, DummyHttpResponseCacher}
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.request.HttpRequest
-import com.stackmob.newman.request.HttpRequest.{Header, Headers}
 import collection.JavaConverters._
 
 /**

@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.serialization.response
+package com.stackmob.newman
+package serialization.response
 
 import scalaz._
 import Scalaz._

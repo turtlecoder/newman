@@ -15,8 +15,6 @@ import scalaz._
 import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure, Success => SpecsSuccess}
-import com.stackmob.newman.request.HttpRequest.Headers
-import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 import com.stackmob.newman.{DummyHttpClient, BaseContext}
 import java.net.URL
 import com.stackmob.newman.request.{HttpRequestWithoutBody, HttpRequest, HttpRequestWithBody}

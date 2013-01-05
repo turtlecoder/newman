@@ -1,11 +1,11 @@
-package com.stackmob.newman.caching
+package com.stackmob.newman
+package caching
 
 import scalaz._
 import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import com.stackmob.newman.{DummyHttpClient, BaseContext}
-import com.stackmob.newman.request.HttpRequest.Headers
 import com.stackmob.newman.response.HttpResponse
 import java.net.URL
 

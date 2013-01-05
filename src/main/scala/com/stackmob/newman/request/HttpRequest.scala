@@ -22,17 +22,15 @@ import scalaz._
 import Scalaz._
 import scalaz.effects._
 import scalaz.concurrent._
-import com.stackmob.newman.response._
-import java.nio.charset.Charset
-import com.stackmob.newman.Constants._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 import com.stackmob.newman.{Constants, HttpClient}
 import com.stackmob.newman.request.HttpRequestExecution._
 import java.security.MessageDigest
+import com.stackmob.newman.response._
+
 
 trait HttpRequest {
-  import HttpRequest._
   import Headers._
   def url: URL
   def requestType: HttpRequestType
@@ -81,7 +79,7 @@ trait HttpRequest {
 
   lazy val hash = {
     val headersString = headers.shows
-    val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | HttpRequestWithBody.RawBody.empty
+    val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | RawBody.empty
     val bodyString = new String(bodyBytes, Constants.UTF8Charset)
     val bytes = "%s%s%s".format(url.toString, headersString, bodyString).getBytes(Constants.UTF8Charset)
     md5.digest(bytes)
@@ -98,39 +96,6 @@ trait HttpRequest {
 
 object HttpRequest {
 
-  type Header = (String, String)
-  type HeaderList = NonEmptyList[Header]
-  type Headers = Option[HeaderList]
-
-  object Headers {
-    implicit val HeadersEqual = new Equal[Headers] {
-      override def equal(headers1: Headers, headers2: Headers): Boolean = (headers1, headers2) match {
-        case (Some(h1), Some(h2)) => h1.list === h2.list
-        case (None, None) => true
-        case _ => false
-      }
-    }
-
-    implicit val HeadersZero = new Zero[Headers] {
-      override val zero = Headers.empty
-    }
-
-    implicit val HeadersShow = new Show[Headers] {
-      override def show(h: Headers): List[Char] = {
-        val s = h.map { headerList: HeaderList =>
-          headerList.list.map(h => "%s=%s".format(h._1, h._2)).mkString("&")
-        } | ""
-        s.toList
-      }
-    }
-
-    def apply(h: Header): Headers = Headers(nel(h))
-    def apply(h: Header, tail: Header*): Headers = Headers(nel(h, tail.toList))
-    def apply(h: HeaderList): Headers = h.some
-    def apply(h: List[Header]): Headers = h.toNel
-    def empty: Option[HeaderList] = Option.empty[HeaderList]
-  }
-
   def fromJValue(jValue: JValue)(implicit client: HttpClient): Result[HttpRequest] = {
     import com.stackmob.newman.serialization.request.HttpRequestSerialization
     import net.liftweb.json.scalaz.JsonScalaz.fromJSON
@@ -146,23 +111,11 @@ object HttpRequest {
 }
 
 sealed trait HttpRequestWithBody extends HttpRequest {
-  import HttpRequestWithBody._
   def body: RawBody
 }
 
 object HttpRequestWithBody {
-  type RawBody = Array[Byte]
-  object RawBody {
-    private lazy val emptyBytes = Array[Byte]()
 
-    implicit val RawBodyZero = new Zero[RawBody] {
-      override val zero = RawBody.empty
-    }
-
-    def empty: Array[Byte] = emptyBytes
-    def apply(s: String, charset: Charset = UTF8Charset): Array[Byte] = s.getBytes(charset)
-    def apply(b: Array[Byte]): Array[Byte] = b
-  }
 
 }
 

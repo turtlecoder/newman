@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.serialization.common
+package com.stackmob.newman
+package serialization.common
 
 import scalaz._
 import Scalaz._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
-import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 import com.stackmob.newman.Constants._
 
 object RawBodySerialization extends SerializationBase[RawBody] {

@@ -26,7 +26,6 @@ import request.HttpRequest._
 import response.HttpResponse
 import org.apache.http.HttpHeaders
 import java.net.URL
-import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 
 class ETagAwareHttpClient(httpClient: HttpClient, httpResponseCacher: HttpResponseCacher) extends HttpClient {
   import ETagAwareHttpClient._
