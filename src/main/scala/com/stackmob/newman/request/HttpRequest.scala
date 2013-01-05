@@ -1,4 +1,5 @@
-package com.stackmob.newman.request
+package com.stackmob.newman
+package request
 
 import java.net.URL
 import _root_.scalaz._
@@ -10,7 +11,6 @@ import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
-import com.stackmob.common.validation._
 import com.stackmob.newman.{Constants, HttpClient}
 import com.stackmob.newman.request.HttpRequestExecution._
 import java.security.MessageDigest

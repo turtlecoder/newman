@@ -4,14 +4,12 @@ package dsl
 import scalaz._
 import Scalaz._
 import scalaz.effects.IO
-import com.stackmob.common.validation._
 import response.HttpResponseCode
 import response.HttpResponse
 import response.HttpResponse.JSONParsingError
 import java.nio.charset.Charset
 import Constants._
 import net.liftweb.json.scalaz.JsonScalaz._
-import net.liftweb.json._
 
 
 /**
@@ -120,7 +118,9 @@ trait ResponseHandlerDSL {
      * response.  @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
     def handleJSONBody[S](code: HttpResponseCode)(handler: S => ThrowableValidation[T])(implicit reader: JSONR[S], charset: Charset = UTF8Charset): ResponseHandler[T] = {
-      handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].mapFailure(JSONParsingError(_): Throwable).flatMap(handler))
+      handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].mapFailure { t =>
+        JSONParsingError(t): Throwable
+      }.flatMap(handler))
     }
 
     /**

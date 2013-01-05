@@ -19,7 +19,6 @@ import com.stackmob.newman.response.HttpResponse
 import org.apache.http.impl.client.{AbstractHttpClient, DefaultHttpClient}
 import org.apache.http.conn.ClientConnectionManager
 import org.apache.http.impl.conn.PoolingClientConnectionManager
-import com.stackmob.common.util.casts._
 import java.util.concurrent.{ThreadFactory, Executors}
 import ApacheHttpClient._
 import java.util.concurrent.atomic.AtomicInteger

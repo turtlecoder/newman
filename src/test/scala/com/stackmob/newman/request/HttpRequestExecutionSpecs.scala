@@ -1,4 +1,5 @@
-package com.stackmob.newman.request
+package com.stackmob.newman
+package request
 
 import scalaz._
 import Scalaz._
@@ -11,7 +12,6 @@ import com.stackmob.newman.request.HttpRequest.Headers
 import com.stackmob.newman.{DummyHttpClient, BaseContext}
 import com.stackmob.newman.request.HttpRequestWithBody.RawBody
 import com.stackmob.newman.request.HttpRequestExecution._
-import com.stackmob.common.validation._
 
 /**
  * Created by IntelliJ IDEA.

@@ -1,8 +1,9 @@
-package com.stackmob.newman.response
+package com.stackmob.newman
+package response
 
-import com.stackmob.common.enumeration._
 import scalaz._
 import Scalaz._
+import enumeration._
 
 /**
  * Created by IntelliJ IDEA.

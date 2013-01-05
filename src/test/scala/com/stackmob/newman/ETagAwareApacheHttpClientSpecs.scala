@@ -6,7 +6,6 @@ import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import org.apache.http.HttpHeaders
 import java.net.URL
-import com.stackmob.common.validation.validating
 import com.stackmob.newman.caching.{HttpResponseCacher, DummyHttpResponseCacher}
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.request.HttpRequest

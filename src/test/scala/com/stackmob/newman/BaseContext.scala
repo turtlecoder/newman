@@ -1,6 +1,5 @@
 package com.stackmob.newman
 
-import com.stackmob.common.logging.LoggingSugar
 import com.stackmob.newman.request.HttpRequest.Headers
 import com.stackmob.newman.request.HttpRequest.Headers.HeadersEqual
 import com.stackmob.newman.response.HttpResponse
@@ -20,9 +19,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
  * Time: 3:30 PM
  */
 
-trait BaseContext extends LoggingSugar {
-
-  private val logger = getLogger[BaseContext]
+trait BaseContext {
 
   protected class HeadersAreEqualMatcher(expected: Headers) extends Matcher[Headers] {
     override def apply[S <: Headers](r: Expectable[S]): MatchResult[S] = {
@@ -46,7 +43,6 @@ trait BaseContext extends LoggingSugar {
   protected def beTheSameResponseAs(h: HttpResponse) = new HttpResponsesAreEqualMatcher(h)
 
   protected def logAndFail(t: Throwable): SpecsResult = {
-    logger.warn(t.getMessage, t)
     SpecsFailure("failed with exception %s".format(t.getMessage))
   }
 
@@ -58,7 +54,6 @@ trait BaseContext extends LoggingSugar {
 
   protected def logAndFail(errs: NonEmptyList[Error]): SpecsResult = {
     val totalErrString = errs.map(errorString(_)).list.mkString("\n")
-    logger.warn("JSON errors:\n%s".format(totalErrString))
     SpecsFailure("JSON errors occurred: %s".format(totalErrString))
   }
 }

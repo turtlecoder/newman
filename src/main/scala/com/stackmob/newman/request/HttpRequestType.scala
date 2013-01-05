@@ -1,6 +1,7 @@
-package com.stackmob.newman.request
+package com.stackmob.newman
+package request
 
-import com.stackmob.common.enumeration._
+import enumeration._
 import scalaz._
 import Scalaz._
 
@@ -22,14 +23,5 @@ object HttpRequestType {
   object DELETE extends HttpRequestType("DELETE")
   object HEAD extends HttpRequestType("HEAD")
 
-  implicit val HttpRequestTypeToReader = new EnumReader[HttpRequestType] {
-    override def read(s: String) = s.toUpperCase match {
-      case GET.stringVal => GET.some
-      case POST.stringVal => POST.some
-      case PUT.stringVal => PUT.some
-      case DELETE.stringVal => DELETE.some
-      case HEAD.stringVal => HEAD.some
-      case _ => none
-    }
-  }
+  implicit val HttpRequestTypeToReader = upperEnumReader(GET, POST, PUT, DELETE, HEAD)
 }

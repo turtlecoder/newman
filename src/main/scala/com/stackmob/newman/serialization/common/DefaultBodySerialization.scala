@@ -1,8 +1,8 @@
-package com.stackmob.newman.serialization.common
+package com.stackmob.newman
+package serialization.common
 
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
-import com.stackmob.common.validation._
 
 /**
  * Created by IntelliJ IDEA.
@@ -18,7 +18,7 @@ object DefaultBodySerialization {
 
   def getReader[A <: AnyRef](implicit m:Manifest[A]): JSONR[A] = new JSONR[A] {
     override def read(json: JValue) = {
-      validating{
+      validating {
         json.extract[A](Serialization.formats(NoTypeHints), m)
       }.mapFailure{ t: Throwable =>
         UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
