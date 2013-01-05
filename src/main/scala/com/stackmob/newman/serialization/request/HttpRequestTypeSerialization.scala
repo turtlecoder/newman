@@ -1,7 +1,9 @@
-package com.stackmob.newman.serialization.request
+package com.stackmob.newman
+package serialization.request
 
 import scalaz._
 import Scalaz._
+import enumeration._
 import com.stackmob.newman.request.HttpRequestType
 import com.stackmob.newman.serialization.common.SerializationBase
 import net.liftweb.json._
@@ -19,8 +21,6 @@ import net.liftweb.json.scalaz.JsonScalaz._
 
 object HttpRequestTypeSerialization extends SerializationBase[HttpRequestType] {
   implicit override val reader = new JSONR[HttpRequestType] {
-    import com.stackmob.newman.request.HttpRequestType._
-    import com.stackmob.common.enumeration.Enumeration._
     override def read(jValue: JValue): ValidationNEL[Error, HttpRequestType] = jValue match {
       case JString(s) => s.readEnum[HttpRequestType].map(_.successNel[Error]) | {
         UncategorizedError("request type", "unknown request type %s".format(s), List()).failNel[HttpRequestType]

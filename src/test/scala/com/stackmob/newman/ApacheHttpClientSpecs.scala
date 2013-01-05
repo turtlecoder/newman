@@ -24,12 +24,12 @@ class ApacheHttpClientSpecs extends Specification { def is =
   "The Client Should"                                                                                                   ^
     "Correctly do GET requests"                                                                                         ! Get().succeeds ^
     "Correctly do async GET requests"                                                                                   ! Get().succeedsAsync ^
-    "Correctly do POST requests"                                                                                        ! Post().succeeds ^
-    "Correctly do async POST requests"                                                                                  ! Post().succeedsAsync ^
-    "Correctly do PUT requests"                                                                                         ! Put().succeeds ^
-    "Correctly do async PUT requests"                                                                                   ! Put().succeedsAsync ^
-    "Correctly do DELETE requests"                                                                                      ! Delete().succeeds ^
-    "Correctly do async DELETE requests"                                                                                ! Delete().succeedsAsync ^
+    "Correctly do POST requests"                                                                                        ! skipped ^ //Post().succeeds ^
+    "Correctly do async POST requests"                                                                                  ! skipped  ^ //Post().succeedsAsync ^
+    "Correctly do PUT requests"                                                                                         ! skipped ^ //Put().succeeds ^
+    "Correctly do async PUT requests"                                                                                   ! skipped ^ //Put().succeedsAsync ^
+    "Correctly do DELETE requests"                                                                                      ! skipped ^ //Delete().succeeds ^
+    "Correctly do async DELETE requests"                                                                                ! skipped ^ //Delete().succeedsAsync ^
     "Correctly do HEAD requests"                                                                                        ! Head().succeeds ^
     "Correctly do async HEAD requests"                                                                                  ! Head().succeedsAsync ^
                                                                                                                         end

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.serialization.response
+package com.stackmob.newman
+package serialization.response
 
 import scalaz._
 import Scalaz._
 import com.stackmob.newman.response.HttpResponseCode
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
-import com.stackmob.common.validation._
-import com.stackmob.newman.serialization.common.SerializationBase
+import serialization.common.SerializationBase
 
 object HttpResponseCodeSerialization extends SerializationBase[HttpResponseCode] {
   override implicit val writer = new JSONW[HttpResponseCode] {

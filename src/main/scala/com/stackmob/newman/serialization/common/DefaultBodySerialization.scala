@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.serialization.common
+package com.stackmob.newman
+package serialization.common
 
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
-import com.stackmob.common.validation._
 
 object DefaultBodySerialization {
 

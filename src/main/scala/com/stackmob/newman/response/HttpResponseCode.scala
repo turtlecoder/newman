@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.response
+package com.stackmob.newman
+package response
 
-import com.stackmob.common.enumeration._
 import scalaz._
 import Scalaz._
+import enumeration._
 
 
 sealed abstract class HttpResponseCode(val code: Int, override val stringVal: String) extends Enumeration

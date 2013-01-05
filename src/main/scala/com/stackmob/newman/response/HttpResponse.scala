@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.response
+package com.stackmob.newman
+package response
 
 import scalaz._
 import effects._
 import Scalaz._
-import com.stackmob.newman.request._
+import request._
+import jsonscalaz._
 import HttpRequest._
 import HttpRequestWithBody._
 import java.nio.charset.Charset
@@ -31,9 +33,6 @@ import org.apache.http.HttpHeaders
 import com.stackmob.newman.response.HttpResponseCode.HttpResponseCodeEqual
 import com.stackmob.newman.serialization.response.HttpResponseSerialization
 import com.stackmob.newman.serialization.common.DefaultBodySerialization
-import com.stackmob.common.util.ValidationT._
-import com.stackmob.common.validation._
-import com.stackmob.common.json.jsonscalaz._
 
 case class HttpResponse(code: HttpResponseCode,
                         headers: Headers,
