@@ -47,21 +47,29 @@ object HttpResponseCode {
 
   object EntityTooLarge extends HttpResponseCode(413, "Entity Too Large")
 
+  object FailedDependency extends HttpResponseCode(424, "Failed Dependency")
+
   object Forbidden extends HttpResponseCode(403, "Forbidden")
 
   object GatewayTimeout extends HttpResponseCode(504, "Gateway Timeout")
 
   object Gone extends HttpResponseCode(410, "Gone")
 
+  object InsufficientStorage extends HttpResponseCode(507, "Insufficient Storage")
+
   object InternalServerError extends HttpResponseCode(500, "Internal Server Error")
 
   object LengthRequired extends HttpResponseCode(411, "Length Required")
+
+  object Locked extends HttpResponseCode(423, "Locked")
 
   object MovedPermanently extends HttpResponseCode(301, "Moved Permanently")
 
   object TemporaryRedirect extends HttpResponseCode(302, "Temporary Redirect")
 
   object MultipleChoices extends HttpResponseCode(300, "Multiple Choices")
+
+  object MultiStatus extends HttpResponseCode(207, "Multi-Status")
 
   object NoContent extends HttpResponseCode(204, "No Content")
 
@@ -95,6 +103,8 @@ object HttpResponseCode {
 
   object ServiceUnavailable extends HttpResponseCode(503, "Service Unavailable")
 
+  object UnprocessableEntity extends HttpResponseCode(422, "Unprocessable Entity")
+
   object UnsupportedMediaType extends HttpResponseCode(415, "Unsupported Media Type")
 
   object UseProxy extends HttpResponseCode(305, "Use Proxy")
@@ -113,11 +123,15 @@ object HttpResponseCode {
     case Forbidden.code => Forbidden.some
     case GatewayTimeout.code => GatewayTimeout.some
     case Gone.code => Gone.some
+    case InsufficientStorage.code => InsufficientStorage.some
     case InternalServerError.code => InternalServerError.some
+    case FailedDependency.code => FailedDependency.some
     case LengthRequired.code => LengthRequired.some
+    case Locked.code => Locked.some
     case MovedPermanently.code => MovedPermanently.some
     case TemporaryRedirect.code => TemporaryRedirect.some
     case MultipleChoices.code => MultipleChoices.some
+    case MultiStatus.code => MultiStatus.some
     case NoContent.code => NoContent.some
     case NotAcceptable.code => NotAcceptable.some
     case NonAuthoritativeInformation.code => NonAuthoritativeInformation.some
@@ -134,6 +148,7 @@ object HttpResponseCode {
     case SeeOther.code => SeeOther.some
     case Unauthorized.code => Unauthorized.some
     case ServiceUnavailable.code => ServiceUnavailable.some
+    case UnprocessableEntity.code => UnprocessableEntity.some
     case UnsupportedMediaType.code => UnsupportedMediaType.some
     case UseProxy.code => UseProxy.some
     case HttpVersionNotSupported.code => HttpVersionNotSupported.some
