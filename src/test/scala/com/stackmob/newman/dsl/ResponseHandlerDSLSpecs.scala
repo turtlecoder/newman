@@ -22,6 +22,8 @@ import scalaz._
 import effects._
 import Scalaz._
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
+import com.stackmob.newman.{RawBody, Headers}
+import com.stackmob.newman.Constants._
 
 class ResponseHandlerDSLSpecs extends Specification { def is =
   "ResponseHandlerDSLSpecs".title                                                                                       ^
@@ -30,7 +32,10 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
   """                                                                                                                   ^
   "The DSL should"                                                                                                      ^
     "return a Failure if the IO throws"                                                                                 ! ThrowingIO().returnsFailure ^
-    "return non throwable error types if specified"                                                                     ! CustomErrors().returnsCorrectly ^
+    "return a Success if the IO doesn't throw, types aren't specified, and Unit is returned"                            ! ThrowingIO().returnsEmptySuccess ^
+    "return a Success if the IO doesn't throw, types aren't specified, and non-Unit is returned"                        ! ThrowingIO().returnsNonEmptySuccess ^
+    "return non throwable error types if specified & the IO throws"                                                     ! CustomErrors().returnsErrorCorrectly ^
+    "return successful validation of nonthrowable error type if specified"                                              ! CustomErrors().returnsSuccessCorrectly ^
                                                                                                                         end
   trait Context
 
@@ -44,15 +49,39 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
         case e => e must beEqualTo(ex)
       }
     }
+
+    def returnsEmptySuccess: SpecsResult = {
+      val respIO = io(HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)).handleCode(HttpResponseCode.Ok)(_ => ().success)
+      respIO.unsafePerformIO.either must beRight.like {
+        case e => e must beEqualTo(())
+      }
+    }
+
+    def returnsNonEmptySuccess: SpecsResult = {
+      val bodyString = "test body"
+      val respIO = io(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode(HttpResponseCode.Ok){resp => resp.bodyString.success}
+      respIO.unsafePerformIO.either must beRight.like {
+        case e => e must beEqualTo(bodyString)
+      }
+    }
   }
 
   case class CustomErrors() extends CustomErrorContext {
-    def returnsCorrectly: SpecsResult = {
-      val ex = new Exception("test exception")
-      val customError = new CustomErrorForSpecs("test exception")
+    def returnsErrorCorrectly: SpecsResult = {
+      val exceptionMessage = "test exception"
+      val ex = new Exception(exceptionMessage)
+      val customError = new CustomErrorForSpecs(exceptionMessage)
       val respIO: IO[Validation[CustomErrorForSpecs, Unit]] = io((throw ex): HttpResponse).handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok)(_ => ().success)
       respIO.unsafePerformIO.either must beLeft.like {
         case e => e must beEqualTo(customError)
+      }
+    }
+
+    def returnsSuccessCorrectly: SpecsResult = {
+      val bodyString = "test body"
+      val respIO: IO[Validation[CustomErrorForSpecs, String]] = io(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){resp => resp.bodyString.success}
+      respIO.unsafePerformIO.either must beRight.like {
+        case e => e must beEqualTo(bodyString)
       }
     }
   }
