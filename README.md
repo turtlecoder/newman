@@ -35,7 +35,8 @@ println("Response returned from %s with code %d, body %s".format(url.toString,re
 ```
 
 #The DSL
-Newman comes with a DSL which is inspired by [Dispatch](http://dispatch.databinder.net/Dispatch.html), but aims to be much simpler to understand and use. This DSL is the recommended way to build requests, and the above example in "Basic Usage" uses the DSL to construct a GET request.
+Newman comes with a DSL which is inspired by [Dispatch](http://dispatch.databinder.net/Dispatch.html), but uses mostly english instead of symbols.
+This DSL is the recommended way to build requests, and the above example in "Basic Usage" uses the DSL to construct a GET request.
 
 To start using the DSL, simply `import com.stackmob.newman.dsl._`. The methods of interest in the DSL are uppercase representations of the HTTP verbs: 
 
@@ -56,7 +57,7 @@ Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously
 * `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc… (hence the suffix `Unsafe`)
 
 # Serializing
-Newman comes with built in support for serializing `HttpRequest`s and `HttpRespons`es to Json.
+Newman comes with built in support for serializing `HttpRequest`s and `HttpResponse`s to Json.
 
 To serialize either, simply call the `toJson(prettyPrint: Boolean = false): String` method on the `HttpRequest` or `HttpResponse`. And to deserialize, call `HttpRequest.fromJson(json: String): Result[HttpRequest]` or `HttpResponse.fromJson(json: String): Result[HttpResponse]` to deserialize the `HttpRequest` or `HttpResponse`, respectively.
 
