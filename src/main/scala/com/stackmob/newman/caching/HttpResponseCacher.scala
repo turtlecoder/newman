@@ -23,6 +23,6 @@ import scalaz.concurrent._
 
 trait HttpResponseCacher {
   def get(req: HttpRequest): IO[Option[HttpResponse]]
-  def set(req: HttpRequest, resp: HttpResponse): IO[Unit]
+  def set(req: HttpRequest, resp: HttpResponse, ttlMilliseconds: Long): IO[Unit]
   def exists(req: HttpRequest): IO[Boolean]
 }

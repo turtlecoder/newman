@@ -22,11 +22,23 @@ import com.stackmob.newman.request.HttpRequest
 import scalaz.effects._
 
 class InMemoryHttpResponseCacher extends HttpResponseCacher {
-  private val cache = new ConcurrentHashMap[Array[Byte], HttpResponse]()
+  private val cache = new ConcurrentHashMap[Array[Byte], (HttpResponse, Long)]()
 
-  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io(Option(cache.get(req.hash)))
-  override def set(req: HttpRequest, resp: HttpResponse): IO[Unit] = io {
-    cache.put(req.hash, resp)
+  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io {
+    Option(cache.get(req.hash)).flatMap { tup =>
+      val (resp, expiresMilliseconds) = tup
+      if (expiresMilliseconds < System.currentTimeMillis()) {
+        //Aaron, 2/14/2012, there's a race condition here that can cause elements to get removed before their expiry
+        cache.remove(req.hash)
+        None
+      } else {
+        Some(resp)
+      }
+    }
+  }
+  override def set(req: HttpRequest, resp: HttpResponse, ttlMilliseconds: Long): IO[Unit] = io {
+    val value = resp -> (System.currentTimeMillis() + ttlMilliseconds)
+    cache.put(req.hash, value)
     ()
   }
 
