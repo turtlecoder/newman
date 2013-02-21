@@ -1,3 +1,19 @@
+/**
+ * Copyright 2013 StackMob
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.stackmob.newman
 
 import scalaz.Scalaz._
@@ -8,19 +24,10 @@ import request._
 import response.HttpResponse
 import java.net.URL
 
-/**
- * Created by IntelliJ IDEA.
- * 
- * com.stackmob.newman
- * 
- * User: aaron
- * Date: 2/14/13
- * Time: 5:16 PM
- */
-class CachingHttpClient(httpClient: HttpClient,
+class ReadCachingHttpClient(httpClient: HttpClient,
                         httpResponseCacher: HttpResponseCacher,
                         t: Time) extends HttpClient {
-  import CachingHttpClient._
+  import ReadCachingHttpClient._
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
     override protected lazy val ttl = t
@@ -30,28 +37,22 @@ class CachingHttpClient(httpClient: HttpClient,
     override val headers = h
   }
 
-  override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest with CachingMixin {
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.post(u, h, b).prepare
+  override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest {
+    override protected def prepareAsync: IO[Promise[HttpResponse]] = httpClient.post(u, h, b).prepareAsync
     override val url = u
     override val headers = h
     override val body = b
   }
 
-  override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest with CachingMixin {
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.put(u, h, b).prepare
+  override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest {
+    override protected def prepareAsync = httpClient.put(u, h, b).prepareAsync
     override val url = u
     override val headers = h
     override val body = b
   }
 
-  override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest with CachingMixin {
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.delete(u, h).prepare
+  override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest {
+    override protected def prepareAsync = httpClient.delete(u, h).prepareAsync
     override val url = u
     override val headers = h
   }
@@ -65,7 +66,7 @@ class CachingHttpClient(httpClient: HttpClient,
   }
 }
 
-object CachingHttpClient {
+object ReadCachingHttpClient {
   trait CachingMixin extends HttpRequest { this: HttpRequest =>
     protected def ttl: Time
     protected def cache: HttpResponseCacher
