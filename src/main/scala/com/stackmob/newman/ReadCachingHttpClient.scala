@@ -38,21 +38,21 @@ class ReadCachingHttpClient(httpClient: HttpClient,
   }
 
   override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest {
-    override protected def prepareAsync: IO[Promise[HttpResponse]] = httpClient.post(u, h, b).prepareAsync
+    override def prepareAsync: IO[Promise[HttpResponse]] = httpClient.post(u, h, b).prepareAsync
     override val url = u
     override val headers = h
     override val body = b
   }
 
   override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest {
-    override protected def prepareAsync = httpClient.put(u, h, b).prepareAsync
+    override def prepareAsync = httpClient.put(u, h, b).prepareAsync
     override val url = u
     override val headers = h
     override val body = b
   }
 
   override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest {
-    override protected def prepareAsync = httpClient.delete(u, h).prepareAsync
+    override def prepareAsync = httpClient.delete(u, h).prepareAsync
     override val url = u
     override val headers = h
   }
