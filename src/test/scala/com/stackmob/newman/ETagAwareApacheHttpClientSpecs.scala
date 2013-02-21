@@ -22,7 +22,7 @@ import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import org.apache.http.HttpHeaders
 import java.net.URL
-import com.stackmob.newman.caching.{HttpResponseCacher, DummyHttpResponseCacher}
+import caching.{Time, HttpResponseCacher, DummyHttpResponseCacher}
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.request.HttpRequest
 import collection.JavaConverters._
@@ -56,7 +56,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     protected val responseWithoutETag = HttpResponse(HttpResponseCode.Ok, Headers.empty, body)
     protected val responseWithNotModified = HttpResponse(HttpResponseCode.NotModified, Headers.empty, body)
 
-    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher)
+    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher, Time.now)
 
     protected def rawClient: DummyHttpClient
     protected def responseCacher: HttpResponseCacher

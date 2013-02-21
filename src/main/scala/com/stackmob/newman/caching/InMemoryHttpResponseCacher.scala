@@ -14,31 +14,54 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.caching
+package com.stackmob.newman
+package caching
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent._
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scalaz.effects._
 
-class InMemoryHttpResponseCacher extends HttpResponseCacher {
-  private val cache = new ConcurrentHashMap[Array[Byte], (HttpResponse, Long)]()
+case class CachedResponseDelay(ttl: Time, hash: HashCode) extends Delayed {
+  private val startTime = Time.now
 
-  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io {
-    Option(cache.get(req.hash)).flatMap { tup =>
-      val (resp, expiresMilliseconds) = tup
-      if (expiresMilliseconds < System.currentTimeMillis()) {
-        //Aaron, 2/14/2012, there's a race condition here that can cause elements to get removed before their expiry
-        cache.remove(req.hash)
-        None
-      } else {
-        Some(resp)
+  override def getDelay(unit: TimeUnit): Long = {
+    val curTime = Time(System.currentTimeMillis(), unit)
+    (curTime -- startTime).asUnit(unit).magnitude
+  }
+
+  override def compareTo(d: Delayed): Int = {
+    val thisDelay: Long = ttl.magnitude
+    val otherDelay: Long = d.getDelay(ttl.unit)
+    thisDelay.compareTo(otherDelay)
+  }
+}
+
+class InMemoryHttpResponseCacher extends HttpResponseCacher {
+
+  Executors.newSingleThreadExecutor().submit(delayQueueRunnable)
+
+  private lazy val cache = new ConcurrentHashMap[Array[Byte], HttpResponse]()
+  private lazy val delayQueue = new DelayQueue[CachedResponseDelay]()
+
+  private lazy val delayQueueRunnable = new Runnable {
+    def run() {
+      while(true) {
+        validating {
+          val hash = delayQueue.take().hash
+          cache.remove(hash)
+        }
       }
     }
   }
-  override def set(req: HttpRequest, resp: HttpResponse, ttlMilliseconds: Long): IO[Unit] = io {
-    val value = resp -> (System.currentTimeMillis() + ttlMilliseconds)
-    cache.put(req.hash, value)
+
+  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io {
+    Option(cache.get(req.hash))
+  }
+
+  override def set(req: HttpRequest, resp: HttpResponse, ttl: Time): IO[Unit] = io {
+    delayQueue.add(CachedResponseDelay(ttl, req.hash))
+    cache.put(req.hash, resp)
     ()
   }
 

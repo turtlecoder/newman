@@ -3,7 +3,7 @@ package com.stackmob.newman
 import scalaz.Scalaz._
 import scalaz.effects.IO
 import scalaz.concurrent.Promise
-import caching.HttpResponseCacher
+import caching.{Time, HttpResponseCacher}
 import request._
 import response.HttpResponse
 import java.net.URL
@@ -19,11 +19,11 @@ import java.net.URL
  */
 class CachingHttpClient(httpClient: HttpClient,
                         httpResponseCacher: HttpResponseCacher,
-                        ttlInMilliseconds: Long) extends HttpClient {
+                        t: Time) extends HttpClient {
   import CachingHttpClient._
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
-    override protected lazy val ttl = ttlInMilliseconds
+    override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.get(u, h).prepare
     override val url = u
@@ -31,7 +31,7 @@ class CachingHttpClient(httpClient: HttpClient,
   }
 
   override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest with CachingMixin {
-    override protected lazy val ttl = ttlInMilliseconds
+    override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.post(u, h, b).prepare
     override val url = u
@@ -40,7 +40,7 @@ class CachingHttpClient(httpClient: HttpClient,
   }
 
   override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest with CachingMixin {
-    override protected lazy val ttl = ttlInMilliseconds
+    override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.put(u, h, b).prepare
     override val url = u
@@ -49,7 +49,7 @@ class CachingHttpClient(httpClient: HttpClient,
   }
 
   override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest with CachingMixin {
-    override protected lazy val ttl = ttlInMilliseconds
+    override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.delete(u, h).prepare
     override val url = u
@@ -57,7 +57,7 @@ class CachingHttpClient(httpClient: HttpClient,
   }
 
   override def head(u: URL, h: Headers): HeadRequest = new HeadRequest with CachingMixin {
-    override protected lazy val ttl = ttlInMilliseconds
+    override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers) = httpClient.head(u, h).prepare
     override val url = u
@@ -67,7 +67,7 @@ class CachingHttpClient(httpClient: HttpClient,
 
 object CachingHttpClient {
   trait CachingMixin extends HttpRequest { this: HttpRequest =>
-    protected def ttl: Long
+    protected def ttl: Time
     protected def cache: HttpResponseCacher
     protected def doHttpRequest(headers: Headers): IO[HttpResponse]
 

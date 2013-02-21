@@ -22,7 +22,27 @@ import scalaz.effects._
 import scalaz.concurrent._
 
 trait HttpResponseCacher {
+  /**
+   * possibly get a response for the given request
+   * @param req the request
+   * @return an IO representing the response, or none if none exists
+   */
   def get(req: HttpRequest): IO[Option[HttpResponse]]
-  def set(req: HttpRequest, resp: HttpResponse, ttlMilliseconds: Long): IO[Unit]
+
+  /**
+   * set a response for the given request, for a TTL
+   * @param req the request
+   * @param resp the response for the given request
+   * @param ttl the time to live for the given request/response pair
+   * @return the IO representing the set action
+   */
+  def set(req: HttpRequest, resp: HttpResponse, ttl: Time): IO[Unit]
+
+  /**
+   * determine whether a response for the given request exists
+   * @param req the request
+   * @return the action to determine existence. will contain true if it does, false otherwise.
+   *         note that if the resultant IO is true, a subsequent get call may still not return a response
+   */
   def exists(req: HttpRequest): IO[Boolean]
 }

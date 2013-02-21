@@ -35,14 +35,14 @@ class InMemoryHttpResponseCacherSpecs extends Specification { def is =
     protected val client = new DummyHttpClient
     protected val request = client.get(new URL("http://stackmob.com"), Headers.empty)
     protected val responseFn = client.responseToReturn
-    protected val cache = new InMemoryHttpResponseCacher
+    protected val cache: HttpResponseCacher = new InMemoryHttpResponseCacher
   }
 
   case class RoundTrip() extends Context {
     def succeeds: SpecsResult = {
       (cache.get(request).unsafePerformIO must beEqualTo(Option.empty[HttpResponse])) and
       (cache.exists(request).unsafePerformIO must beFalse) and
-      (cache.set(request, responseFn()).unsafePerformIO must beEqualTo(())) and
+      (cache.set(request, responseFn(), Time.now).unsafePerformIO must beEqualTo(())) and
       (cache.get(request).unsafePerformIO must beEqualTo(responseFn().some)) and
       (cache.exists(request).unsafePerformIO must beTrue)
     }
