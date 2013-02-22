@@ -36,7 +36,7 @@ class DummyHttpResponseCacher(onGet: => Option[HttpResponse],
     onGet
   }
 
-  override def set(req: HttpRequest, resp: HttpResponse, ttl: Time) = io {
+  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds) = io {
     setCalls.add(req -> resp)
     onSet
   }

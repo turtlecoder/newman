@@ -58,7 +58,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     protected val responseWithoutETag = HttpResponse(HttpResponseCode.Ok, Headers.empty, body)
     protected val responseWithNotModified = HttpResponse(HttpResponseCode.NotModified, Headers.empty, body)
 
-    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher, Time.now)
+    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher, Milliseconds.current)
 
     protected def rawClient: DummyHttpClient
     protected def responseCacher: HttpResponseCacher

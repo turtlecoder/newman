@@ -19,14 +19,15 @@ package com.stackmob.newman
 import scalaz.Scalaz._
 import scalaz.effects.IO
 import scalaz.concurrent.Promise
-import caching.{Time, HttpResponseCacher}
+import caching._
 import request._
 import response.HttpResponse
 import java.net.URL
+import java.util.Date
 
 class ReadCachingHttpClient(httpClient: HttpClient,
                         httpResponseCacher: HttpResponseCacher,
-                        t: Time) extends HttpClient {
+                        t: Milliseconds) extends HttpClient {
   import ReadCachingHttpClient._
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
@@ -68,7 +69,7 @@ class ReadCachingHttpClient(httpClient: HttpClient,
 
 object ReadCachingHttpClient {
   trait CachingMixin extends HttpRequest { this: HttpRequest =>
-    protected def ttl: Time
+    protected def ttl: Milliseconds
     protected def cache: HttpResponseCacher
     protected def doHttpRequest(headers: Headers): IO[HttpResponse]
 

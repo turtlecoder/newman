@@ -68,7 +68,7 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
     val response = getResponse(request)
     val getRes1 = cache.get(request).unsafePerformIO must beNone
     val existsRes1 = cache.exists(request).unsafePerformIO must beFalse
-    val setRes1 = cache.set(request, response, Time(60, TimeUnit.SECONDS)).unsafePerformIO must beEqualTo(())
+    val setRes1 = cache.set(request, response, Milliseconds(1000)).unsafePerformIO must beEqualTo(())
     val getRes2 = cache.get(request).unsafePerformIO must beSome.like {
       case s => s must beEqualTo(response)
     }
@@ -78,7 +78,7 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
 
   private def ttlSucceeds = forAll(genRequest, genCache) { (request, cache) =>
     val response = getResponse(request)
-    cache.set(request, response, Time(0, TimeUnit.MILLISECONDS)).unsafePerformIO
+    cache.set(request, response, Milliseconds(0)).unsafePerformIO
     Thread.sleep(100)
     cache.get(request).unsafePerformIO must beNone
   }

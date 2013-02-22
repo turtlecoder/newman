@@ -27,10 +27,11 @@ import response.HttpResponse
 import org.apache.http.HttpHeaders
 import java.net.URL
 import java.util.concurrent.TimeUnit
+import java.util.Date
 
 class ETagAwareHttpClient(httpClient: HttpClient,
                           httpResponseCacher: HttpResponseCacher,
-                          t: Time) extends HttpClient {
+                          t: Milliseconds) extends HttpClient {
   import ETagAwareHttpClient._
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
@@ -79,7 +80,7 @@ class ETagAwareHttpClient(httpClient: HttpClient,
 object ETagAwareHttpClient {
   trait CachingMixin extends HttpRequest { this: HttpRequest =>
     //the TTL for cached responses until they're purged and we go back to the server with no modified header
-    protected def ttl: Time
+    protected def ttl: Milliseconds
     protected def cache: HttpResponseCacher
     protected def doHttpRequest(headers: Headers): IO[HttpResponse]
     private lazy val cacheResult = cache.get(this)
@@ -88,7 +89,7 @@ object ETagAwareHttpClient {
       nel(HttpHeaders.IF_NONE_MATCH -> eTag, headerList.list.filterNot(_._1 === HttpHeaders.IF_NONE_MATCH))
     } orElse { Headers(HttpHeaders.IF_NONE_MATCH -> eTag) }
 
-    private def cachedAndETagPresent(cached: HttpResponse, eTag: String, ttl: Time): IO[Promise[HttpResponse]] = {
+    private def cachedAndETagPresent(cached: HttpResponse, eTag: String, ttl: Milliseconds): IO[Promise[HttpResponse]] = {
       val newHeaderList = addIfNoneMatch(this.headers, eTag)
       doHttpRequest(newHeaderList).flatMap { response: HttpResponse =>
         if(response.notModified) {
@@ -103,7 +104,7 @@ object ETagAwareHttpClient {
 
     private def cachedAndETagNotPresent: IO[Promise[HttpResponse]] = notCached(ttl)
 
-    private def notCached(ttl: Time): IO[Promise[HttpResponse]] = {
+    private def notCached(ttl: Milliseconds): IO[Promise[HttpResponse]] = {
       doHttpRequest(headers).flatMap { response: HttpResponse =>
         cache.set(this, response, ttl) >| response.pure[Promise]
       }

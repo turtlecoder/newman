@@ -22,18 +22,17 @@ import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scalaz.effects._
 
-case class CachedResponseDelay(ttl: Time, hash: HashCode) extends Delayed {
-  private val startTime = Time.now
+case class CachedResponseDelay(ttl: Milliseconds, hash: HashCode) extends Delayed {
+  private val start = Milliseconds.current
+  private def endMilliseconds = start ++ ttl
 
   override def getDelay(unit: TimeUnit): Long = {
-    val curTime = Time(System.currentTimeMillis(), unit)
-    (curTime -- startTime).asUnit(unit).magnitude
+    unit.convert(endMilliseconds.magnitude - Milliseconds.current.magnitude, TimeUnit.MILLISECONDS)
   }
 
   override def compareTo(d: Delayed): Int = {
-    val thisDelay: Long = ttl.magnitude
-    val otherDelay: Long = d.getDelay(ttl.unit)
-    thisDelay.compareTo(otherDelay)
+    val otherDelay = Milliseconds(d.getDelay(TimeUnit.MILLISECONDS))
+    endMilliseconds.compareTo(otherDelay)
   }
 }
 
@@ -59,7 +58,7 @@ class InMemoryHttpResponseCacher extends HttpResponseCacher {
     Option(cache.get(req.hash))
   }
 
-  override def set(req: HttpRequest, resp: HttpResponse, ttl: Time): IO[Unit] = io {
+  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = io {
     cache.put(req.hash, resp)
     delayQueue.add(CachedResponseDelay(ttl, req.hash))
     ()

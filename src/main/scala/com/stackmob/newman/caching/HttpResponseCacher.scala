@@ -19,7 +19,6 @@ package com.stackmob.newman.caching
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scalaz.effects._
-import scalaz.concurrent._
 
 trait HttpResponseCacher {
   /**
@@ -36,7 +35,7 @@ trait HttpResponseCacher {
    * @param ttl the time to live for the given request/response pair
    * @return the IO representing the set action
    */
-  def set(req: HttpRequest, resp: HttpResponse, ttl: Time): IO[Unit]
+  def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit]
 
   /**
    * determine whether a response for the given request exists
