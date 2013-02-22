@@ -26,22 +26,25 @@ class DummyHttpResponseCacher(onGet: => Option[HttpResponse],
                               onSet: => Unit,
                               onExists: => Boolean) extends HttpResponseCacher {
 
+  def cannedGet = onGet
+  def cannedExists = onExists
+
   val getCalls = new CopyOnWriteArrayList[HttpRequest]()
   val setCalls = new CopyOnWriteArrayList[(HttpRequest, HttpResponse)]()
   val existsCalls = new CopyOnWriteArrayList[HttpRequest]()
   def totalNumCalls = getCalls.size() + setCalls.size() + existsCalls.size()
 
-  override def get(req: HttpRequest) = io {
+  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io {
     getCalls.add(req)
     onGet
   }
 
-  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds) = io {
+  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = io {
     setCalls.add(req -> resp)
     onSet
   }
 
-  override def exists(req: HttpRequest) = io {
+  override def exists(req: HttpRequest): IO[Boolean] = io {
     existsCalls.add(req)
     onExists
   }
