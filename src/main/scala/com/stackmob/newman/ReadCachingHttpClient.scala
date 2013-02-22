@@ -23,7 +23,6 @@ import caching._
 import request._
 import response.HttpResponse
 import java.net.URL
-import java.util.Date
 
 class ReadCachingHttpClient(httpClient: HttpClient,
                             httpResponseCacher: HttpResponseCacher,
@@ -33,7 +32,9 @@ class ReadCachingHttpClient(httpClient: HttpClient,
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
     override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.get(u, h).prepare
+    override protected def doHttpRequest(h: Headers) = {
+      httpClient.get(u, h).prepare
+    }
     override val url = u
     override val headers = h
   }
@@ -61,22 +62,24 @@ class ReadCachingHttpClient(httpClient: HttpClient,
   override def head(u: URL, h: Headers): HeadRequest = new HeadRequest with CachingMixin {
     override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.head(u, h).prepare
+    override protected def doHttpRequest(h: Headers) = {
+      httpClient.head(u, h).prepare
+    }
     override val url = u
     override val headers = h
   }
 }
 
 object ReadCachingHttpClient {
-  trait CachingMixin extends HttpRequest { this: HttpRequest =>
+  trait CachingMixin { this: HttpRequest =>
     protected def ttl: Milliseconds
     protected def cache: HttpResponseCacher
     protected def doHttpRequest(headers: Headers): IO[HttpResponse]
 
     override def prepareAsync: IO[Promise[HttpResponse]] = cache.get(this).flatMap { mbCachedResponse: Option[HttpResponse] =>
-      mbCachedResponse.map { resp =>
+      mbCachedResponse some { resp =>
         resp.pure[Promise].pure[IO]
-      } | {
+      } none {
         doHttpRequest(headers).flatMap { response: HttpResponse =>
           cache.set(this, response, ttl) >| response.pure[Promise]
         }
