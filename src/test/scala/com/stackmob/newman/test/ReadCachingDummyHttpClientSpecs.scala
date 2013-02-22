@@ -75,6 +75,7 @@ class ReadCachingDummyHttpClientSpecs
 
       val req = fn(client, url, headers)
       val resp = req.executeUnsafe
+      //the response should match what's in the cache, not what's in the underlying client
       val respMatches = dummyCache.cannedGet must beSome.like {
         case r => {
           r must beEqualTo(resp)
@@ -82,7 +83,9 @@ class ReadCachingDummyHttpClientSpecs
       }
 
       respMatches and
+      //there should be 1 cache get, a hit
       verifyCacheInteraction(dummyCache, CacheInteraction(1, 0, 0))
+      //there should be no client interaction at all, since a cache hit occurred
       verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
 
     }
@@ -95,30 +98,21 @@ class ReadCachingDummyHttpClientSpecs
       genDummyHttpClient,
       genDummyHttpResponseCache(genNoHttpResponse)) { (url, headers, dummyClient, dummyCache) =>
 
-      val client = createClient(dummyClient, dummyCache, Milliseconds(60000))
+      val oneMinute = Milliseconds(6000)
+
+      val client = createClient(dummyClient, dummyCache, oneMinute)
       val req = createRequest(client, url, headers)
+      val resp = req.executeUnsafe
+      val respVerified = resp must beEqualTo(dummyClient.responseToReturn())
+      //there should be a single client call after the cache miss
+      val respClientVerified = verifyClientInteraction(dummyClient, createClientInteraction(1))
+      //there should be a get call, a miss, then a set call to perform the write back to the cache,
+      //after we've talked to the client
+      val respCacheVerified = verifyCacheInteraction(dummyCache, CacheInteraction(1, 1, 0))
 
-      val expectedResponse = dummyClient.responseToReturn()
-
-      val resp1 = req.executeUnsafe
-      val resp1Verified = resp1 must beEqualTo(expectedResponse)
-      val resp1ClientVerified = verifyClientInteraction(dummyClient, createClientInteraction(1))
-      //there should be a get call, a miss, then a set call to perform the write back to the cache
-      val resp1CacheVerified = verifyCacheInteraction(dummyCache, CacheInteraction(1, 1, 0))
-
-      val resp2 = req.executeUnsafe
-      val resp2Verified = resp2 must beEqualTo(expectedResponse)
-      //it shouldn't hit the backing client (ie the dummy client) again
-      val resp2ClientVerified = verifyClientInteraction(dummyClient, createClientInteraction(1))
-      //there should be 2 get calls now, and still only 1 read back to the cache
-      val resp2CacheVerified = verifyCacheInteraction(dummyCache, CacheInteraction(2, 1, 0))
-
-      resp1Verified and
-      resp1ClientVerified and
-      resp1CacheVerified and
-      resp2Verified and
-      resp2ClientVerified and
-      resp2CacheVerified
+      respVerified and
+      respClientVerified and
+      respCacheVerified
     }
   }
 
@@ -163,20 +157,22 @@ class ReadCachingDummyHttpClientSpecs
 trait CacheVerification { this: Specification =>
   protected case class CacheInteraction(numGets: Int, numSets: Int, numExists: Int)
   protected def verifyCacheInteraction(cache: DummyHttpResponseCacher, interaction: CacheInteraction) = {
-    (cache.getCalls.size must beEqualTo(interaction.numGets)) and
-    (cache.setCalls.size must beEqualTo(interaction.numSets)) and
-    (cache.existsCalls.size must beEqualTo(interaction.numExists))
+    val getCalls = cache.getCalls.size must beEqualTo(interaction.numGets)
+    val setCalls = cache.setCalls.size must beEqualTo(interaction.numSets)
+    val existsCalls = cache.existsCalls.size must beEqualTo(interaction.numExists)
+    getCalls and setCalls and existsCalls
   }
 }
 
 trait ClientVerification { this: Specification =>
   protected case class ClientInteraction(numGets: Int, numPosts: Int, numPuts: Int, numDeletes: Int, numHeads: Int)
   protected def verifyClientInteraction(client: DummyHttpClient, interaction: ClientInteraction) = {
-    (client.getRequests.size must beEqualTo(interaction.numGets)) and
-    (client.postRequests.size must beEqualTo(interaction.numPosts)) and
-    (client.putRequests.size must beEqualTo(interaction.numPuts)) and
-    (client.deleteRequests.size must beEqualTo(interaction.numDeletes)) and
-    (client.headRequests.size must beEqualTo(interaction.numHeads))
+    val getReqs = client.getRequests.size must beEqualTo(interaction.numGets)
+    val postReqs = client.postRequests.size must beEqualTo(interaction.numPosts)
+    val putReqs = client.putRequests.size must beEqualTo(interaction.numPuts)
+    val deleteReqs = client.deleteRequests.size must beEqualTo(interaction.numDeletes)
+    val headReqs = client.headRequests.size must beEqualTo(interaction.numHeads)
+    getReqs and postReqs and putReqs and deleteReqs and headReqs
   }
 
 }
