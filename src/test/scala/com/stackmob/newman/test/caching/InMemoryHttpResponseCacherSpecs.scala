@@ -37,7 +37,7 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
     request.prepare.unsafePerformIO
   }
 
-  private def roundTripSucceeds = forAll(genRequest(client), genCache) { (request, cache) =>
+  private def roundTripSucceeds = forAll(genHttpRequest(client), genCache) { (request, cache) =>
     val response = getResponse(request)
     val getRes1 = cache.get(request).unsafePerformIO must beNone
     val existsRes1 = cache.exists(request).unsafePerformIO must beFalse
@@ -49,7 +49,7 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
     getRes1 and existsRes1 and setRes1 and getRes2 and existsRes2
   }
 
-  private def ttlSucceeds = forAll(genRequest(client), genCache) { (request, cache) =>
+  private def ttlSucceeds = forAll(genHttpRequest(client), genCache) { (request, cache) =>
     val response = getResponse(request)
     cache.set(request, response, Milliseconds(0)).unsafePerformIO
     Thread.sleep(100)

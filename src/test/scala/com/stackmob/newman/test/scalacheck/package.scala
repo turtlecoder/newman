@@ -22,6 +22,8 @@ import com.stackmob.newman._
 import com.stackmob.newman.caching._
 import com.stackmob.newman.request._
 import java.net.URL
+import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
+import HttpResponseCode._
 
 package object scalacheck {
   val genNonEmptyString: Gen[String] = for {
@@ -32,7 +34,7 @@ package object scalacheck {
     charList.mkString
   }
 
-  private val timeUnits = Seq(TimeUnit.DAYS,
+  private val timeUnits = Seq[TimeUnit](TimeUnit.DAYS,
     TimeUnit.HOURS,
     TimeUnit.MICROSECONDS,
     TimeUnit.MILLISECONDS,
@@ -48,11 +50,57 @@ package object scalacheck {
     Milliseconds(magnitude)
   }
 
+  private val httpResponseCodes = Seq[HttpResponseCode](Accepted,
+    BadGateway,
+    MethodNotAllowed,
+    BadRequest,
+    ClientTimeout,
+    Conflict,
+    Created,
+    EntityTooLarge,
+    FailedDependency,
+    Forbidden,
+    GatewayTimeout,
+    Gone,
+    InsufficientStorage,
+    InternalServerError,
+    LengthRequired,
+    Locked,
+    MovedPermanently,
+    TemporaryRedirect,
+    MultipleChoices,
+    MultiStatus,
+    NoContent,
+    NotAcceptable,
+    NonAuthoritativeInformation,
+    NotFound,
+    NotImplemented,
+    NotModified,
+    Ok,
+    PartialContent,
+    PaymentRequired,
+    PreconditionFailed,
+    AuthenticationRequired,
+    RequestURITooLarge,
+    ResetContent,
+    SeeOther,
+    Unauthorized,
+    ServiceUnavailable,
+    UnprocessableEntity,
+    UnsupportedMediaType,
+    UseProxy,
+    HttpVersionNotSupported
+  )
+  val genHttpResponseCode: Gen[HttpResponseCode] = Gen.oneOf(httpResponseCodes)
+
+
   val genHashCode: Gen[HashCode] = for {
     str <- genNonEmptyString
   } yield {
     str.getBytes
   }
+
+  val genRawBody: Gen[RawBody] = genHashCode
 
   val genCachedResponseDelay = for {
     ttl <- genPositiveMilliseconds
@@ -74,17 +122,29 @@ package object scalacheck {
     Headers(headers)
   }
 
-  def genRequest(client: HttpClient): Gen[HttpRequest] = for {
+  val genURL: Gen[URL] = for {
     urlString <- genNonEmptyString
-    url <- Gen.value(new URL("http://%s.com".format(urlString)))
+  } yield {
+    new URL("http://%s.com".format(urlString))
+  }
+
+  def genHttpRequest(client: HttpClient): Gen[HttpRequest] = for {
+    url <- genURL
     headers <- genHeaders
   } yield {
     client.get(url, headers)
   }
 
+  val genHttpResponse: Gen[HttpResponse] = for {
+    code <- genHttpResponseCode
+    headers <- genHeaders
+    body <- genRawBody
+  } yield {
+    new HttpResponse(code, headers, body)
+  }
+
   val genCache: Gen[HttpResponseCacher] = {
     Gen.value(new InMemoryHttpResponseCacher)
   }
-
 
 }
