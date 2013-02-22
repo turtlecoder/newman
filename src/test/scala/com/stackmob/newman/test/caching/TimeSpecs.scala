@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.caching
+package com.stackmob.newman.test.caching
 
 import org.specs2.{ScalaCheck, Specification}
 import java.util.concurrent.TimeUnit
 import org.scalacheck._
 import Prop._
-import com.stackmob.newman.scalacheck._
+import com.stackmob.newman.test.scalacheck._
+import com.stackmob.newman.caching.Time
 
 class TimeSpecs extends Specification with ScalaCheck { def is =
   "TimeSpecs".title                                                                                                     ^ end ^

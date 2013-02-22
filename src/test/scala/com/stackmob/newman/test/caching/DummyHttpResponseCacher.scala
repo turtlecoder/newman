@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.caching
+package com.stackmob.newman.test.caching
 
 import scalaz.effects._
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import java.util.concurrent.CopyOnWriteArrayList
+import com.stackmob.newman.caching._
 
 class DummyHttpResponseCacher(onGet: => Option[HttpResponse],
                               onSet: => Unit,

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
-import dsl.URLBuilderDSL
+import com.stackmob.newman.dsl.URLBuilderDSL
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL

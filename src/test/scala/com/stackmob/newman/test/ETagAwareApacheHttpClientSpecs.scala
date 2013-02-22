@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
 import scalaz._
 import Scalaz._
@@ -22,9 +22,11 @@ import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import org.apache.http.HttpHeaders
 import java.net.URL
-import caching.{Time, HttpResponseCacher, DummyHttpResponseCacher}
-import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import com.stackmob.newman.request.HttpRequest
+import com.stackmob.newman._
+import com.stackmob.newman.caching._
+import com.stackmob.newman.response._
+import com.stackmob.newman.request._
+import com.stackmob.newman.test.caching._
 import collection.JavaConverters._
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =

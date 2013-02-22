@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import scalaz._
 import Scalaz._
 import net.liftweb.json._
+import com.stackmob.newman._
 import com.stackmob.newman.dsl._
 import java.net.URL
 import com.stackmob.newman.request.HttpRequest

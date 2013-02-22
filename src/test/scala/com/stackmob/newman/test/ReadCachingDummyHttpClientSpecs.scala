@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
 import org.specs2.Specification
 

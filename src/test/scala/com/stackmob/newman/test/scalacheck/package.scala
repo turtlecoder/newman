@@ -1,6 +1,6 @@
-package com.stackmob.newman
+package com.stackmob.newman.test
 
-import caching.Time
+import com.stackmob.newman.caching.Time
 import org.scalacheck.Gen
 import java.util.concurrent.TimeUnit
 

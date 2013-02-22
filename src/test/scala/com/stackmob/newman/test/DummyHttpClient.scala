@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
 import java.net.URL
-import request._
-import request.HttpRequest._
-import request.HttpRequestWithBody._
+import com.stackmob.newman._
+import com.stackmob.newman.request._
+import com.stackmob.newman.response._
 import java.util.concurrent.CopyOnWriteArrayList
-import response.{HttpResponseCode, HttpResponse}
 import scalaz._
 import Scalaz._
 import scalaz.effects._

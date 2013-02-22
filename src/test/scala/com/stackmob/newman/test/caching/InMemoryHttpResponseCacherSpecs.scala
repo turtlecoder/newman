@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 package caching
 
 import scalaz._
 import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
-import com.stackmob.newman.{DummyHttpClient, BaseContext}
-import com.stackmob.newman.response.HttpResponse
+import com.stackmob.newman._
+import com.stackmob.newman.caching._
+import com.stackmob.newman.response._
 import java.net.URL
 
 class InMemoryHttpResponseCacherSpecs extends Specification { def is =
