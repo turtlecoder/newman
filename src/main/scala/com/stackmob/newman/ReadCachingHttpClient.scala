@@ -26,8 +26,8 @@ import java.net.URL
 import java.util.Date
 
 class ReadCachingHttpClient(httpClient: HttpClient,
-                        httpResponseCacher: HttpResponseCacher,
-                        t: Milliseconds) extends HttpClient {
+                            httpResponseCacher: HttpResponseCacher,
+                            t: Milliseconds) extends HttpClient {
   import ReadCachingHttpClient._
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
