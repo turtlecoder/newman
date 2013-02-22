@@ -41,7 +41,7 @@ class InMemoryHttpResponseCacher extends HttpResponseCacher {
 
   Executors.newSingleThreadExecutor().submit(delayQueueRunnable)
 
-  private lazy val cache = new ConcurrentHashMap[Array[Byte], HttpResponse]()
+  private lazy val cache = new ConcurrentHashMap[HashCode, HttpResponse]()
   private lazy val delayQueue = new DelayQueue[CachedResponseDelay]()
 
   private lazy val delayQueueRunnable = new Runnable {
@@ -60,8 +60,8 @@ class InMemoryHttpResponseCacher extends HttpResponseCacher {
   }
 
   override def set(req: HttpRequest, resp: HttpResponse, ttl: Time): IO[Unit] = io {
-    delayQueue.add(CachedResponseDelay(ttl, req.hash))
     cache.put(req.hash, resp)
+    delayQueue.add(CachedResponseDelay(ttl, req.hash))
     ()
   }
 
