@@ -106,6 +106,7 @@ object ETagAwareHttpClient {
 
     private def notCached(ttl: Milliseconds): IO[Promise[HttpResponse]] = {
       doHttpRequest(headers).flatMap { response: HttpResponse =>
+        //TODO: respect cache-control headers
         cache.set(this, response, ttl) >| response.pure[Promise]
       }
     }
