@@ -16,36 +16,38 @@
 
 package com.stackmob.newman.caching
 
-import org.specs2.Specification
+import org.specs2.{ScalaCheck, Specification}
 import java.util.concurrent.TimeUnit
+import org.scalacheck._
+import Prop._
+import com.stackmob.newman.scalacheck._
 
-class TimeSpecs extends Specification { def is =
-  "TimeSpecs".title                                                                                                     ^
-  "Time is a data structure that manages times in various units"                                                        ^
+class TimeSpecs extends Specification with ScalaCheck { def is =
+  "TimeSpecs".title                                                                                                     ^ end ^
+  "Time is a data structure that manages times in various units"                                                        ^ end ^
   "Time.asUnit returns the current time in the new unit"                                                                ! asUnitWorks ^ end ^
   "Time.add works as expected"                                                                                          ! addWorks ^ end ^
   "Time.subtract works as expected"                                                                                     ! subtractWorks ^ end
 
 
-  private def asUnitWorks = {
-    val nowInMilliseconds = Time(System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-    val nowInSeconds = nowInMilliseconds.asUnit(TimeUnit.SECONDS)
-    nowInSeconds.magnitude must beEqualTo(nowInMilliseconds.magnitude / 1000)
+  private val microUnit = TimeUnit.MICROSECONDS
+
+  private def asUnitWorks = forAll(genPositiveTime, genTimeUnit) { (time, otherUnit) =>
+    val converted = otherUnit.convert(time.magnitude, time.unit)
+    val asUnit = time.asUnit(otherUnit)
+    asUnit.magnitude must beEqualTo(converted)
   }
 
-  private def addWorks = {
-    val now = Time.now
-    val moreSeconds = Time(2, TimeUnit.SECONDS)
-    val res = now ++ moreSeconds
-    (res.asUnit(TimeUnit.SECONDS).magnitude - 2) must beEqualTo(now.asUnit(TimeUnit.SECONDS).magnitude)
+  private def addWorks = forAll(genPositiveTime, genPositiveTime) { (time1, time2) =>
+    val addRes = time1 ++ time2
+    val expectedMicroseconds = time1.asUnit(microUnit).magnitude + time2.asUnit(microUnit).magnitude
+
+    addRes.asUnit(microUnit).magnitude must beEqualTo(expectedMicroseconds)
   }
 
-  private def subtractWorks = {
-    val now = Time.now
-    val fewerSeconds = Time(2, TimeUnit.SECONDS)
-    val res = now -- fewerSeconds
-    (res.asUnit(TimeUnit.SECONDS).magnitude + 2) must beEqualTo(now.asUnit(TimeUnit.SECONDS).magnitude)
+  private def subtractWorks = forAll(genPositiveTime, genPositiveTime) { (time1, time2) =>
+    val subRes = time1 -- time2
+    val expectedMicroseconds = time1.asUnit(microUnit).magnitude - time2.asUnit(microUnit).magnitude
+    subRes.asUnit(microUnit).magnitude must beEqualTo(expectedMicroseconds)
   }
-
-
 }
