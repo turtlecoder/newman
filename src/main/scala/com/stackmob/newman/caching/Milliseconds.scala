@@ -16,25 +16,21 @@
 
 package com.stackmob.newman.caching
 
-sealed trait Milliseconds extends Comparable[Milliseconds] {
+/**
+ * a simple container for a milliseconds value
+ */
+sealed trait Milliseconds {
   def magnitude: Long
-  override def compareTo(other: Milliseconds) = {
-    magnitude.compareTo(other.magnitude)
-  }
-
-  def ++(other: Milliseconds): Milliseconds = {
-    Milliseconds(magnitude + other.magnitude)
-  }
 }
 object Milliseconds {
   /**
-   * get the current time
-   * @return the current number of milliseconds since the epoch
+   * create a new Milliseconds containing the current epoch time
+   * @return the new Milliseconds
    */
   def current: Milliseconds = apply(System.currentTimeMillis())
 
   /**
-   * create a new number of milliseconds
+   * create a new Milliseconds
    * @param l the number of milliseconds
    * @return a Milliseconds object
    */
