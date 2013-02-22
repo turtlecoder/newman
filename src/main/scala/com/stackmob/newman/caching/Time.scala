@@ -27,7 +27,9 @@ sealed trait Time {
    * @param newUnit the new unit
    * @return this time in newUnit
    */
-  def asUnit(newUnit: TimeUnit): Time = Time(newUnit.convert(magnitude, unit), newUnit)
+  def asUnit(newUnit: TimeUnit): Time = {
+    Time(newUnit.convert(magnitude, unit), newUnit)
+  }
 
   /**
    * add a time to this one
