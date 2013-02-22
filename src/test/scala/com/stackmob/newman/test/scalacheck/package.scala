@@ -16,9 +16,12 @@
 
 package com.stackmob.newman.test
 
-import com.stackmob.newman.caching._
 import org.scalacheck.Gen
 import java.util.concurrent.TimeUnit
+import com.stackmob.newman._
+import com.stackmob.newman.caching._
+import com.stackmob.newman.request._
+import java.net.URL
 
 package object scalacheck {
   val genNonEmptyString: Gen[String] = for {
@@ -57,5 +60,31 @@ package object scalacheck {
   } yield {
     CachedResponseDelay(ttl, hashCode)
   }
+
+  val genHeader: Gen[Header] = for {
+    key <- genNonEmptyString
+    value <- genNonEmptyString
+  } yield {
+    key -> value
+  }
+
+  val genHeaders: Gen[Headers] = for {
+    headers <- Gen.listOf(genHeader)
+  } yield {
+    Headers(headers)
+  }
+
+  def genRequest(client: HttpClient): Gen[HttpRequest] = for {
+    urlString <- genNonEmptyString
+    url <- Gen.value(new URL("http://%s.com".format(urlString)))
+    headers <- genHeaders
+  } yield {
+    client.get(url, headers)
+  }
+
+  val genCache: Gen[HttpResponseCacher] = {
+    Gen.value(new InMemoryHttpResponseCacher)
+  }
+
 
 }

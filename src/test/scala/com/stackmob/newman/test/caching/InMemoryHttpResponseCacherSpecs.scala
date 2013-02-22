@@ -21,8 +21,6 @@ import com.stackmob.newman._
 import com.stackmob.newman.caching._
 import com.stackmob.newman.test.scalacheck._
 import org.specs2.{ScalaCheck, Specification}
-import java.net.URL
-import java.util.concurrent.TimeUnit
 import org.scalacheck._
 import Prop._
 import request._
@@ -35,36 +33,11 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
                                                                                                                         end
   private val client = new DummyHttpClient()
 
-  private val genHeader: Gen[Header] = for {
-    key <- genNonEmptyString
-    value <- genNonEmptyString
-  } yield {
-    key -> value
-  }
-
-  private val genHeaders: Gen[Headers] = for {
-    headers <- Gen.listOf(genHeader)
-  } yield {
-    Headers(headers)
-  }
-
-  private val genRequest: Gen[HttpRequest] = for {
-    urlString <- genNonEmptyString
-    url <- Gen.value(new URL("http://%s.com".format(urlString)))
-    headers <- genHeaders
-  } yield {
-    client.get(url, headers)
-  }
-
-  private val genCache: Gen[HttpResponseCacher] = {
-    Gen.value(new InMemoryHttpResponseCacher)
-  }
-
   private def getResponse(request: HttpRequest) = {
     request.prepare.unsafePerformIO
   }
 
-  private def roundTripSucceeds = forAll(genRequest, genCache) { (request, cache) =>
+  private def roundTripSucceeds = forAll(genRequest(client), genCache) { (request, cache) =>
     val response = getResponse(request)
     val getRes1 = cache.get(request).unsafePerformIO must beNone
     val existsRes1 = cache.exists(request).unsafePerformIO must beFalse
@@ -76,7 +49,7 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
     getRes1 and existsRes1 and setRes1 and getRes2 and existsRes2
   }
 
-  private def ttlSucceeds = forAll(genRequest, genCache) { (request, cache) =>
+  private def ttlSucceeds = forAll(genRequest(client), genCache) { (request, cache) =>
     val response = getResponse(request)
     cache.set(request, response, Milliseconds(0)).unsafePerformIO
     Thread.sleep(100)
