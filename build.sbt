@@ -13,7 +13,7 @@ testOptions in Test += Tests.Argument("html", "console")
 publishArtifact in Test := true
 
 publishTo <<= (version) { version: String =>
-    val nexus = "http://oss.sonatype.org"
+    val nexus = "http://oss.sonatype.org/"
     if (version.trim.endsWith("SNAPSHOT")) {
         Some("snapshots" at nexus + "content/repositories/snapshots")
      } else {
@@ -63,8 +63,6 @@ pomExtra := (
     </developer>
   </developers>
 )
-
-resolvers ++= Seq("StackMob Nexus" at "http://nexus/nexus/content/groups/public")
 
 libraryDependencies ++= {
     val httpCoreVersion = "4.2.1"
