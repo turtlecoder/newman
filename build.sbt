@@ -13,9 +13,12 @@ testOptions in Test += Tests.Argument("html", "console")
 publishArtifact in Test := true
 
 publishTo <<= (version) { version: String =>
-    val stackmobNexus = "http://nexus/nexus/content/repositories/"
-    if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at stackmobNexus + "snapshots/")
-    else                                   Some("releases"  at stackmobNexus + "releases/")
+    val nexus = "http://oss.sonatype.org"
+    if (version.trim.endsWith("SNAPSHOT")) {
+        Some("snapshots" at nexus + "content/repositories/snapshots")
+     } else {
+        Some("releases" at nexus + "service/local/staging/deploy/maven2")
+    }
 }
 
 publishMavenStyle := true
