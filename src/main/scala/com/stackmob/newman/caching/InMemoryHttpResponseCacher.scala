@@ -21,6 +21,7 @@ import java.util.concurrent._
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scalaz.effects._
+import tools.nsc.io.DaemonThreadFactory
 
 sealed case class CachedResponseDelay(ttl: Milliseconds, hash: HashCode) extends Delayed {
   private val insertTime = System.currentTimeMillis()
@@ -36,8 +37,7 @@ sealed case class CachedResponseDelay(ttl: Milliseconds, hash: HashCode) extends
 }
 
 class InMemoryHttpResponseCacher extends HttpResponseCacher {
-
-  Executors.newSingleThreadExecutor().submit(delayQueueRunnable)
+  Executors.newSingleThreadExecutor(new DaemonThreadFactory).submit(delayQueueRunnable)
 
   private lazy val cache = new ConcurrentHashMap[HashCode, HttpResponse]()
   private lazy val delayQueue = new DelayQueue[CachedResponseDelay]()
