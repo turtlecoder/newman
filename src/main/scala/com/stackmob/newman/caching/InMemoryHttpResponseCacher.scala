@@ -14,19 +14,52 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.caching
+package com.stackmob.newman
+package caching
 
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent._
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scalaz.effects._
+import tools.nsc.io.DaemonThreadFactory
+
+sealed case class CachedResponseDelay(ttl: Milliseconds, hash: HashCode) extends Delayed {
+  private val insertTime = System.currentTimeMillis()
+  def getDelay(unit: TimeUnit): Long = {
+    unit.convert((insertTime - System.currentTimeMillis() + ttl.magnitude), TimeUnit.MILLISECONDS)
+  }
+
+  def compareTo(other: Delayed): Int = {
+    val otherDelay: Long = other.getDelay(TimeUnit.MILLISECONDS)
+    val thisDelay: Long = this.getDelay(TimeUnit.MILLISECONDS)
+    thisDelay.compareTo(otherDelay)
+  }
+}
 
 class InMemoryHttpResponseCacher extends HttpResponseCacher {
-  private val cache = new ConcurrentHashMap[Array[Byte], HttpResponse]()
+  Executors.newSingleThreadExecutor(new DaemonThreadFactory).submit(delayQueueRunnable)
 
-  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io(Option(cache.get(req.hash)))
-  override def set(req: HttpRequest, resp: HttpResponse): IO[Unit] = io {
+  private lazy val cache = new ConcurrentHashMap[HashCode, HttpResponse]()
+  private lazy val delayQueue = new DelayQueue[CachedResponseDelay]()
+
+  private lazy val delayQueueRunnable = new Runnable {
+    def run() {
+      while(true) {
+        validating {
+          val hash = delayQueue.take().hash
+          cache.remove(hash)
+        }
+      }
+    }
+  }
+
+  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io {
+    Option(cache.get(req.hash))
+  }
+
+  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = io {
     cache.put(req.hash, resp)
+    delayQueue.add(CachedResponseDelay(ttl, req.hash))
     ()
   }
 

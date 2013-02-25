@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.dsl
+package com.stackmob.newman.test.dsl
 
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}

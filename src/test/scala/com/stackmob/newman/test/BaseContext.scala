@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
-import com.stackmob.newman.response.HttpResponse
+import com.stackmob.newman._
+import com.stackmob.newman.response._
 import org.specs2.matcher.{MatchResult, Expectable, Matcher}
 import org.specs2.execute.{Failure => SpecsFailure, Result => SpecsResult}
 import scalaz._

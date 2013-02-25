@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
-package response
+package com.stackmob.newman.test.response
 
 import scalaz._
 import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
-import com.stackmob.newman.BaseContext
+import com.stackmob.newman.test.BaseContext
+import com.stackmob.newman._
+import com.stackmob.newman.response._
 
 class HttpResponseSpecs extends Specification { def is =
   "HttpResponseSpecs".title                                                                                             ^

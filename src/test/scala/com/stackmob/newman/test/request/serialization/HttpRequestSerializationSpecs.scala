@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 package request.serialization
 
 import scalaz._
 import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure, Success => SpecsSuccess}
-import com.stackmob.newman.{DummyHttpClient, BaseContext}
+import com.stackmob.newman._
 import java.net.URL
 import com.stackmob.newman.request.{HttpRequestWithoutBody, HttpRequest, HttpRequestWithBody}
 

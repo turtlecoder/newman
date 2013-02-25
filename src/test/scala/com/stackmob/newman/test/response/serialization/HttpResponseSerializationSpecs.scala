@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 package response.serialization
 
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
-import com.stackmob.newman.BaseContext
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import com.stackmob.newman.request.HttpRequest._
-import com.stackmob.newman.request.HttpRequestWithBody._
+import com.stackmob.newman._
 
 class HttpResponseSerializationSpecs extends Specification { def is =
   "HttpResponseSerializationSpecs".title                                                                                ^

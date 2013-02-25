@@ -13,10 +13,56 @@ testOptions in Test += Tests.Argument("html", "console")
 publishArtifact in Test := true
 
 publishTo <<= (version) { version: String =>
-    val stackmobNexus = "http://nexus/nexus/content/repositories/"
-    if (version.trim.endsWith("SNAPSHOT")) Some("snapshots" at stackmobNexus + "snapshots/")
-    else                                   Some("releases"  at stackmobNexus + "releases/")
+    val nexus = "http://oss.sonatype.org"
+    if (version.trim.endsWith("SNAPSHOT")) {
+        Some("snapshots" at nexus + "content/repositories/snapshots")
+     } else {
+        Some("releases" at nexus + "service/local/staging/deploy/maven2")
+    }
 }
+
+publishMavenStyle := true
+
+publishArtifact in Test := true
+
+pomIncludeRepository := { x => false }
+
+pomExtra := (
+  <url>https://github.com/stackmob/newman</url>
+  <licenses>
+    <license>
+      <name>Apache 2</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <url>git@github.com:stackmob/newman.git</url>
+    <connection>scm:git:git@github.com:stackmob/newman.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <id>arschles</id>
+      <name>Aaron Schlesinger</name>
+      <url>http://www.stackmob.com</url>
+    </developer>
+    <developer>
+      <id>devmage</id>
+      <name>Andrew Harris</name>
+      <url>http://www.stackmob.com</url>
+    </developer>
+    <developer>
+      <id>taylorleese</id>
+      <name>Taylor Leese</name>
+      <url>http://www.stackmob.com</url>
+    </developer>
+    <developer>
+      <id>kelseyq</id>
+      <name>Kelsey Innis</name>
+      <url>http://www.stackmob.com</url>
+    </developer>
+  </developers>
+)
 
 resolvers ++= Seq("StackMob Nexus" at "http://nexus/nexus/content/groups/public")
 
