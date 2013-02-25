@@ -48,7 +48,7 @@ pomExtra := (
     </developer>
     <developer>
       <id>devmage</id>
-      <name>Andrew HarrisAaron Schlesinger</name>
+      <name>Andrew Harris</name>
       <url>http://www.stackmob.com</url>
     </developer>
     <developer>
