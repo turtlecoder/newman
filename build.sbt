@@ -13,7 +13,7 @@ testOptions in Test += Tests.Argument("html", "console")
 publishArtifact in Test := true
 
 publishTo <<= (version) { version: String =>
-    val nexus = "http://oss.sonatype.org/"
+    val nexus = "https://oss.sonatype.org/"
     if (version.trim.endsWith("SNAPSHOT")) {
         Some("snapshots" at nexus + "content/repositories/snapshots")
      } else {
