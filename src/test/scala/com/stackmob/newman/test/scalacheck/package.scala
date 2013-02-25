@@ -26,15 +26,14 @@ import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import HttpResponseCode._
 
 package object scalacheck {
-  val genNonEmptyString: Gen[String] = for {
-    firstChar <- Gen.listOf1(Gen.alphaChar)
-    remainingChars <- Gen.listOf(Gen.alphaChar)
+  lazy val genNonEmptyString: Gen[String] = for {
+    chars <- Gen.listOf1(Gen.alphaChar)
   } yield {
-    val charList = List(firstChar) ++ remainingChars
+    val charList = List(chars)
     charList.mkString
   }
 
-  private val timeUnits = Seq[TimeUnit](TimeUnit.DAYS,
+  private lazy val timeUnits = Seq[TimeUnit](TimeUnit.DAYS,
     TimeUnit.HOURS,
     TimeUnit.MICROSECONDS,
     TimeUnit.MILLISECONDS,
@@ -42,15 +41,15 @@ package object scalacheck {
     TimeUnit.NANOSECONDS,
     TimeUnit.SECONDS)
 
-  val genTimeUnit: Gen[TimeUnit] = Gen.oneOf(timeUnits)
+  lazy val genTimeUnit: Gen[TimeUnit] = Gen.oneOf(timeUnits)
 
-  val genPositiveMilliseconds: Gen[Milliseconds] = for {
+  lazy val genPositiveMilliseconds: Gen[Milliseconds] = for {
     magnitude <- Gen.posNum[Long]
   } yield {
     Milliseconds(magnitude)
   }
 
-  private val httpResponseCodes = Seq[HttpResponseCode](Accepted,
+  private lazy val httpResponseCodes = Seq[HttpResponseCode](Accepted,
     BadGateway,
     MethodNotAllowed,
     BadRequest,
@@ -91,38 +90,38 @@ package object scalacheck {
     UseProxy,
     HttpVersionNotSupported
   )
-  val genHttpResponseCode: Gen[HttpResponseCode] = Gen.oneOf(httpResponseCodes)
+  lazy val genHttpResponseCode: Gen[HttpResponseCode] = Gen.oneOf(httpResponseCodes)
 
 
-  val genHashCode: Gen[HashCode] = for {
+  lazy val genHashCode: Gen[HashCode] = for {
     str <- genNonEmptyString
   } yield {
-    str.getBytes
+    str.getBytes("UTF-8")
   }
 
-  val genRawBody: Gen[RawBody] = genHashCode
+  lazy val genRawBody: Gen[RawBody] = genHashCode
 
-  val genCachedResponseDelay = for {
+  lazy val genCachedResponseDelay = for {
     ttl <- genPositiveMilliseconds
     hashCode <- genHashCode
   } yield {
     CachedResponseDelay(ttl, hashCode)
   }
 
-  val genHeader: Gen[Header] = for {
+  lazy val genHeader: Gen[Header] = for {
     key <- genNonEmptyString
     value <- genNonEmptyString
   } yield {
     key -> value
   }
 
-  val genHeaders: Gen[Headers] = for {
+  lazy val genHeaders: Gen[Headers] = for {
     headers <- Gen.listOf(genHeader)
   } yield {
     Headers(headers)
   }
 
-  val genURL: Gen[URL] = for {
+  lazy val genURL: Gen[URL] = for {
     urlString <- genNonEmptyString
   } yield {
     new URL("http://%s.com".format(urlString))
@@ -135,7 +134,7 @@ package object scalacheck {
     client.get(url, headers)
   }
 
-  val genHttpResponse: Gen[HttpResponse] = for {
+  lazy val genHttpResponse: Gen[HttpResponse] = for {
     code <- genHttpResponseCode
     headers <- genHeaders
     body <- genRawBody
@@ -143,7 +142,7 @@ package object scalacheck {
     new HttpResponse(code, headers, body)
   }
 
-  val genCache: Gen[HttpResponseCacher] = {
+  lazy val genCache: Gen[HttpResponseCacher] = {
     Gen.value(new InMemoryHttpResponseCacher)
   }
 
