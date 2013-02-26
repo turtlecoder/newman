@@ -21,11 +21,6 @@ import Scalaz._
 
 package object enumeration extends EnumerationImplicits {
 
-  /**
-   * here for backward compatability for code that import com.stackmob.common.enumeration.Enumeration._
-   */
-  object Enumeration extends EnumerationImplicits
-
   class EnumerationException(s: String) extends Exception("Unknown enumeration value " + s)
 
   /**

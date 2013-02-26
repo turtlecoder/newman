@@ -17,11 +17,11 @@
 package com.stackmob.newman.test
 
 import org.specs2.Specification
-import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import com.stackmob.newman._
 import com.stackmob.newman.dsl._
+import org.specs2.matcher.MatchResult
 
 class ApacheHttpClientSpecs extends Specification { def is =
   "ApacheHttpClientSpecs".title                                                                                         ^
@@ -32,7 +32,7 @@ class ApacheHttpClientSpecs extends Specification { def is =
     "Correctly do GET requests"                                                                                         ! Get().succeeds ^
     "Correctly do async GET requests"                                                                                   ! Get().succeedsAsync ^
     "Correctly do POST requests"                                                                                        ! skipped ^ //Post().succeeds ^
-    "Correctly do async POST requests"                                                                                  ! skipped  ^ //Post().succeedsAsync ^
+    "Correctly do async POST requests"                                                                                  ! skipped ^ //Post().succeedsAsync ^
     "Correctly do PUT requests"                                                                                         ! skipped ^ //Put().succeeds ^
     "Correctly do async PUT requests"                                                                                   ! skipped ^ //Put().succeedsAsync ^
     "Correctly do DELETE requests"                                                                                      ! skipped ^ //Delete().succeeds ^
@@ -45,14 +45,14 @@ class ApacheHttpClientSpecs extends Specification { def is =
 
     protected def execute(t: Builder,
                           expectedCode: HttpResponseCode = HttpResponseCode.Ok)
-                         (fn: HttpResponse => SpecsResult): SpecsResult = {
+                         (fn: HttpResponse => MatchResult[_]) = {
       val r = t.executeUnsafe
       r.code must beEqualTo(expectedCode) and fn(r)
     }
 
     protected def executeAsync(t: Builder,
                                expectedCode: HttpResponseCode = HttpResponseCode.Ok)
-                              (fn: HttpResponse => SpecsResult): SpecsResult = {
+                              (fn: HttpResponse => MatchResult[_]) = {
       val rPromise = t.executeAsyncUnsafe
       rPromise.map { r: HttpResponse =>
         r.code must beEqualTo(expectedCode) and fn(r)
@@ -62,8 +62,8 @@ class ApacheHttpClientSpecs extends Specification { def is =
     protected lazy val url = new URL("https://www.stackmob.com")
 
     implicit private val encoding = Constants.UTF8Charset
-    protected def ensureHttpOK(h: HttpResponse): SpecsResult = h.code must beEqualTo(HttpResponseCode.Ok)
-    protected def ensureHtmlReturned(h: HttpResponse): SpecsResult = {
+    protected def ensureHttpOK(h: HttpResponse) = h.code must beEqualTo(HttpResponseCode.Ok)
+    protected def ensureHtmlReturned(h: HttpResponse) = {
       (h.bodyString() must contain("html")) and
       (h.bodyString() must contain("/html"))
     }

@@ -72,6 +72,11 @@ trait Enumeration extends Serializable {
   def matches(s: String): Boolean = s.toLowerCase.equals(stringVal)
 }
 
+/**
+ * here for backward compatability for code that import com.stackmob.common.enumeration.Enumeration._
+ */
+object Enumeration extends EnumerationImplicits
+
 trait EnumReader[T] {
   def read(s: String): Option[T]
 

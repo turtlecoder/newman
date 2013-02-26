@@ -20,8 +20,6 @@ package dsl
 import scalaz._
 import Scalaz._
 import request._
-import HttpRequest._
-import HttpRequestWithBody._
 import java.net.URL
 import java.nio.charset.Charset
 import com.stackmob.newman.serialization.common.DefaultBodySerialization
@@ -119,9 +117,6 @@ trait RequestBuilderDSL {
 
     override def toRequest: HttpRequest = fn(headers, body)
   }
-
-  implicit def transformerToHttpRequest(t: Builder): HttpRequest = t.toRequest
-
 
   def GET(url: URL)(implicit client: HttpClient): HeaderBuilder = HeaderBuilder { h: Headers =>
     client.get(url, h)

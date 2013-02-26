@@ -23,6 +23,7 @@ import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
 import com.stackmob.newman.test.BaseContext
 import com.stackmob.newman._
 import com.stackmob.newman.response._
+import org.specs2.matcher.{MatchFailure, MatchResult}
 
 class HttpResponseSpecs extends Specification { def is =
   "HttpResponseSpecs".title                                                                                             ^
@@ -52,8 +53,10 @@ class HttpResponseSpecs extends Specification { def is =
         {
           (ex.expected must beEqualTo(expectedRespCode)) and
           (ex.actual must beEqualTo(actualRespCode))
-        }: SpecsResult
-      } | (SpecsFailure("returned excpetion was not an HttpResponse.UnexpectedResponseCode"): SpecsResult))
+        }: MatchResult[_]
+      } | {
+        MatchFailure("ok", "returned exception was not an HttpResponse.UnexpectedResponseCode", (false must beTrue).expectable)
+      })
     }
   }
 

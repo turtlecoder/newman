@@ -66,13 +66,12 @@ class DSLSpecs extends Specification { def is =
     "correctly set a body when passed a string"                                                                         ! HeaderAndBodyTransformerTest().correctlySetsStringBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
                                                                                                                         end
-  protected val u: URL = url(http, "stackmob.com")
 
   trait Context extends BaseContext {
     implicit protected val client = new DummyHttpClient
-    protected def ensureEmptyHeaders[T <: Builder](t: T)(implicit m: Manifest[T]): SpecsResult = {
-      (t must beAnInstanceOf[T]) and
-      (t.headers must beEqualTo(Headers.empty))
+    protected val u: URL = url(http, "stackmob.com").toURL
+    protected def ensureEmptyHeaders[T <: Builder](t: T) = {
+      t.headers must beEqualTo(Headers.empty)
     }
   }
 

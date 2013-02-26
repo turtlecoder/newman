@@ -24,19 +24,6 @@ trait URLBuilderDSL {
 
   val DefaultPort = 80
 
-  implicit def urlCapableToURL(c: URLCapable) = c.toURL
-  implicit def stringToPath(s: String) = Path(s :: Nil)
-
-  sealed trait Protocol {
-    def name: String
-  }
-  case object http extends Protocol {
-    override lazy val name = "http"
-  }
-  case object https extends Protocol {
-    override lazy val name = "https"
-  }
-
   def url(protocol: Protocol, host: String, port: Int, path: Path): PathBuilder = PathBuilder(protocol, host, port, path)
   def url(protocol: Protocol, host: String, path: Path): PathBuilder = url(protocol, host, DefaultPort, path)
   def url(protocol: Protocol, host: String, port: Int): PathBuilder = url(protocol, host, port, empty)
@@ -63,17 +50,6 @@ trait URLBuilderDSL {
     }
   }
 
-  case class PathBuilder(protocol: Protocol,
-                         host: String,
-                         port: Int,
-                         path: Path = Path.empty) extends URLCapable {
-    def /(pathElt: String): PathBuilder = PathBuilder(protocol, host, port, path / pathElt)
-    def /(path: Path): PathBuilder = PathBuilder(protocol, host, port, path)
-    def ?(queryStringElts: (String, String)*): QueryStringBuilder = {
-      QueryStringBuilder(protocol, host, port, path, queryStringElts.toList)
-    }
-  }
-
   case class QueryStringBuilder(protocol: Protocol,
                                 host: String,
                                 port: Int,
@@ -82,6 +58,18 @@ trait URLBuilderDSL {
     def &(queryStringElt: (String, String)): QueryStringBuilder = {
       QueryStringBuilder(protocol, host, port, path, query :+ queryStringElt)
     }
+  }
+
+}
+
+case class PathBuilder(protocol: Protocol,
+                       host: String,
+                       port: Int,
+                       path: Path = Path.empty) extends URLCapable {
+  def /(pathElt: String): PathBuilder = PathBuilder(protocol, host, port, path / pathElt)
+  def /(path: Path): PathBuilder = PathBuilder(protocol, host, port, path)
+  def ?(queryStringElts: (String, String)*): QueryStringBuilder = {
+    QueryStringBuilder(protocol, host, port, path, queryStringElts.toList)
   }
 }
 
@@ -94,4 +82,3 @@ case class Path(list: List[String]) {
 object Path {
   val empty = Path(Nil)
 }
-
