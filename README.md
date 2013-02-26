@@ -10,17 +10,15 @@ To add it to your project, use this for Maven:
 <dependency>
   <groupId>com.stackmob</groupId>
   <artifactId>newman_2.9.1</artifactId>
-  <version>VERSION</version>
+  <version>0.8.0</version>
 </dependency>
 ```
 
 … or the equivalent for sbt
 
 ```scala
-libraryDependencies += "com.stackmob" %% "newman" % "VERSION"
+libraryDependencies += "com.stackmob" %% "newman" % "0.8.0"
 ```
-
-0.8.0 is the first publicly available version. See [here](https://github.com/stackmob/newman/tags) for a full list.
 
 # Basic Usage
 	
