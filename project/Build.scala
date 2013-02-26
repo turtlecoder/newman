@@ -37,11 +37,11 @@ object NewmanReleaseSteps {
   }
 
   private def updateReadme(st: State, newVersion: String) {
-    val conscriptR = """stackmob/newman/\d+\.\d+\.\d+""".r
+    val conscriptR = """\d+\.\d+\.\d+""".r
     val oldReadme = Source.fromFile(readme).mkString
     val out = new PrintWriter(readme, "UTF-8")
     try {
-      val newReadme = conscriptR.replaceFirstIn(oldReadme, "stackmob/newman/%s".format(newVersion))
+      val newReadme = conscriptR.replaceFirstIn(oldReadme, "%s".format(newVersion))
       newReadme.foreach(out.write(_))
     } finally {
       out.close()
