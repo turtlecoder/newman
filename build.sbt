@@ -100,5 +100,10 @@ pomExtra := (
       <name>Kelsey Innis</name>
       <url>http://www.stackmob.com</url>
     </developer>
+    <developer>
+        <id>jrwest</id>
+        <name>Jordan West</name>
+        <url>http://github.com/jrwest</url>
+    </developer>
   </developers>
 )
