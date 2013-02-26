@@ -20,7 +20,7 @@ To add it to your project, use this for Maven:
 </dependency>
 ```
 
-‚Äö√Ñ¬∂ or the equivalent for sbt
+‚Äö√Ñ√∂‚àö√ë¬¨‚àÇ or the equivalent for sbt
 
 ```scala
 libraryDependencies += "com.stackmob" %% "newman" % "0.8.0"
@@ -65,7 +65,7 @@ in the `DSL` package to let you build up a request and then execute it.
 Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously want to execute it. There are 2 methods defined on all `HttpRequest`s that execute requests differently:
 
 * `def prepare: IO[HttpResponse]` - returns a `scalaz.effects.IO` that represents the result of executing the request. Remember that this method does not actually execute the request, and no network traffic will happen if you call this method. In order to actually execute the request, call `unsafePerformIO` on this method's result.
-* `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc‚Äö√Ñ¬∂ (hence the suffix `Unsafe`)
+* `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc‚Äö√Ñ√∂‚àö√ë¬¨‚àÇ (hence the suffix `Unsafe`)
 
 # Serializing
 Newman comes with built in support for serializing `HttpRequest`s and `HttpResponse`s to Json.
@@ -86,7 +86,7 @@ import com.stacmob.newman.caching.InMemoryHttpResponseCacher
 import com.stackmob.newman.DSL._
 import java.net.URL
 	
-//change this implementation to your own if you want to use Memcached, Redis, etc‚Äö√Ñ¬∂
+//change this implementation to your own if you want to use Memcached, Redis, etc‚Äö√Ñ√∂‚àö√ë¬¨‚àÇ
 val cache = new InMemoryHttpResponseCacher
 val rawHttpClient = new ApacheHttpClient
 //eTagClient will be used in the DSL to construct & execute requests below
