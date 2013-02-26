@@ -20,10 +20,11 @@ package request.serialization
 import scalaz._
 import Scalaz._
 import org.specs2.Specification
-import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure, Success => SpecsSuccess}
+import org.specs2.execute.{Result => SpecsResult}
 import com.stackmob.newman._
 import java.net.URL
 import com.stackmob.newman.request.{HttpRequestWithoutBody, HttpRequest, HttpRequestWithBody}
+import org.specs2.matcher.{MatchSuccess, MatchFailure, MatchResult}
 
 class HttpRequestSerializationSpecs extends Specification { def is =
   "HttpRequestSerializationSpecs".title                                                                                 ^
@@ -47,7 +48,7 @@ class HttpRequestSerializationSpecs extends Specification { def is =
     protected lazy val headReq = client.head(url, headers)
     protected lazy val client = new DummyHttpClient
 
-    private def ensure(t: HttpRequest)(extra: HttpRequest => SpecsResult): SpecsResult = {
+    private def ensure(t: HttpRequest)(extra: HttpRequest => MatchResult[_]): MatchResult[_] = {
       val json = t.toJson(false)(client)
       HttpRequest.fromJson(json)(client).fold(
         success = { deser: HttpRequest =>
@@ -56,20 +57,24 @@ class HttpRequestSerializationSpecs extends Specification { def is =
           (extra(deser))
         },
         failure = { eNel =>
-          SpecsFailure("deserialization failed with %d errors".format(eNel.list.length)): SpecsResult
+          MatchFailure("ok", "deserialization failed with %d errors".format(eNel.list.length), (false must beTrue).expectable)
         }
       )
     }
 
-    protected def ensure(t: HttpRequestWithoutBody): SpecsResult = {
-      ensure(t: HttpRequest) { r: HttpRequest => SpecsSuccess("ok") }
+    protected def ensure(t: HttpRequestWithoutBody): MatchResult[_] = {
+      ensure(t: HttpRequest) { r: HttpRequest =>
+        MatchSuccess("ok", "error", (true must beTrue).expectable)
+      }
     }
 
-    protected def ensure(t: HttpRequestWithBody): SpecsResult = {
+    protected def ensure(t: HttpRequestWithBody): MatchResult[_] = {
       ensure(t: HttpRequest) { r: HttpRequest =>
         r.cast[HttpRequestWithBody].map { d: HttpRequestWithBody =>
-          (d.body must beEqualTo(t.body)): SpecsResult
-        } | SpecsFailure("deserialization returned a %s, not HttpRequestWithBody as expected".format(r.getClass.getCanonicalName))
+          (d.body must beEqualTo(t.body)): MatchResult[_]
+        } | {
+          MatchFailure("ok", "deserialization returned a %s, not HttpRequestWithBody as expected".format(r.getClass.getCanonicalName), (false must beTrue).expectable)
+        }
       }
     }
   }

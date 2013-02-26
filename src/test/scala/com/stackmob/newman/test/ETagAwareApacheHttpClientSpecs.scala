@@ -28,6 +28,7 @@ import com.stackmob.newman.response._
 import com.stackmob.newman.request._
 import com.stackmob.newman.test.caching._
 import collection.JavaConverters._
+import org.specs2.matcher.MatchResult
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   "ETagAwareApacheHttpClientSpecs".title                                                                                ^
@@ -64,8 +65,8 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     protected def responseCacher: HttpResponseCacher
 
     def foldResponseCacherCalls(c: DummyHttpResponseCacher,
-                                getFn: List[HttpRequest] => SpecsResult,
-                                setFn: List[(HttpRequest, HttpResponse)] => SpecsResult): SpecsResult = {
+                                getFn: List[HttpRequest] => MatchResult[_],
+                                setFn: List[(HttpRequest, HttpResponse)] => MatchResult[_]): MatchResult[_] = {
       (c.existsCalls.size must beEqualTo(0)) and
       (getFn(c.getCalls.asScala.toList)) and
       (setFn(c.setCalls.asScala.toList))

@@ -16,4 +16,40 @@
 
 package com.stackmob.newman
 
-package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHandlerDSL
+import request.HttpRequest
+import response.HttpResponse
+import scalaz._
+import scalaz.effects._
+import Scalaz._
+import java.net.URL
+
+package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHandlerDSL {
+
+  sealed trait Protocol {
+    def name: String
+  }
+
+  case object http extends Protocol {
+    override lazy val name = "http"
+  }
+
+  case object https extends Protocol {
+    override lazy val name = "https"
+  }
+
+  implicit def urlCapableToURL(c: URLCapable): URL = c.toURL
+  implicit def stringToPath(s: String): Path = Path(s :: Nil)
+
+  implicit def transformerToHttpRequest(t: Builder): HttpRequest = t.toRequest
+
+  implicit def ioRespToW(ioResp: IO[HttpResponse]): IOResponseW = new IOResponseW {
+    override val value = ioResp
+  }
+
+  implicit def ResponseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = {
+    handler.default { resp =>
+      UnhandledResponseCode(resp.code, resp.bodyString).fail[T]
+    }
+  }
+
+}
