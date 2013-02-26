@@ -46,7 +46,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
     override val value = ioResp
   }
 
-  implicit def ResponseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = {
+  implicit def responseHandlerToResponse[T](handler: ResponseHandler[T]): IO[ThrowableValidation[T]] = {
     handler.default { resp =>
       UnhandledResponseCode(resp.code, resp.bodyString).fail[T]
     }
