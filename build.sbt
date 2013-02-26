@@ -47,7 +47,21 @@ Plugin.graphSettings
 
 releaseSettings
 
-releaseProcess := Seq[ReleaseStep](setReadmeReleaseVersion)
+releaseProcess := Seq[ReleaseStep](
+  checkSnapshotDependencies,
+  inquireVersions,
+  runTest,
+  setReleaseVersion,
+  commitReleaseVersion,
+  setLaunchConfigReleaseVersion,
+  setReadmeReleaseVersion,
+  tagRelease,
+  publishArtifacts,
+  setNextVersion,
+  commitNextVersion,
+  setLaunchConfigNextVersion,
+  pushChanges,
+)
 
 publishTo <<= (version) { version: String =>
     val nexus = "https://oss.sonatype.org/"
