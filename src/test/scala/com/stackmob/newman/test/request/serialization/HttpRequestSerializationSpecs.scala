@@ -17,14 +17,12 @@
 package com.stackmob.newman.test
 package request.serialization
 
-import scalaz._
-import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import com.stackmob.newman._
 import java.net.URL
 import com.stackmob.newman.request.{HttpRequestWithoutBody, HttpRequest, HttpRequestWithBody}
-import org.specs2.matcher.{MatchSuccess, MatchFailure, MatchResult}
+import org.specs2.matcher.{MatchSuccess, MatchResult}
 
 class HttpRequestSerializationSpecs extends Specification { def is =
   "HttpRequestSerializationSpecs".title                                                                                 ^
@@ -50,16 +48,13 @@ class HttpRequestSerializationSpecs extends Specification { def is =
 
     private def ensure(t: HttpRequest)(extra: HttpRequest => MatchResult[_]): MatchResult[_] = {
       val json = t.toJson(false)(client)
-      HttpRequest.fromJson(json)(client).fold(
-        success = { deser: HttpRequest =>
-          (deser.url must beEqualTo(t.url)) and
-          (deser.headers must haveTheSameHeadersAs(t.headers)) and
-          (extra(deser))
-        },
-        failure = { eNel =>
-          MatchFailure("ok", "deserialization failed with %d errors".format(eNel.list.length), (false must beTrue).expectable)
+      HttpRequest.fromJson(json)(client).either must beRight.like {
+        case req: HttpRequest => {
+          (req.url must beEqualTo(t.url)) and
+          (req.headers must haveTheSameHeadersAs(t.headers)) and
+          (extra(req))
         }
-      )
+      }
     }
 
     protected def ensure(t: HttpRequestWithoutBody): MatchResult[_] = {
@@ -70,10 +65,8 @@ class HttpRequestSerializationSpecs extends Specification { def is =
 
     protected def ensure(t: HttpRequestWithBody): MatchResult[_] = {
       ensure(t: HttpRequest) { r: HttpRequest =>
-        r.cast[HttpRequestWithBody].map { d: HttpRequestWithBody =>
-          (d.body must beEqualTo(t.body)): MatchResult[_]
-        } | {
-          MatchFailure("ok", "deserialization returned a %s, not HttpRequestWithBody as expected".format(r.getClass.getCanonicalName), (false must beTrue).expectable)
+        r.cast[HttpRequestWithBody] must beSome.like {
+          case req: HttpRequestWithBody => (req.body must beEqualTo(t.body))
         }
       }
     }
