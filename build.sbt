@@ -15,7 +15,14 @@ scalaVersion := "2.9.1"
 
 crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0")
 
-scalacOptions ++= Seq("-unchecked", "-deprecation")
+scalacOptions <++= (scalaVersion).map { version: String =>
+  val defaults = Seq("-unchecked", "-deprecation")
+  if (version.startsWith("2.10")) {
+    defaults ++ Seq("-feature", "-language:implicitConversions,", "-language:higherKinds")
+  } else {
+    defaults
+  }
+}
 
 libraryDependencies ++= {
   val httpCoreVersion = "4.2.1"
