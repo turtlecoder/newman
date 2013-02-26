@@ -10,15 +10,17 @@ To add it to your project, use this for Maven:
 <dependency>
   <groupId>com.stackmob</groupId>
   <artifactId>newman_2.9.1</artifactId>
-  <version>SOME_VERSION</version>
+  <version>VERSION</version>
 </dependency>
 ```
 
 … or the equivalent for sbt
 
 ```scala
-libraryDependencies += "com.stackmob" %% "newman" % "SOME_VERSION"
+libraryDependencies += "com.stackmob" %% "newman" % "VERSION"
 ```
+
+0.8.0 is the first publicly available version. See [here](https://github.com/stackmob/newman/tags) for a full list.
 
 # Basic Usage
 	
@@ -35,10 +37,13 @@ println("Response returned from %s with code %d, body %s".format(url.toString,re
 ```
 
 #The DSL
-Newman comes with a DSL which is inspired by [Dispatch](http://dispatch.databinder.net/Dispatch.html), but uses mostly english instead of symbols.
-This DSL is the recommended way to build requests, and the above example in "Basic Usage" uses the DSL to construct a GET request.
+Newman comes with a DSL which is inspired by [Dispatch](http://dispatch.databinder.net/Dispatch.html), 
+but uses mostly english instead of symbols.
+This DSL is the recommended way to build requests, and the above example in "Basic Usage" uses the DSL to 
+construct a GET request.
 
-To start using the DSL, simply `import com.stackmob.newman.dsl._`. The methods of interest in the DSL are uppercase representations of the HTTP verbs: 
+To start using the DSL, simply `import com.stackmob.newman.dsl._`. 
+The methods of interest in the DSL are uppercase representations of the HTTP verbs: 
 
 * `def GET(url: URL)(implicit client: HttpClient)`
 * `def POST(url: URL)(implicit client: HttpClient)`
@@ -46,9 +51,11 @@ To start using the DSL, simply `import com.stackmob.newman.dsl._`. The methods o
 * `def DELETE(url: URL)(implicit client: HttpClient)`
 * `def HEAD(url: URL)(implicit client: HttpClient)`
 
-Notice that each method takes an implicit `HttpClient`, so you must declare your own implicit before you use any of the above listed DSL methods, or pass one explicitly.
+Notice that each method takes an implicit `HttpClient`, so you must declare your own implicit before 
+you use any of the above listed DSL methods, or pass one explicitly.
 
-Each method listed above returns a Builder, which works in concert with the implicit methods defined in the `DSL` package to let you build up a request and then execute it.
+Each method listed above returns a Builder, which works in concert with the implicit methods defined 
+in the `DSL` package to let you build up a request and then execute it.
 
 # Executing Requests
 Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously want to execute it. There are 2 methods defined on all `HttpRequest`s that execute requests differently:
