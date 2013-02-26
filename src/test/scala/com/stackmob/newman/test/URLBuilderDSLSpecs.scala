@@ -16,7 +16,7 @@
 
 package com.stackmob.newman.test
 
-import com.stackmob.newman.dsl.URLBuilderDSL
+import com.stackmob.newman.dsl._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL
@@ -32,7 +32,7 @@ class URLBuilderDSLSpecs extends Specification { def is =
     "correctly assemble an http://something.somethign/something?key=val URL"                                            ! ProtocolHostPathAndQueryString().succeeds ^
     "correctly assemble an http://something.something?key=val URL"                                                      ! ProtocolHostAndQueryString().succeeds ^
                                                                                                                         end
-  trait Context extends BaseContext with URLBuilderDSL {
+  trait Context extends BaseContext {
     protected val protocol = http
     protected val host = "stackmob.com"
     protected val port = DefaultPort
