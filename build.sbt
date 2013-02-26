@@ -58,14 +58,12 @@ releaseProcess := Seq[ReleaseStep](
   runTest,
   setReleaseVersion,
   commitReleaseVersion,
-  setLaunchConfigReleaseVersion,
   setReadmeReleaseVersion,
   tagRelease,
   publishArtifacts,
   setNextVersion,
   commitNextVersion,
-  setLaunchConfigNextVersion,
-  pushChanges,
+  pushChanges
 )
 
 publishTo <<= (version) { version: String =>
