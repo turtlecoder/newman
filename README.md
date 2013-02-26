@@ -4,8 +4,10 @@ This is StackMob's HTTP client. We named it after this man:
 
 Newman supports the following basic features:
 
-* Making requests and receiving responses
-* Serializing and deserializing requests and responses to/from Json
+* Making HTTP requests and receiving responses
+* Serializing and deserializing request and response bodies
+* Serializing and deserializing requests and responses for replay or caching
+* In memory response caching with TTL expiry
 * ETag HTTP caching
 
 To add it to your project, use this for Maven:
@@ -45,7 +47,7 @@ This DSL is the recommended way to build requests, and the above example in "Bas
 construct a GET request.
 
 To start using the DSL, simply `import com.stackmob.newman.dsl._`. 
-The methods of interest in the DSL are uppercase representations of the HTTP verbs: 
+The functions of interest in the DSL are uppercase representations of the HTTP verbs: 
 
 * `def GET(url: URL)(implicit client: HttpClient)`
 * `def POST(url: URL)(implicit client: HttpClient)`
