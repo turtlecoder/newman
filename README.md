@@ -20,7 +20,7 @@ To add it to your project, use this for Maven:
 </dependency>
 ```
 
-‚Äö√Ñ√∂‚àö√ë¬¨‚àÇ or the equivalent for sbt
+or the equivalent for sbt:
 
 ```scala
 libraryDependencies += "com.stackmob" %% "newman" % "0.8.0"
