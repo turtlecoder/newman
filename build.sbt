@@ -30,7 +30,7 @@ libraryDependencies ++= {
   val scalaCheckVersion = "1.10.0"
   val specs2Version = "1.12.3"
   val mockitoVersion = "1.9.0"
-  val scalazVersion = "6.0.3"
+  val scalazVersion = "6.0.4"
   val liftJsonVersion = "2.5-RC1"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
