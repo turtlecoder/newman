@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,14 +47,14 @@ class ReadCachingHttpClient(httpClient: HttpClient,
   }
 
   override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest {
-    override def prepareAsync = httpClient.put(u, h, b).prepareAsync
+    override def prepareAsync: IO[Promise[HttpResponse]] = httpClient.put(u, h, b).prepareAsync
     override val url = u
     override val headers = h
     override val body = b
   }
 
   override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest {
-    override def prepareAsync = httpClient.delete(u, h).prepareAsync
+    override def prepareAsync: IO[Promise[HttpResponse]] = httpClient.delete(u, h).prepareAsync
     override val url = u
     override val headers = h
   }
