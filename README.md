@@ -1,6 +1,6 @@
 #Newman
 
-[![Build Status](https://travis-ci.org/stackmob/newman.png)](https://travis-ci.org/stackmob/newman)
+[![Build Status](https://travis-ci.org/stackmob/newman.png?branch=master)](https://travis-ci.org/stackmob/newman)
 
 Newman is StackMob's HTTP client. We named it after this man:
 
