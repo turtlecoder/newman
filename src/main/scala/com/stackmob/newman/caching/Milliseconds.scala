@@ -14,11 +14,27 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.serialization.common
+package com.stackmob.newman.caching
 
-import net.liftweb.json.scalaz.JsonScalaz._
+/**
+ * a simple container for a milliseconds value
+ */
+sealed trait Milliseconds {
+  def magnitude: Long
+}
+object Milliseconds {
+  /**
+   * create a new Milliseconds containing the current epoch time
+   * @return the new Milliseconds
+   */
+  def current: Milliseconds = apply(System.currentTimeMillis())
 
-trait SerializationBase[T] {
-  def writer: JSONW[T]
-  def reader: JSONR[T]
+  /**
+   * create a new Milliseconds
+   * @param l the number of milliseconds
+   * @return a Milliseconds object
+   */
+  def apply(l: Long): Milliseconds = new Milliseconds {
+    override lazy val magnitude: Long = l
+  }
 }

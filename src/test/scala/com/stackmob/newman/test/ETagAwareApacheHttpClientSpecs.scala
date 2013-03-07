@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
 import scalaz._
 import Scalaz._
@@ -22,10 +22,13 @@ import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import org.apache.http.HttpHeaders
 import java.net.URL
-import com.stackmob.newman.caching.{HttpResponseCacher, DummyHttpResponseCacher}
-import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import com.stackmob.newman.request.HttpRequest
+import com.stackmob.newman._
+import com.stackmob.newman.caching._
+import com.stackmob.newman.response._
+import com.stackmob.newman.request._
+import com.stackmob.newman.test.caching._
 import collection.JavaConverters._
+import org.specs2.matcher.MatchResult
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   "ETagAwareApacheHttpClientSpecs".title                                                                                ^
@@ -56,14 +59,14 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     protected val responseWithoutETag = HttpResponse(HttpResponseCode.Ok, Headers.empty, body)
     protected val responseWithNotModified = HttpResponse(HttpResponseCode.NotModified, Headers.empty, body)
 
-    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher)
+    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher, Milliseconds.current)
 
     protected def rawClient: DummyHttpClient
     protected def responseCacher: HttpResponseCacher
 
     def foldResponseCacherCalls(c: DummyHttpResponseCacher,
-                                getFn: List[HttpRequest] => SpecsResult,
-                                setFn: List[(HttpRequest, HttpResponse)] => SpecsResult): SpecsResult = {
+                                getFn: List[HttpRequest] => MatchResult[_],
+                                setFn: List[(HttpRequest, HttpResponse)] => MatchResult[_]): MatchResult[_] = {
       (c.existsCalls.size must beEqualTo(0)) and
       (getFn(c.getCalls.asScala.toList)) and
       (setFn(c.setCalls.asScala.toList))

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
 import java.net.URL
-import request._
-import request.HttpRequest._
-import request.HttpRequestWithBody._
+import com.stackmob.newman._
+import com.stackmob.newman.request._
+import com.stackmob.newman.response._
 import java.util.concurrent.CopyOnWriteArrayList
-import response.{HttpResponseCode, HttpResponse}
 import scalaz._
 import Scalaz._
 import scalaz.effects._

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,22 +21,11 @@ import scalaz._
 import Scalaz._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
-import com.stackmob.newman.request.HttpRequest._
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import java.util.Date
 import com.stackmob.newman.Constants._
 import com.stackmob.newman.serialization.common._
 import java.nio.charset.Charset
-
-/**
- * Created by IntelliJ IDEA.
- *
- * com.stackmob.newman.serialization.response
- *
- * User: aaron
- * Date: 5/11/12
- * Time: 1:36 PM
- */
 
 class HttpResponseSerialization(charset: Charset = UTF8Charset) extends SerializationBase[HttpResponse] {
   protected val CodeKey = "code"

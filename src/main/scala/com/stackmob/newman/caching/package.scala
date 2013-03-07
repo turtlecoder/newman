@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.serialization.common
+package com.stackmob.newman
 
-import net.liftweb.json.scalaz.JsonScalaz._
-
-trait SerializationBase[T] {
-  def writer: JSONW[T]
-  def reader: JSONR[T]
+package object caching {
+  type HashCode = Array[Byte]
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,33 +14,37 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.caching
+package com.stackmob.newman.test.caching
 
 import scalaz.effects._
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import java.util.concurrent.CopyOnWriteArrayList
+import com.stackmob.newman.caching._
 
 class DummyHttpResponseCacher(onGet: => Option[HttpResponse],
                               onSet: => Unit,
                               onExists: => Boolean) extends HttpResponseCacher {
+
+  def cannedGet = onGet
+  def cannedExists = onExists
 
   val getCalls = new CopyOnWriteArrayList[HttpRequest]()
   val setCalls = new CopyOnWriteArrayList[(HttpRequest, HttpResponse)]()
   val existsCalls = new CopyOnWriteArrayList[HttpRequest]()
   def totalNumCalls = getCalls.size() + setCalls.size() + existsCalls.size()
 
-  override def get(req: HttpRequest) = io {
+  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io {
     getCalls.add(req)
     onGet
   }
 
-  override def set(req: HttpRequest, resp: HttpResponse) = io {
+  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = io {
     setCalls.add(req -> resp)
     onSet
   }
 
-  override def exists(req: HttpRequest) = io {
+  override def exists(req: HttpRequest): IO[Boolean] = io {
     existsCalls.add(req)
     onExists
   }

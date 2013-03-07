@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,6 @@ import scalaz._
 import Scalaz._
 
 package object enumeration extends EnumerationImplicits {
-
-  /**
-   * here for backward compatability for code that import com.stackmob.common.enumeration.Enumeration._
-   */
-  object Enumeration extends EnumerationImplicits
 
   class EnumerationException(s: String) extends Exception("Unknown enumeration value " + s)
 

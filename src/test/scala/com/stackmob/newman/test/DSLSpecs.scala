@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 
+import com.stackmob.newman._
 import com.stackmob.newman.dsl._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL
-import com.stackmob.newman.request.HttpRequest._
 import scalaz._
 import Scalaz._
 
@@ -66,13 +66,12 @@ class DSLSpecs extends Specification { def is =
     "correctly set a body when passed a string"                                                                         ! HeaderAndBodyTransformerTest().correctlySetsStringBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
                                                                                                                         end
-  protected val u: URL = url(http, "stackmob.com")
 
   trait Context extends BaseContext {
     implicit protected val client = new DummyHttpClient
-    protected def ensureEmptyHeaders[T <: Builder](t: T)(implicit m: Manifest[T]): SpecsResult = {
-      (t must beAnInstanceOf[T]) and
-      (t.headers must beEqualTo(Headers.empty))
+    protected val u: URL = url(http, "stackmob.com").toURL
+    protected def ensureEmptyHeaders[T <: Builder](t: T) = {
+      t.headers must beEqualTo(Headers.empty)
     }
   }
 

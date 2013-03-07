@@ -1,7 +1,13 @@
-This is StackMob's HTTP client. It supports the following basic features:
+This is StackMob's HTTP client. We named it after this man:
 
-* Making requests and receiving responses
-* Serializing and deserializing requests and responses to/from Json
+![Newman](https://a248.e.akamai.net/camo.github.com/e39710b58661110e1c932cc9c76e0dd4e9abae43/687474703a2f2f756e6465727374616e64686973746f72796e6f772e66696c65732e776f726470726573732e636f6d2f323031322f30352f6e65776d616e2e6a7067)
+
+Newman supports the following basic features:
+
+* Making HTTP requests and receiving responses
+* Serializing and deserializing request and response bodies
+* Serializing and deserializing requests and responses for replay or caching
+* In memory response caching with TTL expiry
 * ETag HTTP caching
 
 To add it to your project, use this for Maven:
@@ -9,15 +15,15 @@ To add it to your project, use this for Maven:
 ```xml
 <dependency>
   <groupId>com.stackmob</groupId>
-  <artifactId>newman_2.9.1</artifactId>
-  <version>0.6.0</version>
+  <artifactId>newman_${scala.version}</artifactId>
+  <version>0.9.2</version>
 </dependency>
 ```
 
-… or the equivalent for sbt
+or the equivalent for sbt:
 
 ```scala
-libraryDependencies += "com.stackmob" %% "newman" % "0.6.0"
+libraryDependencies += "com.stackmob" %% "newman" % "0.9.2"
 ```
 
 # Basic Usage
@@ -35,9 +41,13 @@ println("Response returned from %s with code %d, body %s".format(url.toString,re
 ```
 
 #The DSL
-Newman comes with a DSL which is inspired by [Dispatch](http://dispatch.databinder.net/Dispatch.html), but aims to be much simpler to understand and use. This DSL is the recommended way to build requests, and the above example in "Basic Usage" uses the DSL to construct a GET request.
+Newman comes with a DSL which is inspired by [Dispatch](http://dispatch.databinder.net/Dispatch.html), 
+but uses mostly english instead of symbols.
+This DSL is the recommended way to build requests, and the above example in "Basic Usage" uses the DSL to 
+construct a GET request.
 
-To start using the DSL, simply `import com.stackmob.newman.dsl._`. The methods of interest in the DSL are uppercase representations of the HTTP verbs: 
+To start using the DSL, simply `import com.stackmob.newman.dsl._`. 
+The functions of interest in the DSL are uppercase representations of the HTTP verbs: 
 
 * `def GET(url: URL)(implicit client: HttpClient)`
 * `def POST(url: URL)(implicit client: HttpClient)`
@@ -45,18 +55,20 @@ To start using the DSL, simply `import com.stackmob.newman.dsl._`. The methods o
 * `def DELETE(url: URL)(implicit client: HttpClient)`
 * `def HEAD(url: URL)(implicit client: HttpClient)`
 
-Notice that each method takes an implicit `HttpClient`, so you must declare your own implicit before you use any of the above listed DSL methods, or pass one explicitly.
+Notice that each method takes an implicit `HttpClient`, so you must declare your own implicit before 
+you use any of the above listed DSL methods, or pass one explicitly.
 
-Each method listed above returns a Builder, which works in concert with the implicit methods defined in the `DSL` package to let you build up a request and then execute it.
+Each method listed above returns a Builder, which works in concert with the implicit methods defined 
+in the `DSL` package to let you build up a request and then execute it.
 
 # Executing Requests
 Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously want to execute it. There are 2 methods defined on all `HttpRequest`s that execute requests differently:
 
 * `def prepare: IO[HttpResponse]` - returns a `scalaz.effects.IO` that represents the result of executing the request. Remember that this method does not actually execute the request, and no network traffic will happen if you call this method. In order to actually execute the request, call `unsafePerformIO` on this method's result.
-* `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc… (hence the suffix `Unsafe`)
+* `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc (hence the suffix `Unsafe`)
 
 # Serializing
-Newman comes with built in support for serializing `HttpRequest`s and `HttpRespons`es to Json.
+Newman comes with built in support for serializing `HttpRequest`s and `HttpResponse`s to Json.
 
 To serialize either, simply call the `toJson(prettyPrint: Boolean = false): String` method on the `HttpRequest` or `HttpResponse`. And to deserialize, call `HttpRequest.fromJson(json: String): Result[HttpRequest]` or `HttpResponse.fromJson(json: String): Result[HttpResponse]` to deserialize the `HttpRequest` or `HttpResponse`, respectively.
 
@@ -74,7 +86,7 @@ import com.stacmob.newman.caching.InMemoryHttpResponseCacher
 import com.stackmob.newman.DSL._
 import java.net.URL
 	
-//change this implementation to your own if you want to use Memcached, Redis, etc…
+//change this implementation to your own if you want to use Memcached, Redis, etc
 val cache = new InMemoryHttpResponseCacher
 val rawHttpClient = new ApacheHttpClient
 //eTagClient will be used in the DSL to construct & execute requests below

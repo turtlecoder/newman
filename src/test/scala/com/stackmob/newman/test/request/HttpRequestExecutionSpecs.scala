@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 package request
 
 import scalaz._
@@ -23,9 +23,11 @@ import scalaz.effects._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
 import java.net.URL
-import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import com.stackmob.newman.{DummyHttpClient, BaseContext}
-import com.stackmob.newman.request.HttpRequestExecution._
+import com.stackmob.newman.request._
+import HttpRequestExecution._
+import com.stackmob.newman.response._
+import com.stackmob.newman._
+
 
 class HttpRequestExecutionSpecs extends Specification { def is =
   "HttpRequestExecutionSpecs".title                                                                                     ^

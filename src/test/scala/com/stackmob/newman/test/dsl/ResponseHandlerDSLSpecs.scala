@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.dsl
+package com.stackmob.newman.test.dsl
 
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}

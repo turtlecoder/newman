@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -208,7 +208,6 @@ trait ResponseHandlerDSL {
   case class UnhandledResponseCode(code: HttpResponseCode, body: String)
     extends Exception("unhandled response code %d and body %s".format(code.code, body))
 
-
   implicit def ioRespToW(ioResp: IO[HttpResponse]): IOResponseW = new IOResponseW {
     val value = ioResp
   }
@@ -218,5 +217,4 @@ trait ResponseHandlerDSL {
       errorConv(UnhandledResponseCode(resp.code, resp.bodyString)).fail[T]
     }
   }
-
 }

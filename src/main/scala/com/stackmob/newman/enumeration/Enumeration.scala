@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,11 @@ trait Enumeration extends Serializable {
   def stringVal: String
   def matches(s: String): Boolean = s.toLowerCase.equals(stringVal)
 }
+
+/**
+ * here for backward compatability for code that import com.stackmob.common.enumeration.Enumeration._
+ */
+object Enumeration extends EnumerationImplicits
 
 trait EnumReader[T] {
   def read(s: String): Option[T]

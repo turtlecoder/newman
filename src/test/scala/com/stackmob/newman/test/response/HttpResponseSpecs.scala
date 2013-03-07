@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
-package response
+package com.stackmob.newman.test.response
 
 import scalaz._
 import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
-import com.stackmob.newman.BaseContext
+import com.stackmob.newman.test.BaseContext
+import com.stackmob.newman._
+import com.stackmob.newman.response._
+import org.specs2.matcher.{MatchFailure, MatchResult}
 
 class HttpResponseSpecs extends Specification { def is =
   "HttpResponseSpecs".title                                                                                             ^
@@ -51,8 +53,10 @@ class HttpResponseSpecs extends Specification { def is =
         {
           (ex.expected must beEqualTo(expectedRespCode)) and
           (ex.actual must beEqualTo(actualRespCode))
-        }: SpecsResult
-      } | (SpecsFailure("returned excpetion was not an HttpResponse.UnexpectedResponseCode"): SpecsResult))
+        }: MatchResult[_]
+      } | {
+        MatchFailure("ok", "returned exception was not an HttpResponse.UnexpectedResponseCode", (false must beTrue).expectable)
+      })
     }
   }
 

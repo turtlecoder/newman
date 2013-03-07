@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,11 +77,15 @@ trait HttpRequest {
 
   private lazy val md5 = MessageDigest.getInstance("MD5")
 
-  lazy val hash = {
+  lazy val hash: Array[Byte] = {
     val headersString = headers.shows
     val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | RawBody.empty
     val bodyString = new String(bodyBytes, Constants.UTF8Charset)
-    val bytes = "%s%s%s".format(url.toString, headersString, bodyString).getBytes(Constants.UTF8Charset)
+    //requestType-url-headers-body
+    val bytes = "%s-%s-%s-%s".format(requestType.stringVal,
+      url.toString,
+      headersString,
+      bodyString).getBytes(Constants.UTF8Charset)
     md5.digest(bytes)
   }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 StackMob
+ * Copyright 2012-2013 StackMob
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman
+package com.stackmob.newman.test
 package request.serialization
 
-import scalaz._
-import Scalaz._
 import org.specs2.Specification
-import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure, Success => SpecsSuccess}
-import com.stackmob.newman.{DummyHttpClient, BaseContext}
+import org.specs2.execute.{Result => SpecsResult}
+import com.stackmob.newman._
 import java.net.URL
 import com.stackmob.newman.request.{HttpRequestWithoutBody, HttpRequest, HttpRequestWithBody}
+import org.specs2.matcher.{MatchSuccess, MatchResult}
 
 class HttpRequestSerializationSpecs extends Specification { def is =
   "HttpRequestSerializationSpecs".title                                                                                 ^
@@ -47,29 +46,28 @@ class HttpRequestSerializationSpecs extends Specification { def is =
     protected lazy val headReq = client.head(url, headers)
     protected lazy val client = new DummyHttpClient
 
-    private def ensure(t: HttpRequest)(extra: HttpRequest => SpecsResult): SpecsResult = {
+    private def ensure(t: HttpRequest)(extra: HttpRequest => MatchResult[_]): MatchResult[_] = {
       val json = t.toJson(false)(client)
-      HttpRequest.fromJson(json)(client).fold(
-        success = { deser: HttpRequest =>
-          (deser.url must beEqualTo(t.url)) and
-          (deser.headers must haveTheSameHeadersAs(t.headers)) and
-          (extra(deser))
-        },
-        failure = { eNel =>
-          SpecsFailure("deserialization failed with %d errors".format(eNel.list.length)): SpecsResult
+      HttpRequest.fromJson(json)(client).either must beRight.like {
+        case req: HttpRequest => {
+          (req.url must beEqualTo(t.url)) and
+          (req.headers must haveTheSameHeadersAs(t.headers)) and
+          (extra(req))
         }
-      )
+      }
     }
 
-    protected def ensure(t: HttpRequestWithoutBody): SpecsResult = {
-      ensure(t: HttpRequest) { r: HttpRequest => SpecsSuccess("ok") }
-    }
-
-    protected def ensure(t: HttpRequestWithBody): SpecsResult = {
+    protected def ensure(t: HttpRequestWithoutBody): MatchResult[_] = {
       ensure(t: HttpRequest) { r: HttpRequest =>
-        r.cast[HttpRequestWithBody].map { d: HttpRequestWithBody =>
-          (d.body must beEqualTo(t.body)): SpecsResult
-        } | SpecsFailure("deserialization returned a %s, not HttpRequestWithBody as expected".format(r.getClass.getCanonicalName))
+        MatchSuccess("ok", "error", (true must beTrue).expectable)
+      }
+    }
+
+    protected def ensure(t: HttpRequestWithBody): MatchResult[_] = {
+      ensure(t: HttpRequest) { r: HttpRequest =>
+        r.cast[HttpRequestWithBody] must beSome.like {
+          case req: HttpRequestWithBody => (req.body must beEqualTo(t.body))
+        }
       }
     }
   }
