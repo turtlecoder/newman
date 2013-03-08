@@ -45,7 +45,7 @@ class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTi
                        val maxTotalConnections: Int = ApacheHttpClient.DefaultMaxTotalConnections,
                        val strategy: Strategy = Strategy.Executor(newmanThreadPool)) extends HttpClient {
 
-  val connManager: ClientConnectionManager = {
+  private val connManager: ClientConnectionManager = {
     val cm = new PoolingClientConnectionManager()
     cm.setDefaultMaxPerRoute(maxConnectionsPerRoute)
     cm.setMaxTotal(maxTotalConnections)
