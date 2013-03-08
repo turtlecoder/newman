@@ -41,12 +41,14 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTimeout,
                        val connectionTimeout: Int = ApacheHttpClient.DefaultConnectionTimeout,
+                       val maxConnectionsPerRoute: Int = ApacheHttpClient.DefaultMaxConnectionsPerRoute,
+                       val maxTotalConnections: Int = ApacheHttpClient.DefaultMaxTotalConnections,
                        val strategy: Strategy = Strategy.Executor(newmanThreadPool)) extends HttpClient {
 
   val connManager: ClientConnectionManager = {
     val cm = new PoolingClientConnectionManager()
-    cm.setDefaultMaxPerRoute(ApacheHttpClient.DefaultMaxConnectionsPerRoute)
-    cm.setMaxTotal(ApacheHttpClient.DefaultMaxTotalConnections)
+    cm.setDefaultMaxPerRoute(maxConnectionsPerRoute)
+    cm.setMaxTotal(maxTotalConnections)
     cm
   }
 
