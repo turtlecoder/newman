@@ -17,5 +17,5 @@
 package com.stackmob.newman
 
 package object caching {
-  type HashCode = Array[Byte]
+  type HashCode = List[Byte]
 }

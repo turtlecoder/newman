@@ -1,4 +1,8 @@
-This is StackMob's HTTP client. We named it after this man:
+#Newman
+
+[![Build Status](https://travis-ci.org/stackmob/newman.png?branch=master)](https://travis-ci.org/stackmob/newman)
+
+Newman is StackMob's HTTP client. We named it after this man:
 
 ![Newman](https://a248.e.akamai.net/camo.github.com/e39710b58661110e1c932cc9c76e0dd4e9abae43/687474703a2f2f756e6465727374616e64686973746f72796e6f772e66696c65732e776f726470726573732e636f6d2f323031322f30352f6e65776d616e2e6a7067)
 
@@ -16,14 +20,14 @@ To add it to your project, use this for Maven:
 <dependency>
   <groupId>com.stackmob</groupId>
   <artifactId>newman_${scala.version}</artifactId>
-  <version>0.9.2</version>
+  <version>0.10.1</version>
 </dependency>
 ```
 
 or the equivalent for sbt:
 
 ```scala
-libraryDependencies += "com.stackmob" %% "newman" % "0.9.2"
+libraryDependencies += "com.stackmob" %% "newman" % "0.10.1"
 ```
 
 # Basic Usage

@@ -77,7 +77,7 @@ trait HttpRequest {
 
   private lazy val md5 = MessageDigest.getInstance("MD5")
 
-  lazy val hash: Array[Byte] = {
+  lazy val hash: List[Byte] = {
     val headersString = headers.shows
     val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | RawBody.empty
     val bodyString = new String(bodyBytes, Constants.UTF8Charset)
@@ -86,7 +86,7 @@ trait HttpRequest {
       url.toString,
       headersString,
       bodyString).getBytes(Constants.UTF8Charset)
-    md5.digest(bytes)
+    md5.digest(bytes).toList
   }
 
   def andThen(remainingRequests: NonEmptyList[HttpResponse => HttpRequest]): IO[RequestResponsePairList] = {
