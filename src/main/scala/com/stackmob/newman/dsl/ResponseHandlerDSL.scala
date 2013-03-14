@@ -30,9 +30,10 @@ import net.liftweb.json.scalaz.JsonScalaz._
 
 /**
  * Facilitates the handling of various response codes per response, where each handler for a given code may fail or may succeed with
- * a value of some type `T`. `ResponseHandler` is an immutable wrapper; handlers, a `HTTPResponse => Validation[Throwable,T].
+ * a value of some type `Success` or fail with a value of some type `Failure`. `Failure` must have an implicit conversion from Throwable
+ * in scope, and defaults to Throwable. `ResponseHandler` is an immutable wrapper; handlers, a `HTTPResponse => Validation[Failure,Success].
  * can be added by using handleCode`, which returns a new instance. After all desired handlers have been added calling `sealHandlers`
- * or using the implicit provided in [[com.stackmob.newman.dsl]] will return an `IO[Validation[Throwable,T]`.
+ * or using the implicit provided in [[com.stackmob.newman.dsl]] will return an `IO[Validation[Failure,Success]`.
  *
  * For response codes without a "catchall" handler always `scalaz.Failure` with a [[com.stackmob.newman.dsl.UnhandledResponseCode]]
  * as its value.
@@ -84,7 +85,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
  */
 
 trait ResponseHandlerDSL {
-  case class ResponseHandler[T](handlers: List[(HttpResponseCode => Boolean, HttpResponse => ThrowableValidation[T])], respIO: IO[HttpResponse]) {
+  case class ResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])], respIO: IO[HttpResponse])(implicit errorConv: Throwable => Failure) {
 
     /**
      * Adds a handler (a function that is called when the code matches the given function) and returns a new ResponseHandler
@@ -93,7 +94,7 @@ trait ResponseHandlerDSL {
      * @return
      */
     def handleCodesSuchThat(check: HttpResponseCode => Boolean)
-                           (handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
+                           (handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
       copy(handlers = (check, handler) :: handlers)
     }
 
@@ -103,7 +104,7 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCode(code: HttpResponseCode)(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
+    def handleCode(code: HttpResponseCode)(handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
       handleCodesSuchThat({c: HttpResponseCode => c === code})(handler)
     }
 
@@ -113,7 +114,7 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCodes(codes: Seq[HttpResponseCode])(handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
+    def handleCodes(codes: Seq[HttpResponseCode])(handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
       handleCodesSuchThat(codes.contains(_))(handler)
     }
 
@@ -124,8 +125,8 @@ trait ResponseHandlerDSL {
      * made, however, if there are there is no effect on the handling of the response.
      * @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
-    def expectJSONBody(code: HttpResponseCode)(implicit reader: JSONR[T], charset: Charset = UTF8Charset): ResponseHandler[T] = {
-      handleJSONBody[T](code)(_.success[Throwable])
+    def expectJSONBody(code: HttpResponseCode)(implicit reader: JSONR[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
+      handleJSONBody[Success](code)(_.success[Failure])
     }
 
     /**
@@ -138,10 +139,10 @@ trait ResponseHandlerDSL {
      * response.  @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
     def handleJSONBody[S](code: HttpResponseCode)
-                         (handler: S => ThrowableValidation[T])
-                         (implicit reader: JSONR[S], charset: Charset = UTF8Charset): ResponseHandler[T] = {
+                         (handler: S => Validation[Failure, Success])
+                         (implicit reader: JSONR[S], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
       handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].mapFailure { t =>
-        JSONParsingError(t): Throwable
+        errorConv(JSONParsingError(t): Throwable): Failure
       }.flatMap(handler))
     }
 
@@ -152,56 +153,59 @@ trait ResponseHandlerDSL {
      * @param successValue - the value to return successfully when a 204 is encountered
      * @return a new ResponseHandler
      */
-    def expectNoContent(successValue: T): ResponseHandler[T] = {
+    def expectNoContent(successValue: Success): ResponseHandler[Failure, Success] = {
       handleCode(HttpResponseCode.NoContent)((_: HttpResponse) => successValue.success)
     }
 
     /**
      * Provide a default handler for all unhandled status codes. Must be the last handler in the chain
      */
-    def default(handler: HttpResponse => ThrowableValidation[T]): IO[ThrowableValidation[T]] = {
+    def default(handler: HttpResponse => Validation[Failure, Success]): IO[Validation[Failure, Success]] = {
       respIO.map { response =>
         handlers.reverse.find(_._1(response.code)).map(_._2 apply response) | handler(response)
-      }.except(t => t.fail[T].pure[IO])
+      }.except(t => errorConv(t).fail[Success].pure[IO])
     }
   }
 
   trait IOResponseW extends NewType[IO[HttpResponse]] {
 
-    def handleCodesSuchThat[T](check: HttpResponseCode => Boolean)
-                              (handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
-      ResponseHandler(Nil, value).handleCodesSuchThat(check)(handler)
+    private def emptyHandlerList[Failure,Success] = List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])]()
+
+    def handleCodesSuchThat[Failure, Success](check: HttpResponseCode => Boolean)
+                              (handler: HttpResponse => Validation[Failure, Success])(implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCodesSuchThat(check)(handler)
     }
 
-    def handleCode[T](code: HttpResponseCode)
-                     (handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
-      ResponseHandler(Nil, value).handleCode(code)(handler)
+    def handleCode[Failure, Success](code: HttpResponseCode)
+                     (handler: HttpResponse => Validation[Failure, Success])(implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCode(code)(handler)
     }
 
-    def handleCodes[T](codes: Seq[HttpResponseCode])
-                      (handler: HttpResponse => ThrowableValidation[T]): ResponseHandler[T] = {
-      ResponseHandler(Nil, value).handleCodes(codes)(handler)
+    def handleCodes[Failure, Success](codes: Seq[HttpResponseCode])
+                      (handler: HttpResponse => Validation[Failure, Success])(implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCodes(codes)(handler)
     }
 
-    def expectJSONBody[T](code: HttpResponseCode)
-                         (implicit reader: JSONR[T],
-                          charset: Charset = UTF8Charset): ResponseHandler[T] = {
-      ResponseHandler(Nil, value).expectJSONBody(code)(reader, charset)
+    def expectJSONBody[Failure, Success](code: HttpResponseCode)
+                         (implicit reader: JSONR[Success],
+                          charset: Charset = UTF8Charset,
+                          errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, charset)
     }
 
-    def handleJSONBody[S, T](code: HttpResponseCode)
-                            (handler: S => ThrowableValidation[T])
+    def handleJSONBody[Failure, S, Success](code: HttpResponseCode)
+                            (handler: S => Validation[Failure, Success])
                             (implicit reader: JSONR[S],
-                             charset: Charset = UTF8Charset): ResponseHandler[T] = {
-      ResponseHandler(Nil, value).handleJSONBody(code)(handler)(reader, charset)
+                             charset: Charset = UTF8Charset,
+                             errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, charset)
     }
 
-    def expectNoContent[T](successValue: T): ResponseHandler[T] = {
-      ResponseHandler(Nil, value).expectNoContent(successValue)
+    def expectNoContent[Failure, Success](successValue: Success)(implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).expectNoContent(successValue)
     }
   }
 
   case class UnhandledResponseCode(code: HttpResponseCode, body: String)
-    extends Exception("undhandled response code %d and body %s".format(code.code, body))
-
+    extends Exception("unhandled response code %d and body %s".format(code.code, body))
 }
