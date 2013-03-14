@@ -94,12 +94,16 @@ package object scalacheck {
 
 
   lazy val genHashCode: Gen[HashCode] = for {
+    str <- genRawBody
+  } yield {
+    str.toList
+  }
+
+  lazy val genRawBody: Gen[RawBody] = for {
     str <- genNonEmptyString
   } yield {
     str.getBytes("UTF-8")
   }
-
-  lazy val genRawBody: Gen[RawBody] = genHashCode
 
   lazy val genCachedResponseDelay = for {
     ttl <- genPositiveMilliseconds

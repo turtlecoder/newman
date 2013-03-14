@@ -42,7 +42,8 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
     val getRes1 = cache.get(request).unsafePerformIO must beNone
     val existsRes1 = cache.exists(request).unsafePerformIO must beFalse
     val setRes1 = cache.set(request, response, Milliseconds(1000)).unsafePerformIO must beEqualTo(())
-    val getRes2 = cache.get(request).unsafePerformIO must beSome.like {
+    val identicalRequest = client.get(request.url, request.headers)
+    val getRes2 = cache.get(identicalRequest).unsafePerformIO must beSome.like {
       case s => s must beEqualTo(response)
     }
     val existsRes2 = cache.exists(request).unsafePerformIO must beTrue
@@ -53,6 +54,7 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
     val response = getResponse(request)
     cache.set(request, response, Milliseconds(0)).unsafePerformIO
     Thread.sleep(100)
-    cache.get(request).unsafePerformIO must beNone
+    val identicalRequest = client.get(request.url, request.headers)
+    cache.get(identicalRequest).unsafePerformIO must beNone
   }
 }
