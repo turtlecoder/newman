@@ -13,7 +13,7 @@ organization := "com.stackmob"
 
 scalaVersion := "2.9.1"
 
-crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0")
+crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0", "2.10.1")
 
 scalacOptions <++= (scalaVersion).map { version: String =>
   val defaults = Seq("-unchecked", "-deprecation")
@@ -31,7 +31,7 @@ libraryDependencies ++= {
   val specs2Version = "1.12.3"
   val mockitoVersion = "1.9.0"
   val scalazVersion = "6.0.4"
-  val liftJsonVersion = "2.5-RC1"
+  val liftJsonVersion = "2.5-RC2"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
