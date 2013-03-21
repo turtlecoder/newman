@@ -65,9 +65,13 @@ class InMemoryHttpResponseCacher extends HttpResponseCacher {
   }
 
   override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = io {
-    cache.put(req.hash, resp)
-    delayQueue.add(CachedResponseDelay(ttl, req.hash))
-    ()
+    if(ttl.magnitude <= 0) {
+      ()
+    } else {
+      delayQueue.add(CachedResponseDelay(ttl, req.hash))
+      cache.put(req.hash, resp)
+      ()
+    }
   }
 
   override def exists(req: HttpRequest): IO[Boolean] = io(cache.containsKey(req.hash))
