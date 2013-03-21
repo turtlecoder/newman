@@ -24,28 +24,28 @@ import com.stackmob.newman.dsl._
 import org.specs2.matcher.MatchResult
 
 class ApacheHttpClientSpecs extends Specification { def is =
-  "ApacheHttpClientSpecs".title                                                                                         ^
+  "ApacheHttpClientSpecs".title                                                                                         ^ end ^
   """
   ApacheHttpClient is the HttpClient implementation that actually hits the internet
-  """                                                                                                                   ^
+  """                                                                                                                   ^ end ^
   "The Client Should"                                                                                                   ^
     "Correctly do GET requests"                                                                                         ! Get().succeeds ^
     "Correctly do async GET requests"                                                                                   ! Get().succeedsAsync ^
-    "Correctly do POST requests"                                                                                        ! skipped ^ //Post().succeeds ^
-    "Correctly do async POST requests"                                                                                  ! skipped ^ //Post().succeedsAsync ^
-    "Correctly do PUT requests"                                                                                         ! skipped ^ //Put().succeeds ^
-    "Correctly do async PUT requests"                                                                                   ! skipped ^ //Put().succeedsAsync ^
-    "Correctly do DELETE requests"                                                                                      ! skipped ^ //Delete().succeeds ^
-    "Correctly do async DELETE requests"                                                                                ! skipped ^ //Delete().succeedsAsync ^
+    "Correctly do POST requests"                                                                                        ! Post().succeeds ^
+    "Correctly do async POST requests"                                                                                  ! Post().succeedsAsync ^
+    "Correctly do PUT requests"                                                                                         ! Put().succeeds ^
+    "Correctly do async PUT requests"                                                                                   ! Put().succeedsAsync ^
+    "Correctly do DELETE requests"                                                                                      ! Delete().succeeds ^
+    "Correctly do async DELETE requests"                                                                                ! Delete().succeedsAsync ^
     "Correctly do HEAD requests"                                                                                        ! Head().succeeds ^
     "Correctly do async HEAD requests"                                                                                  ! Head().succeedsAsync ^
                                                                                                                         end
   trait Context extends BaseContext {
     implicit protected val httpClient = new ApacheHttpClient
 
-    protected def execute(t: Builder,
-                          expectedCode: HttpResponseCode = HttpResponseCode.Ok)
-                         (fn: HttpResponse => MatchResult[_]) = {
+    protected def execute[T](t: Builder,
+                             expectedCode: HttpResponseCode = HttpResponseCode.Ok)
+                            (fn: HttpResponse => MatchResult[T]) = {
       val r = t.executeUnsafe
       r.code must beEqualTo(expectedCode) and fn(r)
     }
@@ -59,46 +59,45 @@ class ApacheHttpClientSpecs extends Specification { def is =
       }.get
     }
 
-    protected lazy val url = new URL("https://www.stackmob.com")
+    protected lazy val getURL = new URL("http://httpbin.org/get")
+    protected lazy val postURL = new URL("http://httpbin.org/post")
+    protected lazy val putURL = new URL("http://httpbin.org/put")
+    protected lazy val deleteURL = new URL("http://httpbin.org/delete")
+    protected lazy val headURL = new URL("http://httpbin.org/get")
 
     implicit private val encoding = Constants.UTF8Charset
-    protected def ensureHttpOK(h: HttpResponse) = h.code must beEqualTo(HttpResponseCode.Ok)
-    protected def ensureHtmlReturned(h: HttpResponse) = {
-      (h.bodyString() must contain("html")) and
-      (h.bodyString() must contain("/html"))
-    }
 
-    protected def ensureHtmlResponse(h: HttpResponse) = ensureHttpOK(h) and ensureHtmlReturned(h)
-
+    protected def ensureHttpOk(h: HttpResponse) = h.code must beEqualTo(HttpResponseCode.Ok)
   }
 
   case class Get() extends Context {
-    def succeeds = execute(GET(url))(ensureHtmlResponse(_))
-    def succeedsAsync = executeAsync(GET(url))(ensureHtmlResponse(_))
+    private val get = GET(getURL)
+    def succeeds = execute(get)(ensureHttpOk(_))
+    def succeedsAsync = executeAsync(get)(ensureHttpOk(_))
   }
 
   case class Post() extends Context {
-    private val post = POST(url)
-    def succeeds = execute(post)(ensureHtmlResponse(_))
-    def succeedsAsync = executeAsync(post)(ensureHtmlResponse(_))
+    private val post = POST(postURL)
+    def succeeds = execute(post)(ensureHttpOk(_))
+    def succeedsAsync = executeAsync(post)(ensureHttpOk(_))
   }
 
   case class Put() extends Context {
-    private val put = PUT(url)
-    def succeeds = execute(put)(ensureHtmlResponse(_))
-    def succeedsAsync = executeAsync(put)(ensureHtmlResponse(_))
+    private val put = PUT(putURL)
+    def succeeds = execute(put)(ensureHttpOk(_))
+    def succeedsAsync = executeAsync(put)(ensureHttpOk(_))
   }
 
   case class Delete() extends Context {
-    private val delete = DELETE(url)
-    def succeeds = execute(delete)(ensureHtmlResponse(_))
-    def succeedsAsync = executeAsync(delete)(ensureHtmlResponse(_))
+    private val delete = DELETE(deleteURL)
+    def succeeds = execute(delete)(ensureHttpOk(_))
+    def succeedsAsync = executeAsync(delete)(ensureHttpOk(_))
   }
 
   case class Head() extends Context {
-    private val head = HEAD(url)
-    def succeeds = execute(head)(ensureHttpOK(_))
-    def succeedsAsync = executeAsync(head)(ensureHttpOK(_))
+    private val head = HEAD(headURL)
+    def succeeds = execute(head)(ensureHttpOk(_))
+    def succeedsAsync = executeAsync(head)(ensureHttpOk(_))
   }
 
 }
