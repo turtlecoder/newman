@@ -146,8 +146,4 @@ package object scalacheck {
     new HttpResponse(code, headers, body)
   }
 
-  lazy val genCache: Gen[HttpResponseCacher] = {
-    Gen.value(new InMemoryHttpResponseCacher)
-  }
-
 }
