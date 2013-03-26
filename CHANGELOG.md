@@ -1,3 +1,6 @@
+# 0.8.1
+* Added `toIO` method on ResponseHandler
+
 # 0.8.0
 * Created proper changelog file!
 * Added ReadCachingHttpClient
