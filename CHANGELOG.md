@@ -1,4 +1,4 @@
-# 0.8.1
+# 0.13.0
 * Added `toIO` method on ResponseHandler
 
 # 0.8.0
