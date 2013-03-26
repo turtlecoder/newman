@@ -32,7 +32,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
  * Facilitates the handling of various response codes per response, where each handler for a given code may fail or may succeed with
  * a value of some type `Success` or fail with a value of some type `Failure`. `Failure` must have an implicit conversion from Throwable
  * in scope, and defaults to Throwable. `ResponseHandler` is an immutable wrapper; handlers, a `HTTPResponse => Validation[Failure,Success].
- * can be added by using handleCode`, which returns a new instance. After all desired handlers have been added calling `sealHandlers`
+ * can be added by using handleCode`, which returns a new instance. After all desired handlers have been added calling `toIO`
  * or using the implicit provided in [[com.stackmob.newman.dsl]] will return an `IO[Validation[Failure,Success]`.
  *
  * For response codes without a "catchall" handler always `scalaz.Failure` with a [[com.stackmob.newman.dsl.UnhandledResponseCode]]
@@ -58,7 +58,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
  *    .handleCode(HttpResponseCode.InternalServerError, (resp: HttpResponse) => {
  *      (new Exception("server error: %s" format resp.bodyString)).fail
  *    })
- *    .sealHandlers // this can typically be omitted
+ *    .toIO // there's also an implicit called ResponseHandlerToResponse in the `com.stackmob.newman.dsl` package
  * }}}
  *
  * If the response is expected to be considered a success when it its code is `200 OK`
@@ -85,7 +85,8 @@ import net.liftweb.json.scalaz.JsonScalaz._
  */
 
 trait ResponseHandlerDSL {
-  case class ResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])], respIO: IO[HttpResponse])(implicit errorConv: Throwable => Failure) {
+  case class ResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])],
+                                               respIO: IO[HttpResponse])(implicit errorConv: Throwable => Failure) {
 
     /**
      * Adds a handler (a function that is called when the code matches the given function) and returns a new ResponseHandler
@@ -164,6 +165,12 @@ trait ResponseHandlerDSL {
       respIO.map { response =>
         handlers.reverse.find(_._1(response.code)).map(_._2 apply response) | handler(response)
       }.except(t => errorConv(t).fail[Success].pure[IO])
+    }
+
+    def toIO: IO[Validation[Failure, Success]] = {
+      default { resp =>
+        errorConv(UnhandledResponseCode(resp.code, resp.bodyString)).fail[Success]
+      }
     }
   }
 
