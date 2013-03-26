@@ -17,10 +17,12 @@
 package com.stackmob
 
 import scalaz._
+import scalaz.effects.IO
 import Scalaz._
 import java.nio.charset.Charset
 
 package object newman extends NewmanPrivate {
+  type IOValidation[Fail, Success] = IO[Validation[Fail, Success]]
 
   type Header = (String, String)
   type HeaderList = NonEmptyList[Header]

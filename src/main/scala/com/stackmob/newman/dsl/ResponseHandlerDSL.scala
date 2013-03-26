@@ -161,13 +161,13 @@ trait ResponseHandlerDSL {
     /**
      * Provide a default handler for all unhandled status codes. Must be the last handler in the chain
      */
-    def default(handler: HttpResponse => Validation[Failure, Success]): IO[Validation[Failure, Success]] = {
+    def default(handler: HttpResponse => Validation[Failure, Success]): IOValidation[Failure, Success] = {
       respIO.map { response =>
         handlers.reverse.find(_._1(response.code)).map(_._2 apply response) | handler(response)
       }.except(t => errorConv(t).fail[Success].pure[IO])
     }
 
-    def toIO: IO[Validation[Failure, Success]] = {
+    def toIO: IOValidation[Failure, Success] = {
       default { resp =>
         errorConv(UnhandledResponseCode(resp.code, resp.bodyString)).fail[Success]
       }

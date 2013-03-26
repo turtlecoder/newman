@@ -46,7 +46,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
     override val value = ioResp
   }
 
-  implicit def ResponseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]) = {
+  implicit def ResponseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]): IOValidation[Failure, Success] = {
     handler.toIO
   }
 
