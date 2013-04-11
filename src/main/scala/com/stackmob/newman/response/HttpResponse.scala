@@ -20,10 +20,7 @@ package response
 import scalaz._
 import effects._
 import Scalaz._
-import request._
 import jsonscalaz._
-import HttpRequest._
-import HttpRequestWithBody._
 import java.nio.charset.Charset
 import java.util.Date
 import com.stackmob.newman.Constants._
