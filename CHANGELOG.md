@@ -1,3 +1,6 @@
+# 0.14.1
+* Improved ReadCachingHttpClient performance
+
 # 0.13.0
 * Added `toIO` method on ResponseHandler
 
