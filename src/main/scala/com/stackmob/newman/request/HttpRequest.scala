@@ -28,7 +28,8 @@ import com.stackmob.newman.{Constants, HttpClient}
 import com.stackmob.newman.request.HttpRequestExecution._
 import java.security.MessageDigest
 import com.stackmob.newman.response._
-
+import com.stackmob.newman.caching._
+import org.apache.commons.codec.binary.Hex
 
 trait HttpRequest {
   def url: URL
@@ -76,7 +77,7 @@ trait HttpRequest {
 
   private lazy val md5 = MessageDigest.getInstance("MD5")
 
-  lazy val hash: List[Byte] = {
+  lazy val hash: HashCode = {
     val headersString: String = {
       ~headers.map { hdrs =>
         hdrs.list.foldLeft(new StringBuilder) { (b, h) =>
@@ -87,13 +88,12 @@ trait HttpRequest {
     val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | RawBody.empty
     val bodyString = new String(bodyBytes, Constants.UTF8Charset)
     //requestType-url-headers-body
-    val bytes = (new StringBuilder)
-      .append(requestType.stringVal)
-      .append(url.toString)
-      .append(headersString)
-      .append(bodyString)
-      .toString().getBytes(Constants.UTF8Charset)
-    md5.digest(bytes).toList
+    val str =
+      requestType.stringVal +
+      url.toString +
+      headersString +
+      bodyString
+    Hex.encodeHexString(md5.digest(str.getBytes(Constants.UTF8Charset)))
   }
 
   def andThen(remainingRequests: NonEmptyList[HttpResponse => HttpRequest]): IO[RequestResponsePairList] = {
