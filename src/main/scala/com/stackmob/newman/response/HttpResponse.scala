@@ -20,10 +20,7 @@ package response
 import scalaz._
 import effects._
 import Scalaz._
-import request._
 import jsonscalaz._
-import HttpRequest._
-import HttpRequestWithBody._
 import java.nio.charset.Charset
 import java.util.Date
 import com.stackmob.newman.Constants._
@@ -33,6 +30,8 @@ import org.apache.http.HttpHeaders
 import com.stackmob.newman.response.HttpResponseCode.HttpResponseCodeEqual
 import com.stackmob.newman.serialization.response.HttpResponseSerialization
 import com.stackmob.newman.serialization.common.DefaultBodySerialization
+import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConversions.JConcurrentMapWrapper
 
 case class HttpResponse(code: HttpResponseCode,
                         headers: Headers,
@@ -40,28 +39,62 @@ case class HttpResponse(code: HttpResponseCode,
                         timeReceived: Date = new Date()) {
   import HttpResponse._
 
-  def bodyString(implicit charset: Charset = UTF8Charset): String = new String(rawBody, charset)
+  private lazy val rawBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[Charset, String])
+  private lazy val parsedBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, JSONR[_]), Result[_]])
+  private lazy val jValueMap = new JConcurrentMapWrapper(new ConcurrentHashMap[Charset, JValue])
+  private lazy val jsonMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Boolean), String])
+  private lazy val caseClassMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Class[_]), Result[_]])
 
-  def toJValue(implicit charset: Charset = UTF8Charset): JValue = toJSON(this)(getResponseSerialization.writer)
+  def bodyString(implicit charset: Charset = UTF8Charset): String = {
+    rawBodyMap.getOrElseUpdate(charset, new String(rawBody, charset))
+  }
 
-  def toJson(prettyPrint: Boolean = false): String = if(prettyPrint) {
-    pretty(render(toJValue))
-  } else {
-    compact(render(toJValue))
+  def toJValue(implicit charset: Charset = UTF8Charset): JValue = {
+    jValueMap.getOrElseUpdate(charset, toJSON(this)(getResponseSerialization.writer))
+  }
+
+  def toJson(prettyPrint: Boolean = false)(implicit charset: Charset = UTF8Charset): String = {
+    jsonMap.getOrElseUpdate((charset, prettyPrint), {
+      if(prettyPrint) {
+        pretty(render(toJValue))
+      } else {
+        compact(render(toJValue))
+      }
+    })
   }
 
   def bodyAsCaseClass[T <: AnyRef](implicit m: Manifest[T], charset: Charset = UTF8Charset): Result[T] = {
     def theReader(implicit reader: JSONR[T] = DefaultBodySerialization.getReader): JSONR[T] = reader
-    fromJSON[T](parse(bodyString(charset)))(theReader)
+    caseClassMap.getOrElseUpdate((charset, m.erasure), {
+      fromJSON[T](parse(bodyString(charset)))(theReader)
+    }).map(_.asInstanceOf[T])
   }
 
   def bodyAs[T](implicit reader: JSONR[T],
-                charset: Charset = UTF8Charset): Result[T] = validating {
-    parse(bodyString(charset))
-  } mapFailure { t: Throwable =>
-    nel(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
-  } flatMap { jValue: JValue =>
-    fromJSON[T](jValue)
+                charset: Charset = UTF8Charset): Result[T] = {
+    parsedBodyMap.get((charset, reader)) match {
+      case Some(v) => v.map(_.asInstanceOf[T])
+      case None => {
+        val d = parseBody[T]
+        // protect against JSONR's which are not singletons
+        // may want to pass in a Manifest[T] to avoid this but it breaks the interface
+        if (parsedBodyMap.size < 16) {
+          parsedBodyMap((charset, reader)) = d
+        }
+        d
+      }
+    }
+  }
+
+  private def parseBody[T](implicit reader: JSONR[T],
+                           charset: Charset = UTF8Charset): Result[T] = {
+    validating {
+      parse(bodyString(charset))
+    } mapFailure { t: Throwable =>
+      nel(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
+    } flatMap { jValue: JValue =>
+      fromJSON[T](jValue)
+    }
   }
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode,
