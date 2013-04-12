@@ -31,7 +31,6 @@ import com.stackmob.newman.response._
 
 
 trait HttpRequest {
-  import Headers._
   def url: URL
   def requestType: HttpRequestType
   def headers: Headers
@@ -78,14 +77,22 @@ trait HttpRequest {
   private lazy val md5 = MessageDigest.getInstance("MD5")
 
   lazy val hash: List[Byte] = {
-    val headersString = headers.shows
+    val headersString: String = {
+      ~headers.map { hdrs =>
+        hdrs.list.foldLeft(new StringBuilder) { (b, h) =>
+          b.append(h._1).append(h._2)
+        }.toString()
+      }
+    }
     val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | RawBody.empty
     val bodyString = new String(bodyBytes, Constants.UTF8Charset)
     //requestType-url-headers-body
-    val bytes = "%s-%s-%s-%s".format(requestType.stringVal,
-      url.toString,
-      headersString,
-      bodyString).getBytes(Constants.UTF8Charset)
+    val bytes = (new StringBuilder)
+      .append(requestType.stringVal)
+      .append(url.toString)
+      .append(headersString)
+      .append(bodyString)
+      .toString().getBytes(Constants.UTF8Charset)
     md5.digest(bytes).toList
   }
 
