@@ -43,6 +43,7 @@ case class HttpResponse(code: HttpResponseCode,
   private lazy val parsedBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, JSONR[_]), Result[_]])
   private lazy val jValueMap = new JConcurrentMapWrapper(new ConcurrentHashMap[Charset, JValue])
   private lazy val jsonMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Boolean), String])
+  private lazy val caseClassMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Class[_]), Result[_]])
 
   def bodyString(implicit charset: Charset = UTF8Charset): String = {
     rawBodyMap.getOrElseUpdate(charset, new String(rawBody, charset))
@@ -64,7 +65,9 @@ case class HttpResponse(code: HttpResponseCode,
 
   def bodyAsCaseClass[T <: AnyRef](implicit m: Manifest[T], charset: Charset = UTF8Charset): Result[T] = {
     def theReader(implicit reader: JSONR[T] = DefaultBodySerialization.getReader): JSONR[T] = reader
-    fromJSON[T](parse(bodyString(charset)))(theReader)
+    caseClassMap.getOrElseUpdate((charset, m.erasure), {
+      fromJSON[T](parse(bodyString(charset)))(theReader)
+    }).map(_.asInstanceOf[T])
   }
 
   def bodyAs[T](implicit reader: JSONR[T],
