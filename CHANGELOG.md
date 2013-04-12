@@ -1,3 +1,6 @@
+# 0.14.2
+* Improved URLBuilderDSL performance
+
 # 0.14.1
 * Improved ReadCachingHttpClient performance
 
