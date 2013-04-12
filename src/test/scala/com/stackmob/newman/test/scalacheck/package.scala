@@ -26,12 +26,7 @@ import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import HttpResponseCode._
 
 package object scalacheck {
-  lazy val genNonEmptyString: Gen[String] = for {
-    chars <- Gen.listOf1(Gen.alphaChar)
-  } yield {
-    val charList = List(chars)
-    charList.mkString
-  }
+  lazy val genNonEmptyString: Gen[String] = Gen.listOf1(Gen.alphaChar).map(_.mkString)
 
   private lazy val timeUnits = Seq[TimeUnit](TimeUnit.DAYS,
     TimeUnit.HOURS,
@@ -96,7 +91,7 @@ package object scalacheck {
   lazy val genHashCode: Gen[HashCode] = for {
     str <- genRawBody
   } yield {
-    str.toList
+    new String(str, "UTF-8")
   }
 
   lazy val genRawBody: Gen[RawBody] = for {

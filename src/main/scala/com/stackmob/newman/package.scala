@@ -43,9 +43,9 @@ package object newman extends NewmanPrivate {
 
     implicit val HeadersShow = new Show[Headers] {
       override def show(h: Headers): List[Char] = {
-        val s = h.map { headerList: HeaderList =>
-          headerList.list.map(h => "%s=%s".format(h._1, h._2)).mkString("&")
-        } | ""
+        val s = ~h.map { headerList: HeaderList =>
+          headerList.list.map(h => h._1 + "=" + h._2).mkString("&")
+        }
         s.toList
       }
     }
