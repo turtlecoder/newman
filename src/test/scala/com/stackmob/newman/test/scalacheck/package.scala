@@ -24,6 +24,7 @@ import com.stackmob.newman.request._
 import java.net.URL
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import HttpResponseCode._
+import org.apache.commons.codec.digest.DigestUtils
 
 package object scalacheck {
   lazy val genNonEmptyString: Gen[String] = Gen.listOf1(Gen.alphaChar).map(_.mkString)
@@ -85,14 +86,10 @@ package object scalacheck {
     UseProxy,
     HttpVersionNotSupported
   )
+
   lazy val genHttpResponseCode: Gen[HttpResponseCode] = Gen.oneOf(httpResponseCodes)
 
-
-  lazy val genHashCode: Gen[HashCode] = for {
-    str <- genRawBody
-  } yield {
-    new String(str, "UTF-8")
-  }
+  lazy val genHashCode: Gen[HashCode] = genNonEmptyString.map(DigestUtils.md5Hex(_))
 
   lazy val genRawBody: Gen[RawBody] = for {
     str <- genNonEmptyString
