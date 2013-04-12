@@ -72,15 +72,29 @@ case class HttpResponse(code: HttpResponseCode,
 
   def bodyAs[T](implicit reader: JSONR[T],
                 charset: Charset = UTF8Charset): Result[T] = {
-    parsedBodyMap.getOrElseUpdate((charset, reader), {
-      validating {
-        parse(bodyString(charset))
-      } mapFailure { t: Throwable =>
-        nel(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
-      } flatMap { jValue: JValue =>
-        fromJSON[T](jValue)
+    parsedBodyMap.get((charset, reader)) match {
+      case Some(v) => v.map(_.asInstanceOf[T])
+      case None => {
+        val d = parseBody[T]
+        // protect against JSONR's which are not singletons
+        // may want to pass in a Manifest[T] to avoid this but it breaks the interface
+        if (parsedBodyMap.size < 16) {
+          parsedBodyMap((charset, reader)) = d
+        }
+        d
       }
-    }).map(_.asInstanceOf[T])
+    }
+  }
+
+  private def parseBody[T](implicit reader: JSONR[T],
+                           charset: Charset = UTF8Charset): Result[T] = {
+    validating {
+      parse(bodyString(charset))
+    } mapFailure { t: Throwable =>
+      nel(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
+    } flatMap { jValue: JValue =>
+      fromJSON[T](jValue)
+    }
   }
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode,
