@@ -47,19 +47,16 @@ class HttpResponseSpecs extends Specification { def is =
       (new Exception("shouldn't be thrown")).fail
     }).map { _: String =>
       SpecsFailure("bodyAsIfResponseCode succeeded when it should have failed")
-    } match {
-      case Success(s) => s
-      case Failure(t) => {
-        (t must beAnInstanceOf[HttpResponse.UnexpectedResponseCode]) and
-        (t.cast[HttpResponse.UnexpectedResponseCode].map { ex: HttpResponse.UnexpectedResponseCode =>
-          {
-            (ex.expected must beEqualTo(expectedRespCode)) and
-            (ex.actual must beEqualTo(actualRespCode))
-          }: MatchResult[_]
-        } | {
-          MatchFailure("ok", "returned exception was not an HttpResponse.UnexpectedResponseCode", (false must beTrue).expectable)
-        })
-      }
+    } valueOr { t =>
+      (t must beAnInstanceOf[HttpResponse.UnexpectedResponseCode]) and
+      (t.cast[HttpResponse.UnexpectedResponseCode].map { ex: HttpResponse.UnexpectedResponseCode =>
+        {
+          (ex.expected must beEqualTo(expectedRespCode)) and
+          (ex.actual must beEqualTo(actualRespCode))
+        }: MatchResult[_]
+      } | {
+        MatchFailure("ok", "returned exception was not an HttpResponse.UnexpectedResponseCode", (false must beTrue).expectable)
+      })
     }
   }
 
@@ -70,10 +67,7 @@ class HttpResponseSpecs extends Specification { def is =
       decodingEx.fail
     }).map { s: String =>
       SpecsFailure("bodyAsIfResponseCode succeeded when it should have failed")
-    } match {
-      case Success(s) => s
-      case Failure(t) => t must beEqualTo(decodingEx)
-    }
+    } valueOr { _ must beEqualTo(decodingEx) }
   }
 
   case class SuccessDecodingBody() extends Context {
@@ -81,10 +75,7 @@ class HttpResponseSpecs extends Specification { def is =
     protected val decodedBody = "testResp"
     def succeeds: SpecsResult = resp.bodyAsIfResponseCode(HttpResponseCode.Ok, r => decodedBody.success).map { s: String =>
       (s must beEqualTo(decodedBody)): SpecsResult
-    } match {
-      case Success(s) => s
-      case Failure(t) => logAndFail(t)
-    }
+    } valueOr { logAndFail(_) }
   }
 
   case class ThrowsDecodingBody() extends Context {
@@ -92,9 +83,6 @@ class HttpResponseSpecs extends Specification { def is =
     private val resp = HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
     def fails: SpecsResult = resp.bodyAsIfResponseCode(resp.code, (_ => throw ex)).map { n: Nothing =>
       SpecsFailure("method succeeded when it should not have")
-    } match {
-      case Success(s) => s
-      case Failure(t) => t must beEqualTo(ex)
-    }
+    } valueOr { _ must beEqualTo(ex) }
   }
 }

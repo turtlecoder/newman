@@ -65,10 +65,7 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     protected def ensureThrows[T](io: IO[T], exception: Throwable): SpecsResult = validating(io.unsafePerformIO()).map { _ =>
       SpecsFailure("didn't throw a %s with message %s when it should have".format(exception.getClass.getCanonicalName,
         exception.getMessage)): SpecsResult
-    } match {
-      case Success(s) => s
-      case Failure(t) => t must beEqualTo(exception)
-    }
+    } valueOr { _ must beEqualTo(exception) }
   }
 
   case class ExecuteSequence() extends Context {
