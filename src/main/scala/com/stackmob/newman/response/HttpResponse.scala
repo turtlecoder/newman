@@ -112,7 +112,7 @@ case class HttpResponse(code: HttpResponseCode,
       body <- eitherT[IO, Throwable, T] {
         IO(decoder(resp).disjunction).except(_.left.pure[IO])
       }
-    } yield body).run.map(_.validation).unsafePerformIO
+    } yield body).run.map(_.validation).unsafePerformIO()
   }
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode)

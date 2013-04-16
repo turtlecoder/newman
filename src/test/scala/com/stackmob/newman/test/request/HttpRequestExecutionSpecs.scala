@@ -62,7 +62,7 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     protected lazy val throwingRequest = throwingClient.get(requestURL, requestHeaders)
     protected lazy val throwingResponse: HttpResponse = throw exception
 
-    protected def ensureThrows[T](io: IO[T], exception: Throwable): SpecsResult = validating(io.unsafePerformIO).map { _ =>
+    protected def ensureThrows[T](io: IO[T], exception: Throwable): SpecsResult = validating(io.unsafePerformIO()).map { _ =>
       SpecsFailure("didn't throw a %s with message %s when it should have".format(exception.getClass.getCanonicalName,
         exception.getMessage)): SpecsResult
     } match {
@@ -76,7 +76,7 @@ class HttpRequestExecutionSpecs extends Specification { def is =
       val requestList = nels(request1, request2)
       val expectedRequestResponseList = nels(request1 -> response1, request2 -> response2)
       val res = sequencedRequests(requestList)
-      res.unsafePerformIO.list must beEqualTo(expectedRequestResponseList.list)
+      res.unsafePerformIO().list must beEqualTo(expectedRequestResponseList.list)
     }
 
     def allFailIfOneFails: SpecsResult = {
@@ -97,7 +97,7 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     def executesCorrectly: SpecsResult = {
       val requestList = request1 :: request2 :: request3 :: Nil
       val res = chainedRequests(request1, nels(chain1 _, chain2 _))
-      res.unsafePerformIO.list must beEqualTo(requestList.zip(List(response1, response2, response3)))
+      res.unsafePerformIO().list must beEqualTo(requestList.zip(List(response1, response2, response3)))
     }
 
     def allFailIfOneRequestFails: SpecsResult = {
@@ -118,7 +118,7 @@ class HttpRequestExecutionSpecs extends Specification { def is =
       val res = concurrentRequests(requestList).map { list: RequestPromiseResponsePairList =>
         list.map(pair => pair._1 -> pair._2.get)
       }
-      res.unsafePerformIO.list must beEqualTo(expectedRequestResponseList.list)
+      res.unsafePerformIO().list must beEqualTo(expectedRequestResponseList.list)
     }
 
     def allFailIfOneFails: SpecsResult = {

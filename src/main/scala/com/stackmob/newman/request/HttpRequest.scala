@@ -52,16 +52,16 @@ trait HttpRequest {
   def prepareAsync: IO[Promise[HttpResponse]]
 
   /**
-   * alias for prepare.unsafePerformIO. executes the HTTP request immediately in the calling thread
+   * alias for prepare.unsafePerformIO(). executes the HTTP request immediately in the calling thread
    * @return the HttpResponse that was returned from this HTTP request
    */
-  def executeUnsafe: HttpResponse = prepare.unsafePerformIO
+  def executeUnsafe: HttpResponse = prepare.unsafePerformIO()
 
   /**
-   * alias for prepareAsync.unsafePerformIO. executes the HTTP request in a Promise
+   * alias for prepareAsync.unsafePerformIO(). executes the HTTP request in a Promise
    * @return a promise representing the HttpResponse that was returned from this HTTP request
    */
-  def executeAsyncUnsafe: Promise[HttpResponse] = prepareAsync.unsafePerformIO
+  def executeAsyncUnsafe: Promise[HttpResponse] = prepareAsync.unsafePerformIO()
 
   def toJValue(implicit client: HttpClient): JValue = {
     import net.liftweb.json.scalaz.JsonScalaz.toJSON

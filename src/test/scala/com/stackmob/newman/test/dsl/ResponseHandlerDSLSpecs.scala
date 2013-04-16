@@ -45,14 +45,14 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
     def returnsFailure: SpecsResult = {
       val ex = new Exception("test exception")
       val respIO = IO((throw ex): HttpResponse).handleCode(HttpResponseCode.Ok)(_ => ().success)
-      respIO.unsafePerformIO.toEither must beLeft.like {
+      respIO.unsafePerformIO().toEither must beLeft.like {
         case e => e must beEqualTo(ex)
       }
     }
 
     def returnsEmptySuccess: SpecsResult = {
       val respIO = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)).handleCode(HttpResponseCode.Ok)(_ => ().success)
-      respIO.unsafePerformIO.toEither must beRight.like {
+      respIO.unsafePerformIO().toEither must beRight.like {
         case e => e must beEqualTo(())
       }
     }
@@ -60,7 +60,7 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
     def returnsNonEmptySuccess: SpecsResult = {
       val bodyString = "test body"
       val respIO = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode(HttpResponseCode.Ok){resp => resp.bodyString.success}
-      respIO.unsafePerformIO.toEither must beRight.like {
+      respIO.unsafePerformIO().toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }
@@ -72,7 +72,7 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
       val ex = new Exception(exceptionMessage)
       val customError = new CustomErrorForSpecs(exceptionMessage)
       val respIO: IO[Validation[CustomErrorForSpecs, Unit]] = IO((throw ex): HttpResponse).handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok)(_ => ().success)
-      respIO.unsafePerformIO.toEither must beLeft.like {
+      respIO.unsafePerformIO().toEither must beLeft.like {
         case e => e must beEqualTo(customError)
       }
     }
@@ -80,7 +80,7 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
     def returnsSuccessCorrectly: SpecsResult = {
       val bodyString = "test body"
       val respIO: IO[Validation[CustomErrorForSpecs, String]] = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){resp => resp.bodyString.success}
-      respIO.unsafePerformIO.toEither must beRight.like {
+      respIO.unsafePerformIO().toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }

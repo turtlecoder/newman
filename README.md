@@ -68,8 +68,8 @@ in the `DSL` package to let you build up a request and then execute it.
 # Executing Requests
 Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously want to execute it. There are 2 methods defined on all `HttpRequest`s that execute requests differently:
 
-* `def prepare: IO[HttpResponse]` - returns a `scalaz.effects.IO` that represents the result of executing the request. Remember that this method does not actually execute the request, and no network traffic will happen if you call this method. In order to actually execute the request, call `unsafePerformIO` on this method's result.
-* `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc (hence the suffix `Unsafe`)
+* `def prepare: IO[HttpResponse]` - returns a `scalaz.effects.IO` that represents the result of executing the request. Remember that this method does not actually execute the request, and no network traffic will happen if you call this method. In order to actually execute the request, call `unsafePerformIO()` on this method's result.
+* `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO()`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc (hence the suffix `Unsafe`)
 
 # Serializing
 Newman comes with built in support for serializing `HttpRequest`s and `HttpResponse`s to Json.
