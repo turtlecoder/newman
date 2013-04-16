@@ -18,8 +18,10 @@ package com.stackmob.newman
 package response
 
 import scalaz._
-import effects._
+import scalaz.effect.IO
+import scalaz.EitherT._
 import Scalaz._
+import scalaz.NonEmptyList._
 import jsonscalaz._
 import java.nio.charset.Charset
 import java.util.Date
@@ -27,11 +29,10 @@ import com.stackmob.newman.Constants._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 import org.apache.http.HttpHeaders
-import com.stackmob.newman.response.HttpResponseCode.HttpResponseCodeEqual
 import com.stackmob.newman.serialization.response.HttpResponseSerialization
 import com.stackmob.newman.serialization.common.DefaultBodySerialization
 import java.util.concurrent.ConcurrentHashMap
-import scala.collection.JavaConversions.JConcurrentMapWrapper
+import scala.collection.convert.Wrappers.JConcurrentMapWrapper
 
 case class HttpResponse(code: HttpResponseCode,
                         headers: Headers,
@@ -65,7 +66,7 @@ case class HttpResponse(code: HttpResponseCode,
 
   def bodyAsCaseClass[T <: AnyRef](implicit m: Manifest[T], charset: Charset = UTF8Charset): Result[T] = {
     def theReader(implicit reader: JSONR[T] = DefaultBodySerialization.getReader): JSONR[T] = reader
-    caseClassMap.getOrElseUpdate((charset, m.erasure), {
+    caseClassMap.getOrElseUpdate((charset, m.runtimeClass), {
       fromJSON[T](parse(bodyString(charset)))(theReader)
     }).map(_.asInstanceOf[T])
   }
@@ -91,7 +92,7 @@ case class HttpResponse(code: HttpResponseCode,
     validating {
       parse(bodyString(charset))
     } mapFailure { t: Throwable =>
-      nel(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
+      nels(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
     } flatMap { jValue: JValue =>
       fromJSON[T](jValue)
     }
@@ -99,20 +100,19 @@ case class HttpResponse(code: HttpResponseCode,
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode,
                               decoder: HttpResponse => ThrowableValidation[T]): ThrowableValidation[T] = {
-    val valT = for {
-      resp <- validationT[IO, Throwable, HttpResponse](validating(this).pure[IO])
-      _ <- validationT[IO, Throwable, Unit] {
+    (for {
+      resp <- eitherT[IO, Throwable, HttpResponse](\/.fromTryCatch(this).pure[IO])
+      _ <- eitherT[IO, Throwable, Unit] {
         if(resp.code === expected) {
-          ().success[Throwable].pure[IO]
+          ().right.pure[IO]
         } else {
-          (UnexpectedResponseCode(expected, resp.code): Throwable).fail[Unit].pure[IO]
+          (UnexpectedResponseCode(expected, resp.code): Throwable).left.pure[IO]
         }
       }
-      body <- validationT[IO, Throwable, T] {
-        io(decoder(resp)).except(t => t.fail[T].pure[IO])
+      body <- eitherT[IO, Throwable, T] {
+        IO(decoder(resp).disjunction).except(_.left.pure[IO])
       }
-    } yield body
-    valT.run.unsafePerformIO
+    } yield body).run.map(_.validation).unsafePerformIO
   }
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode)
@@ -143,7 +143,7 @@ object HttpResponse {
     parse(json)
   } mapFailure { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
-  }).liftFailNel.flatMap(fromJValue(_))
+  }).toValidationNel.flatMap { j: JValue => fromJValue(j) }
 
   case class UnexpectedResponseCode(expected: HttpResponseCode, actual: HttpResponseCode)
     extends Exception("expected response code %d, got %d".format(expected.code, actual.code))

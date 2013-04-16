@@ -16,7 +16,7 @@
 
 package com.stackmob.newman.test.caching
 
-import scalaz.effects._
+import scalaz.effect.IO
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import java.util.concurrent.CopyOnWriteArrayList
@@ -34,17 +34,17 @@ class DummyHttpResponseCacher(onGet: => Option[HttpResponse],
   val existsCalls = new CopyOnWriteArrayList[HttpRequest]()
   def totalNumCalls = getCalls.size() + setCalls.size() + existsCalls.size()
 
-  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io {
+  override def get(req: HttpRequest): IO[Option[HttpResponse]] = IO {
     getCalls.add(req)
     onGet
   }
 
-  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = io {
+  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = IO {
     setCalls.add(req -> resp)
     onSet
   }
 
-  override def exists(req: HttpRequest): IO[Boolean] = io {
+  override def exists(req: HttpRequest): IO[Boolean] = IO {
     existsCalls.add(req)
     onExists
   }

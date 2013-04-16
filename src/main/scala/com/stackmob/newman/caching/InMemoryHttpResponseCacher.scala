@@ -20,7 +20,7 @@ package caching
 import java.util.concurrent._
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
-import scalaz.effects._
+import scalaz.effect.IO
 
 sealed case class CachedResponseDelay(ttl: Milliseconds, hash: HashCode) extends Delayed {
   private val insertTime = System.currentTimeMillis()
@@ -60,11 +60,11 @@ class InMemoryHttpResponseCacher extends HttpResponseCacher {
     }
   }
 
-  override def get(req: HttpRequest): IO[Option[HttpResponse]] = io {
+  override def get(req: HttpRequest): IO[Option[HttpResponse]] = IO {
     Option(cache.get(req.hash))
   }
 
-  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = io {
+  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit] = IO {
     if(ttl.magnitude <= 0) {
       ()
     } else {
@@ -74,5 +74,5 @@ class InMemoryHttpResponseCacher extends HttpResponseCacher {
     }
   }
 
-  override def exists(req: HttpRequest): IO[Boolean] = io(cache.containsKey(req.hash))
+  override def exists(req: HttpRequest): IO[Boolean] = IO(cache.containsKey(req.hash))
 }

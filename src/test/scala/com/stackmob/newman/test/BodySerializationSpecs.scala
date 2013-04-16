@@ -52,13 +52,19 @@ class BodySerializationSpecs extends Specification { def is =
     def ensureSucceedsWithReader[T](req: HttpRequest, expected: T)(implicit reader: JSONR[T]) = {
       req.executeUnsafe.bodyAs[T].map { body: T =>
         (body must beEqualTo(expected)): SpecsResult
-      } ||| (logAndFail(_))
+      } match {
+        case Success(s) => s
+        case Failure(t) => logAndFail(t)
+      }
     }
 
     def ensureSucceedsAsCaseClass[T <: AnyRef: Manifest](req: HttpRequest, expected: T) = {
       req.executeUnsafe.bodyAsCaseClass[T].map { body: T =>
         (body must beEqualTo(expected)): SpecsResult
-      } ||| (logAndFail(_))
+      } match {
+        case Success(s) => s
+        case Failure(t) => logAndFail(t)
+      }
     }
 
     def succeedWith[E, A](a: =>A) = validationWith[E, A](Success(a))

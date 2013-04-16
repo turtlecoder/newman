@@ -19,7 +19,7 @@ package com.stackmob.newman
 import request.HttpRequest
 import response.HttpResponse
 import scalaz._
-import scalaz.effects._
+import scalaz.effect.IO
 import Scalaz._
 import java.net.URL
 

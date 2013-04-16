@@ -17,7 +17,7 @@
 package com.stackmob.newman
 
 import scalaz.Scalaz._
-import scalaz.effects.IO
+import scalaz.effect.IO
 import scalaz.concurrent.Promise
 import caching._
 import request._

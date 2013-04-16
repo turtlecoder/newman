@@ -31,8 +31,8 @@ trait EnumerationImplicits {
     override def write(value: T): JValue = JString(value.stringVal)
     override def read(json: JValue): Result[T] = json match {
       case JString(s) => (validating(reader.withName(s)).mapFailure { _ =>
-        UncategorizedError(s, "Invalid %s: %s".format(m.erasure.getSimpleName, s), Nil)
-      }).liftFailNel
+        UncategorizedError(s, "Invalid %s: %s".format(m.runtimeClass.getSimpleName, s), Nil)
+      }).toValidationNel
       case j => UnexpectedJSONError(j, classOf[JString]).failNel
     }
   }

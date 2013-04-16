@@ -19,7 +19,7 @@ package dsl
 
 import scalaz._
 import Scalaz._
-import scalaz.effects.IO
+import scalaz.effect.IO
 import response.HttpResponseCode
 import response.HttpResponse
 import response.HttpResponse.JSONParsingError

@@ -20,7 +20,8 @@ package request
 import java.net.URL
 import scalaz._
 import Scalaz._
-import scalaz.effects._
+import scalaz.effect.IO
+import scalaz.NonEmptyList._
 import scalaz.concurrent._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
@@ -118,7 +119,7 @@ object HttpRequest {
     parse(json)
   } mapFailure { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
-  }).liftFailNel.flatMap(fromJValue(_))
+  }).toValidationNel.flatMap { j: JValue => fromJValue(j) }
 }
 
 sealed trait HttpRequestWithBody extends HttpRequest {

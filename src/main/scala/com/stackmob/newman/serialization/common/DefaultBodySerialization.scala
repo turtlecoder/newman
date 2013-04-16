@@ -28,7 +28,7 @@ object DefaultBodySerialization {
         json.extract[A](Serialization.formats(NoTypeHints), m)
       }.mapFailure{ t: Throwable =>
         UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
-      }.liftFailNel
+      }.toValidationNel
     }
   }
 

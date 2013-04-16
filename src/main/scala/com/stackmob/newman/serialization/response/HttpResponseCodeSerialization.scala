@@ -33,7 +33,7 @@ object HttpResponseCodeSerialization extends SerializationBase[HttpResponseCode]
     override def read(json: JValue): Result[HttpResponseCode] = {
       json match {
         case JInt(code) => validating(HttpResponseCode.fromInt(code.toInt)).fold(
-          success = {
+          succ = {
             o: Option[HttpResponseCode] =>
               o.map {
                 c: HttpResponseCode => c.successNel[Error]
@@ -41,7 +41,7 @@ object HttpResponseCodeSerialization extends SerializationBase[HttpResponseCode]
                 UncategorizedError("response code", "Unknown Http Response Code %d".format(code), List()).failNel[HttpResponseCode]
               }
           },
-          failure = { t: Throwable =>
+          fail = { t: Throwable =>
             UncategorizedError("response code", t.getMessage, List()).failNel[HttpResponseCode]
           }
         )
