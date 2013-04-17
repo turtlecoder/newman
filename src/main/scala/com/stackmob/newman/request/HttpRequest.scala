@@ -19,6 +19,7 @@ package request
 
 import java.net.URL
 import scalaz._
+import scalaz.Validation._
 import Scalaz._
 import scalaz.effect.IO
 import scalaz.NonEmptyList._
@@ -115,7 +116,7 @@ object HttpRequest {
     fromJSON(jValue)(requestSerialization.reader)
   }
 
-  def fromJson(json: String)(implicit client: HttpClient): Result[HttpRequest] = (validating {
+  def fromJson(json: String)(implicit client: HttpClient): Result[HttpRequest] = (fromTryCatch {
     parse(json)
   } mapFailure { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())

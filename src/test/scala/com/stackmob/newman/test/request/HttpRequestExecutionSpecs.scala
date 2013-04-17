@@ -18,6 +18,7 @@ package com.stackmob.newman.test
 package request
 
 import scalaz._
+import scalaz.Validation._
 import Scalaz._
 import scalaz.effect.IO
 import scalaz.NonEmptyList._
@@ -62,7 +63,7 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     protected lazy val throwingRequest = throwingClient.get(requestURL, requestHeaders)
     protected lazy val throwingResponse: HttpResponse = throw exception
 
-    protected def ensureThrows[T](io: IO[T], exception: Throwable): SpecsResult = validating(io.unsafePerformIO()).map { _ =>
+    protected def ensureThrows[T](io: IO[T], exception: Throwable): SpecsResult = fromTryCatch(io.unsafePerformIO()).map { _ =>
       SpecsFailure("didn't throw a %s with message %s when it should have".format(exception.getClass.getCanonicalName,
         exception.getMessage)): SpecsResult
     } valueOr { _ must beEqualTo(exception) }

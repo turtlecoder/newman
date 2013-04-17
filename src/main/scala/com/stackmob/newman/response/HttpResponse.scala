@@ -89,7 +89,7 @@ case class HttpResponse(code: HttpResponseCode,
 
   private def parseBody[T](implicit reader: JSONR[T],
                            charset: Charset = UTF8Charset): Result[T] = {
-    validating {
+    Validation.fromTryCatch {
       parse(bodyString(charset))
     } mapFailure { t: Throwable =>
       nels(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
@@ -101,7 +101,9 @@ case class HttpResponse(code: HttpResponseCode,
   def bodyAsIfResponseCode[T](expected: HttpResponseCode,
                               decoder: HttpResponse => ThrowableValidation[T]): ThrowableValidation[T] = {
     (for {
-      resp <- eitherT[IO, Throwable, HttpResponse](\/.fromTryCatch(this).pure[IO])
+      resp <- eitherT[IO, Throwable, HttpResponse] {
+        \/.fromTryCatch(this).pure[IO]
+      }
       _ <- eitherT[IO, Throwable, Unit] {
         if(resp.code === expected) {
           ().right.pure[IO]
@@ -139,7 +141,7 @@ object HttpResponse {
     fromJSON(jValue)(getResponseSerialization.reader)
   }
 
-  def fromJson(json: String): Result[HttpResponse] = (validating {
+  def fromJson(json: String): Result[HttpResponse] = (Validation.fromTryCatch {
     parse(json)
   } mapFailure { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())

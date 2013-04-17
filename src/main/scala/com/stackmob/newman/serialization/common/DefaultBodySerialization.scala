@@ -17,6 +17,7 @@
 package com.stackmob.newman
 package serialization.common
 
+import scalaz.Validation._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 
@@ -24,7 +25,7 @@ object DefaultBodySerialization {
 
   def getReader[A <: AnyRef](implicit m:Manifest[A]): JSONR[A] = new JSONR[A] {
     override def read(json: JValue): Result[A] = {
-      validating {
+      fromTryCatch {
         json.extract[A](Serialization.formats(NoTypeHints), m)
       }.mapFailure{ t: Throwable =>
         UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())

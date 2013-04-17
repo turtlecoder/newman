@@ -59,9 +59,4 @@ trait NewmanPrivate {
     override lazy val v = validation
   }
 
-  private[newman] def validating[T](t: => T): ThrowableValidation[T] = try {
-    t.success[Throwable]
-  } catch {
-    case e: Throwable => e.fail[T]
-  }
 }

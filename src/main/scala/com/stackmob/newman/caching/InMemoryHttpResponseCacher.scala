@@ -21,6 +21,7 @@ import java.util.concurrent._
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scalaz.effect.IO
+import scalaz.Validation._
 
 sealed case class CachedResponseDelay(ttl: Milliseconds, hash: HashCode) extends Delayed {
   private val insertTime = System.currentTimeMillis()
@@ -52,7 +53,7 @@ class InMemoryHttpResponseCacher extends HttpResponseCacher {
   private lazy val delayQueueRunnable = new Runnable {
     def run() {
       while(true) {
-        validating {
+        fromTryCatch {
           val hash = delayQueue.take().hash
           cache.remove(hash)
         }

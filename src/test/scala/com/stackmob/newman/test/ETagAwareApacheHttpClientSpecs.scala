@@ -17,6 +17,7 @@
 package com.stackmob.newman.test
 
 import scalaz._
+import scalaz.Validation._
 import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
@@ -160,7 +161,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       (throw cacheException): Boolean)
 
     def executesNoRequest: SpecsResult = {
-      validating(client.get(url, Headers.empty).prepare.unsafePerformIO())
+      fromTryCatch(client.get(url, Headers.empty).prepare.unsafePerformIO())
       (rawClient.totalNumRequestsMade must beEqualTo(0))
     }
   }
