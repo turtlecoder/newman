@@ -73,17 +73,19 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
 
     def expectJSONBody[Failure, Success](code: HttpResponseCode)
                                         (implicit reader: JSONR[Success],
+                                         m: Manifest[Success],
                                          charset: Charset = UTF8Charset,
                                          errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, charset)
+      ResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, m, charset)
     }
 
     def handleJSONBody[Failure, S, Success](code: HttpResponseCode)
                                            (handler: S => Validation[Failure, Success])
                                            (implicit reader: JSONR[S],
+                                            m: Manifest[S],
                                             charset: Charset = UTF8Charset,
                                             errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, charset)
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, m, charset)
     }
 
     def expectNoContent[Failure, Success](successValue: Success)

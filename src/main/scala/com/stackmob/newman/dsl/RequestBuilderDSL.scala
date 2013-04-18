@@ -100,7 +100,7 @@ trait RequestBuilderDSL {
                             (implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A],
                              charset: Charset = UTF8Charset): HeaderAndBodyBuilder = {
       //if it's a string, don't JSON encode it
-      val bodyString = value.cast[String].map(s => s) | compact(render(toJSON(value)))
+      val bodyString = value.cast[String].map(s => s) | compactRender(toJSON(value))
       setBodyString(bodyString)
     }
 

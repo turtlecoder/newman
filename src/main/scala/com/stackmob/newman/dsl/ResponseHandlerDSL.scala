@@ -125,7 +125,7 @@ trait ResponseHandlerDSL {
      * made, however, if there are there is no effect on the handling of the response.
      * @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
-    def expectJSONBody(code: HttpResponseCode)(implicit reader: JSONR[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
+    def expectJSONBody(code: HttpResponseCode)(implicit reader: JSONR[Success], m: Manifest[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
       handleJSONBody[Success](code)(_.success[Failure])
     }
 
@@ -140,7 +140,7 @@ trait ResponseHandlerDSL {
      */
     def handleJSONBody[S](code: HttpResponseCode)
                          (handler: S => Validation[Failure, Success])
-                         (implicit reader: JSONR[S], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
+                         (implicit reader: JSONR[S], m: Manifest[S], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
       handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].mapFailure { t =>
         errorConv(JSONParsingError(t): Throwable): Failure
       }.flatMap(handler))

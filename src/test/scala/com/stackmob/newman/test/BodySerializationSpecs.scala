@@ -49,7 +49,7 @@ class BodySerializationSpecs extends Specification { def is =
   import BodySerializationSpecs._
 
   trait Context extends BaseContext {
-    def ensureSucceedsWithReader[T](req: HttpRequest, expected: T)(implicit reader: JSONR[T]) = {
+    def ensureSucceedsWithReader[T : JSONR : Manifest](req: HttpRequest, expected: T) = {
       req.executeUnsafe.bodyAs[T].map { body: T =>
         (body must beEqualTo(expected)): SpecsResult
       } valueOr { logAndFail(_) }
@@ -112,12 +112,12 @@ class BodySerializationSpecs extends Specification { def is =
 
     def deserializesWithJSONR: SpecsResult = {
       val bodyObject = SomeClass("boyz", 2, "men")
-      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
+      ensureSucceedsWithReader(getResponse(compactRender(toJSON(bodyObject))), bodyObject)
     }
 
     def deserializesWithoutJSONR: SpecsResult = {
       val bodyObject = ClassWithoutReader(9.5, false)
-      ensureSucceedsAsCaseClass(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
+      ensureSucceedsAsCaseClass(getResponse(compactRender(toJSON(bodyObject))), bodyObject)
     }
 
     def deserializesWithSpecificJSONR: SpecsResult = {
@@ -130,7 +130,7 @@ class BodySerializationSpecs extends Specification { def is =
           }
         }
       }
-      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
+      ensureSucceedsWithReader(getResponse(compactRender(toJSON(bodyObject))), bodyObject)
     }
 
     def deserializesWithReplacedJSONR: SpecsResult = {
@@ -145,7 +145,7 @@ class BodySerializationSpecs extends Specification { def is =
           }
         }
       }
-      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), newBodyObject)
+      ensureSucceedsWithReader(getResponse(compactRender(toJSON(bodyObject))), newBodyObject)
     }
   }
 

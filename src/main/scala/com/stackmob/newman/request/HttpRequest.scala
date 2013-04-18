@@ -74,7 +74,7 @@ trait HttpRequest {
   def toJson(prettyPrint: Boolean = false)(implicit client: HttpClient): String = if(prettyPrint) {
     pretty(render(toJValue))
   } else {
-    compact(render(toJValue))
+    compactRender(toJValue)
   }
 
   private lazy val md5 = MessageDigest.getInstance("MD5")

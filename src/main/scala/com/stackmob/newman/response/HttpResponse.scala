@@ -41,7 +41,7 @@ case class HttpResponse(code: HttpResponseCode,
   import HttpResponse._
 
   private lazy val rawBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[Charset, String])
-  private lazy val parsedBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, JSONR[_]), Result[_]])
+  private lazy val parsedBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Class[_]), Result[_]])
   private lazy val jValueMap = new JConcurrentMapWrapper(new ConcurrentHashMap[Charset, JValue])
   private lazy val jsonMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Boolean), String])
   private lazy val caseClassMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Class[_]), Result[_]])
@@ -59,7 +59,7 @@ case class HttpResponse(code: HttpResponseCode,
       if(prettyPrint) {
         pretty(render(toJValue))
       } else {
-        compact(render(toJValue))
+        compactRender(toJValue)
       }
     })
   }
@@ -72,16 +72,13 @@ case class HttpResponse(code: HttpResponseCode,
   }
 
   def bodyAs[T](implicit reader: JSONR[T],
+                m: Manifest[T],
                 charset: Charset = UTF8Charset): Result[T] = {
-    parsedBodyMap.get((charset, reader)) match {
+    parsedBodyMap.get((charset, m.runtimeClass)) match {
       case Some(v) => v.map(_.asInstanceOf[T])
       case None => {
         val d = parseBody[T]
-        // protect against JSONR's which are not singletons
-        // may want to pass in a Manifest[T] to avoid this but it breaks the interface
-        if (parsedBodyMap.size < 16) {
-          parsedBodyMap((charset, reader)) = d
-        }
+        parsedBodyMap((charset, m.runtimeClass)) = d
         d
       }
     }
@@ -119,6 +116,7 @@ case class HttpResponse(code: HttpResponseCode,
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode)
                              (implicit reader: JSONR[T],
+                              m: Manifest[T],
                               charset: Charset = UTF8Charset): ThrowableValidation[T] = {
     bodyAsIfResponseCode[T](expected, { resp: HttpResponse =>
       bodyAs[T].mapFailure { errNel: NonEmptyList[Error] =>
