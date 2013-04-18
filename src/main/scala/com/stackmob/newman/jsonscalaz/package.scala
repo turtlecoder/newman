@@ -19,9 +19,8 @@ package com.stackmob.newman
 import net.liftweb.json.scalaz.JsonScalaz._
 
 package object jsonscalaz {
-  trait ErrorW {
-    protected def error: Error
 
+  implicit class RichError(error: Error) {
     def fold[T](unexpected: UnexpectedJSONError => T,
                 noSuchField: NoSuchFieldError => T,
                 uncategorized: UncategorizedError => T): T = error match {
@@ -29,9 +28,6 @@ package object jsonscalaz {
       case n@NoSuchFieldError(_, _) => noSuchField(n)
       case u@UncategorizedError(_, _, _) => uncategorized(u)
     }
-  }
-  implicit def errorToW(e: Error): ErrorW = new ErrorW {
-    override lazy val error = e
   }
 
 }

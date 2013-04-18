@@ -24,8 +24,9 @@ import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 
 trait EnumerationImplicits {
-  implicit def stringToStringEnumW(s: String): StringEnumReaderW = new StringEnumReaderW {
-    def value: String = s
+
+  implicit class RichString(value: String) {
+    def readEnum[T <: Enumeration](implicit reader: EnumReader[T]): Option[T] = reader.read(value)
   }
 
   implicit def enumerationJSON[T <: Enumeration](implicit reader: EnumReader[T], m: Manifest[T]): JSON[T] = new JSON[T] {

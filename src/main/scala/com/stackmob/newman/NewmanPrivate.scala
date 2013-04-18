@@ -22,8 +22,8 @@ import scalaz.Failure
 import scalaz.Success
 
 trait NewmanPrivate {
-  private[newman] trait Identity[Id] {
-    def value: Id
+
+  implicit class Identity[Id](value: Id) {
     def cast[T](implicit target: Manifest[T]): Option[T] = {
       Option(value).flatMap { _ =>
         val source = value match {
@@ -41,22 +41,14 @@ trait NewmanPrivate {
       }
     }
   }
-  private[newman] implicit def tToIdentity[T](t: T): Identity[T] = new Identity[T] {
-    override lazy val value = t
-  }
 
   private[newman] type ThrowableValidation[T] = Validation[Throwable, T]
 
-  private[newman] sealed trait ValidationW[Fail, Success] {
-    def v: Validation[Fail, Success]
-
+  implicit class RichValidation[Fail, Success](v: Validation[Fail, Success]) {
     def mapFailure[NewFail](transform: Fail => NewFail): Validation[NewFail, Success] = v match {
       case Success(s) => s.success[NewFail]
       case Failure(f) => transform(f).fail[Success]
     }
-  }
-  private[newman] implicit def validationToW[T, U](validation: Validation[T, U]): ValidationW[T, U] = new ValidationW[T, U] {
-    override lazy val v = validation
   }
 
 }
