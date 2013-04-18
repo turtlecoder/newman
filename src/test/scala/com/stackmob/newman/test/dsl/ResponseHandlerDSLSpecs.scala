@@ -24,6 +24,7 @@ import Scalaz._
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.{RawBody, Headers}
 import com.stackmob.newman.Constants._
+import language.implicitConversions
 
 class ResponseHandlerDSLSpecs extends Specification { def is =
   "ResponseHandlerDSLSpecs".title                                                                                       ^

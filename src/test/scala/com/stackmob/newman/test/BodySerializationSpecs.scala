@@ -69,7 +69,6 @@ class BodySerializationSpecs extends Specification { def is =
     }
   }
 
-
   case class SerializationTest() extends Context {
     implicit val client = new DummyHttpClient
     private lazy val transformer = PUT(url)
