@@ -92,6 +92,8 @@ object HttpResponseCode {
   object PreconditionFailed extends HttpResponseCode(412, "Precondition Failed")
 
   object AuthenticationRequired extends HttpResponseCode(407, "Proxy Authentication Required")
+  
+  object RequestedRangeNotSatisfiable extends HttpResponseCode(416, "Requested Range Not Satisfiable")
 
   object RequestURITooLarge extends HttpResponseCode(414, "Request-URI Too Large")
 
