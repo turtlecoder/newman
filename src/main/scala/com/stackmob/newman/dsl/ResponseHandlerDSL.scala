@@ -62,7 +62,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
  *
  * If the response is expected to be considered a success when it its code is `200 OK`
  * and is expected to have a body whose content can is valid JSON `expectJSONBody`
- * can be called given there is an implicit [[net.liftweb.json.scalaz.Types.JSONR]] in scope for `T`.
+ * can be called given there is an implicit `net.liftweb.json.scalaz.Types.JSONR` in scope for `T`.
  * See `expectJSONBody` for more info.
  *
  * Example:
