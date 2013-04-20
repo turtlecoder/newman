@@ -136,8 +136,17 @@ object FinagleHttpClient {
   }
 
   private[FinagleHttpClient] sealed class TwitterFutureW[T](future: TwitterFuture[T]) {
-    def toScalaPromise(implicit strategy: Strategy): Promise[T] = {
-      Promise(future.get())
+    def toScalaPromise: Promise[T] = {
+      //use a naive strategy here so that the promise creation doesn't use a thread
+      //TODO: I'm not sure if this works
+      implicit val strategy = Strategy.Naive
+      val promise = new Promise[T]()
+      future.onSuccess { res =>
+        promise.fulfill(res)
+      }.onFailure { t =>
+        promise.break
+      }
+      promise
     }
   }
   private[FinagleHttpClient] implicit def twitterFutureToW[T](future: TwitterFuture[T]): TwitterFutureW[T] = {
