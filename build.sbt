@@ -11,9 +11,9 @@ name := "newman"
 
 organization := "com.stackmob"
 
-scalaVersion := "2.9.1"
+scalaVersion := "2.9.2"
 
-crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0", "2.10.1")
+crossScalaVersions := Seq("2.9.2", "2.10.0", "2.10.1")
 
 scalacOptions <++= (scalaVersion).map { version: String =>
   val defaults = Seq("-unchecked", "-deprecation")
@@ -36,6 +36,7 @@ libraryDependencies ++= {
     "org.scalaz" %% "scalaz-core" % scalazVersion,
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
+    "com.twitter" %% "finagle-http" % "6.2.0",
     "net.liftweb" %% "lift-json-scalaz" % liftJsonVersion,
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
     "org.specs2" %% "specs2" % specs2Version % "test",
