@@ -88,7 +88,7 @@ case class HttpResponse(code: HttpResponseCode,
                            charset: Charset = UTF8Charset): Result[T] = {
     Validation.fromTryCatch {
       parse(bodyString(charset))
-    } mapFailure { t: Throwable =>
+    } leftMap { t: Throwable =>
       nels(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
     } flatMap { jValue: JValue =>
       fromJSON[T](jValue)
@@ -119,7 +119,7 @@ case class HttpResponse(code: HttpResponseCode,
                               m: Manifest[T],
                               charset: Charset = UTF8Charset): ThrowableValidation[T] = {
     bodyAsIfResponseCode[T](expected, { resp: HttpResponse =>
-      bodyAs[T].mapFailure { errNel: NonEmptyList[Error] =>
+      bodyAs[T].leftMap { errNel: NonEmptyList[Error] =>
         val t: Throwable = JSONParsingError(errNel)
         t
       }
@@ -141,7 +141,7 @@ object HttpResponse {
 
   def fromJson(json: String): Result[HttpResponse] = (Validation.fromTryCatch {
     parse(json)
-  } mapFailure { t: Throwable =>
+  } leftMap { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
   }).toValidationNel.flatMap { j: JValue => fromJValue(j) }
 

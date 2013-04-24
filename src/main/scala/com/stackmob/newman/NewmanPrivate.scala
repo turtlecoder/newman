@@ -44,11 +44,4 @@ trait NewmanPrivate {
 
   private[newman] type ThrowableValidation[T] = Validation[Throwable, T]
 
-  implicit class RichValidation[Fail, Success](v: Validation[Fail, Success]) {
-    def mapFailure[NewFail](transform: Fail => NewFail): Validation[NewFail, Success] = v match {
-      case Success(s) => s.success[NewFail]
-      case Failure(f) => transform(f).fail[Success]
-    }
-  }
-
 }

@@ -141,7 +141,7 @@ trait ResponseHandlerDSL {
     def handleJSONBody[S](code: HttpResponseCode)
                          (handler: S => Validation[Failure, Success])
                          (implicit reader: JSONR[S], m: Manifest[S], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
-      handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].mapFailure { t =>
+      handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].leftMap { t =>
         errorConv(JSONParsingError(t): Throwable): Failure
       }.flatMap(handler))
     }

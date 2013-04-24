@@ -118,7 +118,7 @@ object HttpRequest {
 
   def fromJson(json: String)(implicit client: HttpClient): Result[HttpRequest] = (fromTryCatch {
     parse(json)
-  } mapFailure { t: Throwable =>
+  } leftMap { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
   }).toValidationNel.flatMap { j: JValue => fromJValue(j) }
 }
