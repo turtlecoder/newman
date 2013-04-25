@@ -13,7 +13,7 @@ organization := "com.stackmob"
 
 scalaVersion := "2.10.1"
 
-scalacOptions := Seq("-unchecked", "-deprecation", "-feature")
+scalacOptions := Seq("-unchecked", "-deprecation")
 
 libraryDependencies ++= {
   val httpCoreVersion = "4.2.1"
