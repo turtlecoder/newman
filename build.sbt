@@ -13,7 +13,7 @@ organization := "com.stackmob"
 
 scalaVersion := "2.10.1"
 
-scalacOptions := Seq("-unchecked", "-deprecation")
+scalacOptions := Seq("-unchecked", "-deprecation", "-feature")
 
 libraryDependencies ++= {
   val httpCoreVersion = "4.2.1"
@@ -21,7 +21,7 @@ libraryDependencies ++= {
   val scalaCheckVersion = "1.10.1"
   val specs2Version = "1.14"
   val mockitoVersion = "1.9.0"
-  val scalazVersion = "7.0.0-RC2"
+  val scalazVersion = "7.0.0"
   val liftJsonVersion = "2.5-RC5"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
