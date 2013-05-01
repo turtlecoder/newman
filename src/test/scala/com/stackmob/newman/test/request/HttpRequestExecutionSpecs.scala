@@ -18,8 +18,10 @@ package com.stackmob.newman.test
 package request
 
 import scalaz._
+import scalaz.Validation._
 import Scalaz._
-import scalaz.effects._
+import scalaz.effect.IO
+import scalaz.NonEmptyList._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
 import java.net.URL
@@ -27,7 +29,6 @@ import com.stackmob.newman.request._
 import HttpRequestExecution._
 import com.stackmob.newman.response._
 import com.stackmob.newman._
-
 
 class HttpRequestExecutionSpecs extends Specification { def is =
   "HttpRequestExecutionSpecs".title                                                                                     ^
@@ -62,24 +63,22 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     protected lazy val throwingRequest = throwingClient.get(requestURL, requestHeaders)
     protected lazy val throwingResponse: HttpResponse = throw exception
 
-    protected def ensureThrows[T](io: IO[T], exception: Throwable): SpecsResult = validating(io.unsafePerformIO).map { _ =>
+    protected def ensureThrows[T](io: IO[T], exception: Throwable): SpecsResult = fromTryCatch(io.unsafePerformIO()).map { _ =>
       SpecsFailure("didn't throw a %s with message %s when it should have".format(exception.getClass.getCanonicalName,
         exception.getMessage)): SpecsResult
-    } ||| { t: Throwable =>
-      t must beEqualTo(exception)
-    }
+    } valueOr { _ must beEqualTo(exception) }
   }
 
   case class ExecuteSequence() extends Context {
     def executesCorrectly: SpecsResult = {
-      val requestList = nel(request1, request2)
-      val expectedRequestResponseList = nel(request1 -> response1, request2 -> response2)
+      val requestList = nels(request1, request2)
+      val expectedRequestResponseList = nels(request1 -> response1, request2 -> response2)
       val res = sequencedRequests(requestList)
-      res.unsafePerformIO.list must beEqualTo(expectedRequestResponseList.list)
+      res.unsafePerformIO().list must beEqualTo(expectedRequestResponseList.list)
     }
 
     def allFailIfOneFails: SpecsResult = {
-      val requestList = nel(request1, throwingRequest)
+      val requestList = nels(request1, throwingRequest)
       val res = sequencedRequests(requestList)
       ensureThrows(res, exception)
     }
@@ -95,33 +94,33 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     private def throwingChain(prevResp: HttpResponse): HttpRequest = throw exception
     def executesCorrectly: SpecsResult = {
       val requestList = request1 :: request2 :: request3 :: Nil
-      val res = chainedRequests(request1, nel(chain1 _, chain2 _))
-      res.unsafePerformIO.list must beEqualTo(requestList.zip(List(response1, response2, response3)))
+      val res = chainedRequests(request1, nels(chain1 _, chain2 _))
+      res.unsafePerformIO().list must beEqualTo(requestList.zip(List(response1, response2, response3)))
     }
 
     def allFailIfOneRequestFails: SpecsResult = {
-      val res = chainedRequests(request1, nel(chain1 _, chainThatReturnsThrowingRequest _))
+      val res = chainedRequests(request1, nels(chain1 _, chainThatReturnsThrowingRequest _))
       ensureThrows(res, exception)
     }
 
     def allFailIfOneChainMethodFails: SpecsResult = {
-      val res = chainedRequests(request1, nel(chain1 _, throwingChain _))
+      val res = chainedRequests(request1, nels(chain1 _, throwingChain _))
       ensureThrows(res, exception)
     }
   }
 
   case class ExecuteConcurrent() extends Context {
     def executesCorrectly: SpecsResult = {
-      val requestList = nel(request1, request2)
-      val expectedRequestResponseList = nel(request1 -> response1, request2 -> response2)
+      val requestList = nels(request1, request2)
+      val expectedRequestResponseList = nels(request1 -> response1, request2 -> response2)
       val res = concurrentRequests(requestList).map { list: RequestPromiseResponsePairList =>
         list.map(pair => pair._1 -> pair._2.get)
       }
-      res.unsafePerformIO.list must beEqualTo(expectedRequestResponseList.list)
+      res.unsafePerformIO().list must beEqualTo(expectedRequestResponseList.list)
     }
 
     def allFailIfOneFails: SpecsResult = {
-      val requestList = nel(request1, throwingRequest)
+      val requestList = nels(request1, throwingRequest)
       val res = concurrentRequests(requestList).map { list: RequestPromiseResponsePairList =>
         list.map(pair => pair._1 -> pair._2.get)
       }

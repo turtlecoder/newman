@@ -11,32 +11,25 @@ name := "newman"
 
 organization := "com.stackmob"
 
-scalaVersion := "2.9.1"
+scalaVersion := "2.10.1"
 
-crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0", "2.10.1")
-
-scalacOptions <++= (scalaVersion).map { version: String =>
-  val defaults = Seq("-unchecked", "-deprecation")
-  if (version.startsWith("2.10")) {
-    defaults ++ Seq("-feature", "-language:implicitConversions,", "-language:higherKinds")
-  } else {
-    defaults
-  }
-}
+scalacOptions := Seq("-unchecked", "-deprecation", "-feature")
 
 libraryDependencies ++= {
   val httpCoreVersion = "4.2.1"
   val httpClientVersion = "4.2.1"
-  val scalaCheckVersion = "1.10.0"
-  val specs2Version = "1.12.3"
+  val scalaCheckVersion = "1.10.1"
+  val specs2Version = "1.14"
   val mockitoVersion = "1.9.0"
-  val scalazVersion = "6.0.4"
-  val liftJsonVersion = "2.5-RC2"
+  val scalazVersion = "7.0.0"
+  val liftJsonVersion = "2.5-RC5"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
+    "org.scalaz" %% "scalaz-effect" % scalazVersion,
+    "org.scalaz" %% "scalaz-concurrent" % scalazVersion,
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
-    "net.liftweb" %% "lift-json-scalaz" % liftJsonVersion,
+    "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion,
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
     "org.specs2" %% "specs2" % specs2Version % "test",
     "org.pegdown" % "pegdown" % "1.0.2" % "test",

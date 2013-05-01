@@ -19,6 +19,7 @@ package dsl
 
 import scalaz._
 import Scalaz._
+import scalaz.Lens._
 import request._
 import java.net.URL
 import java.nio.charset.Charset
@@ -27,7 +28,7 @@ import Constants._
 import net.liftweb.json._
 
 trait RequestBuilderDSL {
-  private val HeadersPrependLens = Lens[Headers, Headers](
+  private val HeadersPrependLens: Headers @> Headers = lensu(
     get = {h: Headers => h },
     set = { (existing: Headers, toPrepend: Headers) =>
       (existing, toPrepend) match {
@@ -39,7 +40,7 @@ trait RequestBuilderDSL {
     }
   )
 
-  private val BodyPrependLens = Lens[Array[Byte], Array[Byte]](
+  private val BodyPrependLens: Array[Byte] @> Array[Byte] = lensu(
     get = { b: Array[Byte] => b },
     set = { (existing: Array[Byte], toPrepend: Array[Byte]) => toPrepend ++ existing }
   )
@@ -99,7 +100,7 @@ trait RequestBuilderDSL {
                             (implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A],
                              charset: Charset = UTF8Charset): HeaderAndBodyBuilder = {
       //if it's a string, don't JSON encode it
-      val bodyString = value.cast[String].map(s => s) | compact(render(toJSON(value)))
+      val bodyString = value.cast[String].map(s => s) | compactRender(toJSON(value))
       setBodyString(bodyString)
     }
 

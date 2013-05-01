@@ -18,7 +18,7 @@ package com.stackmob.newman
 
 import scalaz._
 import Scalaz._
-import scalaz.effects._
+import scalaz.effect.IO
 import scalaz.concurrent._
 import org.apache.http.params.HttpConnectionParams
 import response.HttpResponseCode
@@ -28,8 +28,6 @@ import org.apache.http.client.methods._
 import org.apache.http.entity.{ByteArrayEntity, BufferedHttpEntity}
 import org.apache.http.HttpHeaders._
 import com.stackmob.newman.request._
-import HttpRequest._
-import HttpRequestWithBody._
 import com.stackmob.newman.Exceptions.UnknownHttpStatusCodeException
 import com.stackmob.newman.response.HttpResponse
 import org.apache.http.impl.client.{AbstractHttpClient, DefaultHttpClient}
@@ -60,7 +58,7 @@ class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTi
     client
   }
 
-  private def wrapIOPromise[T](t: => T): IO[Promise[T]] = io(promise(t)(strategy))
+  private def wrapIOPromise[T](t: => T): IO[Promise[T]] = IO(Promise(t)(strategy))
 
   protected def executeRequest(httpMessage: HttpRequestBase,
                                url: URL,
@@ -75,7 +73,7 @@ class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTi
       }
     }
     //if there's both a body and httpMessage is an entity enclosing request, then set the body
-    (body <|*|> httpMessage.cast[HttpEntityEnclosingRequestBase]).foreach { tup: (RawBody, HttpEntityEnclosingRequestBase) =>
+    (body tuple httpMessage.cast[HttpEntityEnclosingRequestBase]).foreach { tup: (RawBody, HttpEntityEnclosingRequestBase) =>
       val (body,req) = tup
       req.setEntity(new ByteArrayEntity(body))
     }

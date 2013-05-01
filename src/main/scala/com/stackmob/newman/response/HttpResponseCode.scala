@@ -20,6 +20,7 @@ package response
 import scalaz._
 import Scalaz._
 import enumeration._
+import language.implicitConversions
 
 sealed abstract class HttpResponseCode(val code: Int, override val stringVal: String) extends Enumeration
 

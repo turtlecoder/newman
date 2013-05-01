@@ -23,6 +23,7 @@ import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL
 import scalaz._
 import Scalaz._
+import scalaz.NonEmptyList._
 
 class DSLSpecs extends Specification { def is =
   "DSLSpecs".title                                                                                                      ^
@@ -150,7 +151,7 @@ class DSLSpecs extends Specification { def is =
 
     protected val header1 = "testHeaderName" -> "testHeaderVal"
     protected val header2 = "testHeaderName2" -> "testHeaderVal2"
-    protected val headers = nel(header1, header2)
+    protected val headers = nels(header1, header2)
     def correctlyAddsAHeader = ensureEqualHeaders(transformer.addHeaders(header1), header1)
     def correctlyAddsHeaders = ensureEqualHeaders(transformer.addHeaders(headers), headers)
     def correctlyPrependsHeaders: SpecsResult = {
@@ -158,14 +159,14 @@ class DSLSpecs extends Specification { def is =
       ensureEqualHeaders(transformer.addHeaders(headers).addHeaders(header2), nel(header2, headers.list))
     }
     def correctlySetsAHeader = {
-      ensureEqualHeaders(transformer.setHeaders(header1), nel(header1))
+      ensureEqualHeaders(transformer.setHeaders(header1), nels(header1))
     }
     def correctlySetsHeaders = {
       ensureEqualHeaders(transformer.setHeaders(headers), Headers(List(header1, header2)))
     }
     def correctlyReplacesHeaders: SpecsResult = {
       ensureEqualHeaders(transformer.addHeaders(header1).setHeaders(header2), Headers(header2)) and
-        ensureEqualHeaders(transformer.addHeaders(headers).setHeaders(header1), nel(header1)) and
+        ensureEqualHeaders(transformer.addHeaders(headers).setHeaders(header1), nels(header1)) and
         ensureEqualHeaders(transformer.addHeaders(header1).setHeaders(headers), Headers(header1, header2))
     }
   }

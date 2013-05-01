@@ -17,11 +17,14 @@
 package com.stackmob.newman
 
 import request.HttpRequest
-import response.HttpResponse
-import scalaz._
-import scalaz.effects._
-import Scalaz._
+import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
+import scalaz.effect.IO
 import java.net.URL
+import scalaz.Validation
+import net.liftweb.json.scalaz.JsonScalaz._
+import java.nio.charset.Charset
+import com.stackmob.newman.Constants._
+import language.implicitConversions
 
 package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHandlerDSL {
 
@@ -42,12 +45,54 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
 
   implicit def transformerToHttpRequest(t: Builder): HttpRequest = t.toRequest
 
-  implicit def ioRespToW(ioResp: IO[HttpResponse]): IOResponseW = new IOResponseW {
-    override val value = ioResp
+  implicit def responseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]): IOValidation[Failure, Success] = {
+    handler.toIO
   }
 
-  implicit def ResponseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]): IOValidation[Failure, Success] = {
-    handler.toIO
+  implicit class RichIOHttpResponse(value: IO[HttpResponse]) {
+
+    private def emptyHandlerList[Failure,Success] = List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])]()
+
+    def handleCodesSuchThat[Failure, Success](check: HttpResponseCode => Boolean)
+                                             (handler: HttpResponse => Validation[Failure, Success])
+                                             (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCodesSuchThat(check)(handler)
+    }
+
+    def handleCode[Failure, Success](code: HttpResponseCode)
+                                    (handler: HttpResponse => Validation[Failure, Success])
+                                    (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCode(code)(handler)
+    }
+
+    def handleCodes[Failure, Success](codes: Seq[HttpResponseCode])
+                                     (handler: HttpResponse => Validation[Failure, Success])
+                                     (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCodes(codes)(handler)
+    }
+
+    def expectJSONBody[Failure, Success](code: HttpResponseCode)
+                                        (implicit reader: JSONR[Success],
+                                         m: Manifest[Success],
+                                         charset: Charset = UTF8Charset,
+                                         errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, m, charset)
+    }
+
+    def handleJSONBody[Failure, S, Success](code: HttpResponseCode)
+                                           (handler: S => Validation[Failure, Success])
+                                           (implicit reader: JSONR[S],
+                                            m: Manifest[S],
+                                            charset: Charset = UTF8Charset,
+                                            errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, m, charset)
+    }
+
+    def expectNoContent[Failure, Success](successValue: Success)
+                                         (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
+      ResponseHandler(emptyHandlerList[Failure,Success], value).expectNoContent(successValue)
+    }
+
   }
 
 }

@@ -18,7 +18,7 @@ package com.stackmob.newman.caching
 
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
-import scalaz.effects._
+import scalaz.effect.IO
 
 trait HttpResponseCacher {
   /**
