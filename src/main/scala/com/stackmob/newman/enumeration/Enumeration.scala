@@ -106,8 +106,3 @@ trait EnumReader[T] {
 trait EnumUnapply[T <: Enumeration] {
   def unapply(s: String)(implicit reader: EnumReader[T]): Option[T] = reader.read(s)
 }
-
-trait StringEnumReaderW {
-  def value: String
-  def readEnum[T <: Enumeration](implicit reader: EnumReader[T]): Option[T] = reader.read(value)
-}

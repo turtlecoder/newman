@@ -19,8 +19,10 @@ package request
 
 import java.net.URL
 import scalaz._
+import scalaz.Validation._
 import Scalaz._
-import scalaz.effects._
+import scalaz.effect.IO
+import scalaz.NonEmptyList._
 import scalaz.concurrent._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
@@ -51,16 +53,16 @@ trait HttpRequest {
   def prepareAsync: IO[Promise[HttpResponse]]
 
   /**
-   * alias for prepare.unsafePerformIO. executes the HTTP request immediately in the calling thread
+   * alias for prepare.unsafePerformIO(). executes the HTTP request immediately in the calling thread
    * @return the HttpResponse that was returned from this HTTP request
    */
-  def executeUnsafe: HttpResponse = prepare.unsafePerformIO
+  def executeUnsafe: HttpResponse = prepare.unsafePerformIO()
 
   /**
-   * alias for prepareAsync.unsafePerformIO. executes the HTTP request in a Promise
+   * alias for prepareAsync.unsafePerformIO(). executes the HTTP request in a Promise
    * @return a promise representing the HttpResponse that was returned from this HTTP request
    */
-  def executeAsyncUnsafe: Promise[HttpResponse] = prepareAsync.unsafePerformIO
+  def executeAsyncUnsafe: Promise[HttpResponse] = prepareAsync.unsafePerformIO()
 
   def toJValue(implicit client: HttpClient): JValue = {
     import net.liftweb.json.scalaz.JsonScalaz.toJSON
@@ -72,7 +74,7 @@ trait HttpRequest {
   def toJson(prettyPrint: Boolean = false)(implicit client: HttpClient): String = if(prettyPrint) {
     pretty(render(toJValue))
   } else {
-    compact(render(toJValue))
+    compactRender(toJValue)
   }
 
   private lazy val md5 = MessageDigest.getInstance("MD5")
@@ -114,11 +116,11 @@ object HttpRequest {
     fromJSON(jValue)(requestSerialization.reader)
   }
 
-  def fromJson(json: String)(implicit client: HttpClient): Result[HttpRequest] = (validating {
+  def fromJson(json: String)(implicit client: HttpClient): Result[HttpRequest] = (fromTryCatch {
     parse(json)
-  } mapFailure { t: Throwable =>
+  } leftMap { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
-  }).liftFailNel.flatMap(fromJValue(_))
+  }).toValidationNel.flatMap { j: JValue => fromJValue(j) }
 }
 
 sealed trait HttpRequestWithBody extends HttpRequest {

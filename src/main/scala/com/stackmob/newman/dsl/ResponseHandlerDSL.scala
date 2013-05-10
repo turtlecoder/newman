@@ -19,14 +19,13 @@ package dsl
 
 import scalaz._
 import Scalaz._
-import scalaz.effects.IO
+import scalaz.effect.IO
 import response.HttpResponseCode
 import response.HttpResponse
 import response.HttpResponse.JSONParsingError
 import java.nio.charset.Charset
 import Constants._
 import net.liftweb.json.scalaz.JsonScalaz._
-
 
 /**
  * Facilitates the handling of various response codes per response, where each handler for a given code may fail or may succeed with
@@ -63,7 +62,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
  *
  * If the response is expected to be considered a success when it its code is `200 OK`
  * and is expected to have a body whose content can is valid JSON `expectJSONBody`
- * can be called given there is an implicit [[net.liftweb.json.scalaz.Types.JSONR]] in scope for `T`.
+ * can be called given there is an implicit `net.liftweb.json.scalaz.Types.JSONR` in scope for `T`.
  * See `expectJSONBody` for more info.
  *
  * Example:
@@ -126,7 +125,7 @@ trait ResponseHandlerDSL {
      * made, however, if there are there is no effect on the handling of the response.
      * @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
-    def expectJSONBody(code: HttpResponseCode)(implicit reader: JSONR[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
+    def expectJSONBody(code: HttpResponseCode)(implicit reader: JSONR[Success], m: Manifest[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
       handleJSONBody[Success](code)(_.success[Failure])
     }
 
@@ -141,8 +140,8 @@ trait ResponseHandlerDSL {
      */
     def handleJSONBody[S](code: HttpResponseCode)
                          (handler: S => Validation[Failure, Success])
-                         (implicit reader: JSONR[S], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
-      handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].mapFailure { t =>
+                         (implicit reader: JSONR[S], m: Manifest[S], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
+      handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].leftMap { t =>
         errorConv(JSONParsingError(t): Throwable): Failure
       }.flatMap(handler))
     }
@@ -171,51 +170,6 @@ trait ResponseHandlerDSL {
       default { resp =>
         errorConv(UnhandledResponseCode(resp.code, resp.bodyString)).fail[Success]
       }
-    }
-  }
-
-  trait IOResponseW {
-
-    protected def value: IO[HttpResponse]
-
-    private def emptyHandlerList[Failure,Success] = List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])]()
-
-    def handleCodesSuchThat[Failure, Success](check: HttpResponseCode => Boolean)
-                                             (handler: HttpResponse => Validation[Failure, Success])
-                                             (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCodesSuchThat(check)(handler)
-    }
-
-    def handleCode[Failure, Success](code: HttpResponseCode)
-                                    (handler: HttpResponse => Validation[Failure, Success])
-                                    (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCode(code)(handler)
-    }
-
-    def handleCodes[Failure, Success](codes: Seq[HttpResponseCode])
-                                     (handler: HttpResponse => Validation[Failure, Success])
-                                     (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCodes(codes)(handler)
-    }
-
-    def expectJSONBody[Failure, Success](code: HttpResponseCode)
-                                        (implicit reader: JSONR[Success],
-                                         charset: Charset = UTF8Charset,
-                                         errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, charset)
-    }
-
-    def handleJSONBody[Failure, S, Success](code: HttpResponseCode)
-                                           (handler: S => Validation[Failure, Success])
-                                           (implicit reader: JSONR[S],
-                                            charset: Charset = UTF8Charset,
-                                            errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, charset)
-    }
-
-    def expectNoContent[Failure, Success](successValue: Success)
-                                         (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).expectNoContent(successValue)
     }
   }
 

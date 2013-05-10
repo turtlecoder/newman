@@ -27,7 +27,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
 
 object HttpRequestTypeSerialization extends SerializationBase[HttpRequestType] {
   implicit override val reader = new JSONR[HttpRequestType] {
-    override def read(jValue: JValue): ValidationNEL[Error, HttpRequestType] = jValue match {
+    override def read(jValue: JValue): ValidationNel[Error, HttpRequestType] = jValue match {
       case JString(s) => s.readEnum[HttpRequestType].map(_.successNel[Error]) | {
         UncategorizedError("request type", "unknown request type %s".format(s), List()).failNel[HttpRequestType]
       }

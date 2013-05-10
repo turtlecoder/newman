@@ -41,12 +41,12 @@ class HttpResponseSerializationSpecs extends Specification { def is =
     def succeeds: SpecsResult = {
       val json = resp.toJson(true)
       HttpResponse.fromJson(json).fold(
-        success = { deserialized: HttpResponse =>
+        succ = { deserialized: HttpResponse =>
           (deserialized.code must beEqualTo(resp.code)) and
           (deserialized.headers must haveTheSameHeadersAs(resp.headers)) and
           (deserialized.rawBody.toList must haveTheSameElementsAs(resp.rawBody.toList))
         },
-        failure = { e =>
+        fail = { e =>
           SpecsFailure("deserialization failed with error %s".format(e.toString()))
         }
       )

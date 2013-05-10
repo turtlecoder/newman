@@ -20,14 +20,13 @@ import com.stackmob.newman.request._
 import com.stackmob.newman.caching._
 import scalaz._
 import Scalaz._
-import scalaz.effects._
+import scalaz.effect.IO
+import scalaz.NonEmptyList._
 import scalaz.concurrent._
 import com.stackmob.newman.caching.HttpResponseCacher
 import response.HttpResponse
 import org.apache.http.HttpHeaders
 import java.net.URL
-import java.util.concurrent.TimeUnit
-import java.util.Date
 
 class ETagAwareHttpClient(httpClient: HttpClient,
                           httpResponseCacher: HttpResponseCacher,

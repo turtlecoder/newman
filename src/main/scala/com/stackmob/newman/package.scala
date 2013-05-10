@@ -17,7 +17,8 @@
 package com.stackmob
 
 import scalaz._
-import scalaz.effects.IO
+import scalaz.effect.IO
+import scalaz.NonEmptyList._
 import Scalaz._
 import java.nio.charset.Charset
 
@@ -37,20 +38,19 @@ package object newman extends NewmanPrivate {
       }
     }
 
-    implicit val HeadersZero = new Zero[Headers] {
-      override val zero = Headers.empty
-    }
+    implicit val HeadersMonoid: Monoid[Headers] =
+      Monoid.instance((mbH1, mbH2) => (mbH1 tuple mbH2).map(h => h._1.append(h._2)), Headers.empty)
 
     implicit val HeadersShow = new Show[Headers] {
-      override def show(h: Headers): List[Char] = {
+      override def shows(h: Headers): String = {
         val s = ~h.map { headerList: HeaderList =>
           headerList.list.map(h => h._1 + "=" + h._2).mkString("&")
         }
-        s.toList
+        s
       }
     }
 
-    def apply(h: Header): Headers = Headers(nel(h))
+    def apply(h: Header): Headers = Headers(nels(h))
     def apply(h: Header, tail: Header*): Headers = Headers(nel(h, tail.toList))
     def apply(h: HeaderList): Headers = h.some
     def apply(h: List[Header]): Headers = h.toNel
@@ -58,9 +58,7 @@ package object newman extends NewmanPrivate {
   }
 
   type RawBody = Array[Byte]
-  implicit val RawBodyZero = new Zero[RawBody] {
-    override lazy val zero = Array[Byte]()
-  }
+  implicit val RawBodyMonoid: Monoid[RawBody] = Monoid.instance(_ ++ _, Array[Byte]())
   object RawBody {
     def apply(s: String, charset: Charset = Constants.UTF8Charset): Array[Byte] = s.getBytes(charset)
     def apply(b: Array[Byte]): Array[Byte] = b

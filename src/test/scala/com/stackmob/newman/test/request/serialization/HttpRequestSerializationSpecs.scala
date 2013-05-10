@@ -48,7 +48,7 @@ class HttpRequestSerializationSpecs extends Specification { def is =
 
     private def ensure(t: HttpRequest)(extra: HttpRequest => MatchResult[_]): MatchResult[_] = {
       val json = t.toJson(false)(client)
-      HttpRequest.fromJson(json)(client).either must beRight.like {
+      HttpRequest.fromJson(json)(client).toEither must beRight.like {
         case req: HttpRequest => {
           (req.url must beEqualTo(t.url)) and
           (req.headers must haveTheSameHeadersAs(t.headers)) and

@@ -18,6 +18,7 @@ package com.stackmob.newman
 package serialization.response
 
 import scalaz._
+import scalaz.Validation._
 import Scalaz._
 import com.stackmob.newman.response.HttpResponseCode
 import net.liftweb.json._
@@ -32,8 +33,8 @@ object HttpResponseCodeSerialization extends SerializationBase[HttpResponseCode]
   override implicit val reader = new JSONR[HttpResponseCode] {
     override def read(json: JValue): Result[HttpResponseCode] = {
       json match {
-        case JInt(code) => validating(HttpResponseCode.fromInt(code.toInt)).fold(
-          success = {
+        case JInt(code) => fromTryCatch(HttpResponseCode.fromInt(code.toInt)).fold(
+          succ = {
             o: Option[HttpResponseCode] =>
               o.map {
                 c: HttpResponseCode => c.successNel[Error]
@@ -41,7 +42,7 @@ object HttpResponseCodeSerialization extends SerializationBase[HttpResponseCode]
                 UncategorizedError("response code", "Unknown Http Response Code %d".format(code), List()).failNel[HttpResponseCode]
               }
           },
-          failure = { t: Throwable =>
+          fail = { t: Throwable =>
             UncategorizedError("response code", t.getMessage, List()).failNel[HttpResponseCode]
           }
         )

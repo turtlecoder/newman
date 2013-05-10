@@ -64,7 +64,7 @@ class HttpRequestSerialization(client: HttpClient) extends SerializationBase[Htt
         val bodyField = field[RawBody](BodyKey)(json)(RawBodyReader)
         val baseApplicative = urlField |@| headersField
         val withBodyApplicative = baseApplicative |@| bodyField
-        val res: ValidationNEL[Error, HttpRequest] = reqType match {
+        val res: ValidationNel[Error, HttpRequest] = reqType match {
           case GET => baseApplicative(client.get(_, _))
           case POST => withBodyApplicative(client.post(_, _, _))
           case PUT => withBodyApplicative(client.put(_, _, _))

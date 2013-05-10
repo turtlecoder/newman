@@ -19,7 +19,7 @@ package com.stackmob.newman.test.dsl
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import scalaz._
-import effects._
+import effect.IO
 import Scalaz._
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.{RawBody, Headers}
@@ -44,23 +44,23 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
   case class ThrowingIO() extends Context {
     def returnsFailure: SpecsResult = {
       val ex = new Exception("test exception")
-      val respIO = io((throw ex): HttpResponse).handleCode(HttpResponseCode.Ok)(_ => ().success)
-      respIO.unsafePerformIO.either must beLeft.like {
+      val respIO = IO((throw ex): HttpResponse).handleCode(HttpResponseCode.Ok)(_ => ().success)
+      respIO.unsafePerformIO().toEither must beLeft.like {
         case e => e must beEqualTo(ex)
       }
     }
 
     def returnsEmptySuccess: SpecsResult = {
-      val respIO = io(HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)).handleCode(HttpResponseCode.Ok)(_ => ().success)
-      respIO.unsafePerformIO.either must beRight.like {
+      val respIO = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)).handleCode(HttpResponseCode.Ok)(_ => ().success)
+      respIO.unsafePerformIO().toEither must beRight.like {
         case e => e must beEqualTo(())
       }
     }
 
     def returnsNonEmptySuccess: SpecsResult = {
       val bodyString = "test body"
-      val respIO = io(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode(HttpResponseCode.Ok){resp => resp.bodyString.success}
-      respIO.unsafePerformIO.either must beRight.like {
+      val respIO = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode(HttpResponseCode.Ok){resp => resp.bodyString.success}
+      respIO.unsafePerformIO().toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }
@@ -71,16 +71,16 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
       val exceptionMessage = "test exception"
       val ex = new Exception(exceptionMessage)
       val customError = new CustomErrorForSpecs(exceptionMessage)
-      val respIO: IO[Validation[CustomErrorForSpecs, Unit]] = io((throw ex): HttpResponse).handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok)(_ => ().success)
-      respIO.unsafePerformIO.either must beLeft.like {
+      val respIO: IO[Validation[CustomErrorForSpecs, Unit]] = IO((throw ex): HttpResponse).handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok)(_ => ().success)
+      respIO.unsafePerformIO().toEither must beLeft.like {
         case e => e must beEqualTo(customError)
       }
     }
 
     def returnsSuccessCorrectly: SpecsResult = {
       val bodyString = "test body"
-      val respIO: IO[Validation[CustomErrorForSpecs, String]] = io(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){resp => resp.bodyString.success}
-      respIO.unsafePerformIO.either must beRight.like {
+      val respIO: IO[Validation[CustomErrorForSpecs, String]] = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){resp => resp.bodyString.success}
+      respIO.unsafePerformIO().toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }

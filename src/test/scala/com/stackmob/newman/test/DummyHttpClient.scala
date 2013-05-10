@@ -23,7 +23,7 @@ import com.stackmob.newman.response._
 import java.util.concurrent.CopyOnWriteArrayList
 import scalaz._
 import Scalaz._
-import scalaz.effects._
+import scalaz.effect.IO
 import scalaz.concurrent._
 
 class DummyHttpClient(val responseToReturn: () => HttpResponse = () => DummyHttpClient.CannedResponse) extends HttpClient {

@@ -17,9 +17,10 @@
 package com.stackmob.newman.request
 
 import scalaz.concurrent.Promise
-import scalaz.effects._
+import scalaz.effect.IO
 import scalaz._
 import Scalaz._
+import scalaz.NonEmptyList._
 import com.stackmob.newman.response.HttpResponse
 
 object HttpRequestExecution {
@@ -34,7 +35,7 @@ object HttpRequestExecution {
    * @return an IO representing a list of each request and its response
    */
   def sequencedRequests(requests: NonEmptyList[HttpRequest]): IO[RequestResponsePairList] = {
-    val ioList: NonEmptyList[IO[RequestResponsePair]] = requests.map(req => req.pure[IO] <|*|> req.prepare)
+    val ioList: NonEmptyList[IO[RequestResponsePair]] = requests.map(req => req.pure[IO] tuple req.prepare)
     ioList.sequence[IO, RequestResponsePair]
   }
 
@@ -49,13 +50,13 @@ object HttpRequestExecution {
     val firstReqIO = firstReq.pure[IO]
     val firstRespIO = firstReq.prepare
     type RunningList = NonEmptyList[IO[(HttpRequest, HttpResponse)]]
-    val runningList: RunningList = nel(firstReqIO <|*|> firstRespIO)
+    val runningList: RunningList = nels(firstReqIO tuple firstRespIO)
     val (_, _, list) = remainingRequests.list.foldLeft((firstReqIO, firstRespIO, runningList)) {
       (running: (IO[HttpRequest], IO[HttpResponse], RunningList), cur: HttpResponse => HttpRequest) =>
         val (_, lastRespIO, runningList) = running
         val newReqIO = lastRespIO.map(cur(_))
         val newRespIO = newReqIO.flatMap(_.prepare)
-        val newRunningList = runningList :::> List(newReqIO <|*|> newRespIO)
+        val newRunningList = runningList :::> List(newReqIO tuple newRespIO)
         (newReqIO, newRespIO, newRunningList)
     }
     list.sequence[IO, RequestResponsePair]
@@ -71,6 +72,6 @@ object HttpRequestExecution {
   def concurrentRequests(requests: NonEmptyList[HttpRequest]): IO[RequestPromiseResponsePairList] = requests.map { req: HttpRequest =>
     val reqIO: IO[HttpRequest] = req.pure[IO]
     val respIO: IO[Promise[HttpResponse]] = req.prepareAsync
-    reqIO <|*|> respIO
+    reqIO tuple respIO
   }.sequence[IO, RequestPromiseResponsePair]
 }

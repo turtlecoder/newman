@@ -18,8 +18,10 @@ package com.stackmob.newman
 package response
 
 import scalaz._
-import effects._
+import scalaz.effect.IO
+import scalaz.EitherT._
 import Scalaz._
+import scalaz.NonEmptyList._
 import jsonscalaz._
 import java.nio.charset.Charset
 import java.util.Date
@@ -27,11 +29,10 @@ import com.stackmob.newman.Constants._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 import org.apache.http.HttpHeaders
-import com.stackmob.newman.response.HttpResponseCode.HttpResponseCodeEqual
 import com.stackmob.newman.serialization.response.HttpResponseSerialization
 import com.stackmob.newman.serialization.common.DefaultBodySerialization
 import java.util.concurrent.ConcurrentHashMap
-import scala.collection.JavaConversions.JConcurrentMapWrapper
+import scala.collection.convert.Wrappers.JConcurrentMapWrapper
 
 case class HttpResponse(code: HttpResponseCode,
                         headers: Headers,
@@ -40,7 +41,7 @@ case class HttpResponse(code: HttpResponseCode,
   import HttpResponse._
 
   private lazy val rawBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[Charset, String])
-  private lazy val parsedBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, JSONR[_]), Result[_]])
+  private lazy val parsedBodyMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Class[_]), Result[_]])
   private lazy val jValueMap = new JConcurrentMapWrapper(new ConcurrentHashMap[Charset, JValue])
   private lazy val jsonMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Boolean), String])
   private lazy val caseClassMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Class[_]), Result[_]])
@@ -58,29 +59,26 @@ case class HttpResponse(code: HttpResponseCode,
       if(prettyPrint) {
         pretty(render(toJValue))
       } else {
-        compact(render(toJValue))
+        compactRender(toJValue)
       }
     })
   }
 
   def bodyAsCaseClass[T <: AnyRef](implicit m: Manifest[T], charset: Charset = UTF8Charset): Result[T] = {
     def theReader(implicit reader: JSONR[T] = DefaultBodySerialization.getReader): JSONR[T] = reader
-    caseClassMap.getOrElseUpdate((charset, m.erasure), {
+    caseClassMap.getOrElseUpdate((charset, m.runtimeClass), {
       fromJSON[T](parse(bodyString(charset)))(theReader)
     }).map(_.asInstanceOf[T])
   }
 
   def bodyAs[T](implicit reader: JSONR[T],
+                m: Manifest[T],
                 charset: Charset = UTF8Charset): Result[T] = {
-    parsedBodyMap.get((charset, reader)) match {
+    parsedBodyMap.get((charset, m.runtimeClass)) match {
       case Some(v) => v.map(_.asInstanceOf[T])
       case None => {
         val d = parseBody[T]
-        // protect against JSONR's which are not singletons
-        // may want to pass in a Manifest[T] to avoid this but it breaks the interface
-        if (parsedBodyMap.size < 16) {
-          parsedBodyMap((charset, reader)) = d
-        }
+        parsedBodyMap((charset, m.runtimeClass)) = d
         d
       }
     }
@@ -88,10 +86,10 @@ case class HttpResponse(code: HttpResponseCode,
 
   private def parseBody[T](implicit reader: JSONR[T],
                            charset: Charset = UTF8Charset): Result[T] = {
-    validating {
+    Validation.fromTryCatch {
       parse(bodyString(charset))
-    } mapFailure { t: Throwable =>
-      nel(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
+    } leftMap { t: Throwable =>
+      nels(UncategorizedError(t.getClass.getCanonicalName, t.getMessage, Nil))
     } flatMap { jValue: JValue =>
       fromJSON[T](jValue)
     }
@@ -99,27 +97,29 @@ case class HttpResponse(code: HttpResponseCode,
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode,
                               decoder: HttpResponse => ThrowableValidation[T]): ThrowableValidation[T] = {
-    val valT = for {
-      resp <- validationT[IO, Throwable, HttpResponse](validating(this).pure[IO])
-      _ <- validationT[IO, Throwable, Unit] {
+    (for {
+      resp <- eitherT[IO, Throwable, HttpResponse] {
+        \/.fromTryCatch(this).pure[IO]
+      }
+      _ <- eitherT[IO, Throwable, Unit] {
         if(resp.code === expected) {
-          ().success[Throwable].pure[IO]
+          ().right.pure[IO]
         } else {
-          (UnexpectedResponseCode(expected, resp.code): Throwable).fail[Unit].pure[IO]
+          (UnexpectedResponseCode(expected, resp.code): Throwable).left.pure[IO]
         }
       }
-      body <- validationT[IO, Throwable, T] {
-        io(decoder(resp)).except(t => t.fail[T].pure[IO])
+      body <- eitherT[IO, Throwable, T] {
+        IO(decoder(resp).disjunction).except(_.left.pure[IO])
       }
-    } yield body
-    valT.run.unsafePerformIO
+    } yield body).run.map(_.validation).unsafePerformIO()
   }
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode)
                              (implicit reader: JSONR[T],
+                              m: Manifest[T],
                               charset: Charset = UTF8Charset): ThrowableValidation[T] = {
     bodyAsIfResponseCode[T](expected, { resp: HttpResponse =>
-      bodyAs[T].mapFailure { errNel: NonEmptyList[Error] =>
+      bodyAs[T].leftMap { errNel: NonEmptyList[Error] =>
         val t: Throwable = JSONParsingError(errNel)
         t
       }
@@ -139,11 +139,11 @@ object HttpResponse {
     fromJSON(jValue)(getResponseSerialization.reader)
   }
 
-  def fromJson(json: String): Result[HttpResponse] = (validating {
+  def fromJson(json: String): Result[HttpResponse] = (Validation.fromTryCatch {
     parse(json)
-  } mapFailure { t: Throwable =>
+  } leftMap { t: Throwable =>
     UncategorizedError(t.getClass.getCanonicalName, t.getMessage, List())
-  }).liftFailNel.flatMap(fromJValue(_))
+  }).toValidationNel.flatMap { j: JValue => fromJValue(j) }
 
   case class UnexpectedResponseCode(expected: HttpResponseCode, actual: HttpResponseCode)
     extends Exception("expected response code %d, got %d".format(expected.code, actual.code))

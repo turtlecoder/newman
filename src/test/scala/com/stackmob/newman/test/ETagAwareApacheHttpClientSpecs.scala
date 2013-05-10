@@ -17,6 +17,7 @@
 package com.stackmob.newman.test
 
 import scalaz._
+import scalaz.Validation._
 import Scalaz._
 import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
@@ -79,7 +80,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     override protected val rawClient = new DummyHttpClient
 
     def executesINMRequest: SpecsResult = {
-      client.get(url, Headers.empty).prepare.unsafePerformIO
+      client.get(url, Headers.empty).prepare.unsafePerformIO()
       (rawClient.getRequests.get(0)._1 must beEqualTo(url)) and
       (rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers(INM)))
     }
@@ -90,7 +91,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.some, (), true)
 
     def returnsCachedResponse: SpecsResult = {
-      val resp = client.get(url, Headers.empty).prepare.unsafePerformIO
+      val resp = client.get(url, Headers.empty).prepare.unsafePerformIO()
       resp must beTheSameResponseAs(responseWithETag)
     }
   }
@@ -100,7 +101,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.some, (), true)
 
     def returnsNewResponse: SpecsResult = {
-      val resp = client.get(url, Headers.empty).prepare.unsafePerformIO
+      val resp = client.get(url, Headers.empty).prepare.unsafePerformIO()
       resp must beTheSameResponseAs(responseWithETag)
     }
   }
@@ -110,14 +111,14 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     override protected val responseCacher = new DummyHttpResponseCacher(responseWithoutETag.some, (), true)
 
     def executesNormalRequest: SpecsResult = {
-      client.get(url, Headers.empty).prepare.unsafePerformIO
+      client.get(url, Headers.empty).prepare.unsafePerformIO()
       (rawClient.getRequests.get(0)._1 must beEqualTo(url)) and
       (rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers.empty))
     }
 
     def cachesNewResponse: SpecsResult = {
       val req = client.get(url, Headers.empty)
-      req.prepare.unsafePerformIO
+      req.prepare.unsafePerformIO()
       foldResponseCacherCalls(responseCacher, { getCalls: List[HttpRequest] =>
         (getCalls.length must beEqualTo(1)) and
         (getCalls(0) must beEqualTo(req))
@@ -133,7 +134,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     override protected val responseCacher = new DummyHttpResponseCacher(Option.empty[HttpResponse], (), true)
 
     def executesNormalRequest: SpecsResult = {
-      client.get(url, Headers.empty).prepare.unsafePerformIO
+      client.get(url, Headers.empty).prepare.unsafePerformIO()
       val getRequest = rawClient.getRequests.get(0)
       (getRequest._1 must beEqualTo(url)) and
       (getRequest._2 must haveTheSameHeadersAs(DummyHttpClient.CannedResponse.headers))
@@ -141,7 +142,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
     def cachesNewResponse: SpecsResult = {
       val req = client.get(url, Headers.empty)
-      req.prepare.unsafePerformIO
+      req.prepare.unsafePerformIO()
       foldResponseCacherCalls(responseCacher, { getCalls: List[HttpRequest] =>
         (getCalls.length must beEqualTo(1)) and
         (getCalls(0) must beEqualTo(req))
@@ -160,7 +161,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       (throw cacheException): Boolean)
 
     def executesNoRequest: SpecsResult = {
-      validating(client.get(url, Headers.empty).prepare.unsafePerformIO)
+      fromTryCatch(client.get(url, Headers.empty).prepare.unsafePerformIO())
       (rawClient.totalNumRequestsMade must beEqualTo(0))
     }
   }
