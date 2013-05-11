@@ -18,6 +18,7 @@ package com.stackmob.newman.test
 
 import org.specs2.Specification
 import com.stackmob.newman.FinagleHttpClient
+import com.twitter.util.Duration
 
 class FinagleHttpClientSpecs extends Specification with ClientTests with ResponseMatcher { def is =
   "FinagleHttpClientSpecs".title                                                                                        ^ end ^
@@ -33,5 +34,5 @@ class FinagleHttpClientSpecs extends Specification with ClientTests with Respons
   "head should work"                                                                                                    ! ClientTests(client).head ^ end ^
   "headAsync should work"                                                                                               ! ClientTests(client).headAsync ^ end ^
   end
-  private def client = new FinagleHttpClient
+  private def client = new FinagleHttpClient(tcpConnectionTimeout = Duration.fromMilliseconds(1000))
 }
