@@ -14,15 +14,6 @@ import scalaz.effect.IO
 import scalaz.Scalaz._
 import collection.JavaConverters._
 
-/**
- * Created by IntelliJ IDEA.
- *
- * com.stackmob.newman
- *
- * User: aaron
- * Date: 4/19/13
- * Time: 10:35 PM
- */
 class FinagleHttpClient extends HttpClient {
   import FinagleHttpClient._
 
