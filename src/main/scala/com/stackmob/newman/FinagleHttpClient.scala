@@ -4,24 +4,26 @@ import java.net.URL
 import com.stackmob.newman.request._
 import scalaz.concurrent.{Strategy, Promise}
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import com.twitter.util.{Future => TwitterFuture}
+import com.twitter.util.{Future => TwitterFuture, Duration}
 import com.twitter.finagle.http._
 import com.twitter.finagle.builder.ClientBuilder
-import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse, HttpRequest => NettyHttpRequest, HttpVersion => NettyHttpVersion, HttpMethod => NettyHttpMethod, HttpResponseStatus, DefaultHttpRequest}
+import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse, HttpRequest => NettyHttpRequest, HttpMethod => NettyHttpMethod, HttpResponseStatus}
 import java.nio.ByteBuffer
-import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer
+import org.jboss.netty.buffer.{ChannelBuffer, ByteBufferBackedChannelBuffer}
 import scalaz.effect.IO
 import scalaz.Scalaz._
 import collection.JavaConverters._
+import FinagleHttpClient._
 
-class FinagleHttpClient extends HttpClient {
-  import FinagleHttpClient._
+class FinagleHttpClient(tcpConnectionTimeout: Duration = DefaultTcpConnectTimeout) extends HttpClient {
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest {
     override lazy val url = u
     override lazy val headers = h
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO(executeRequest(NettyHttpMethod.GET, url, headers))
+      IO {
+        executeRequest(tcpConnectionTimeout, NettyHttpMethod.GET, url, headers)
+      }
     }
   }
 
@@ -30,7 +32,9 @@ class FinagleHttpClient extends HttpClient {
     override lazy val headers = h
     override lazy val body = b
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO(executeRequest(NettyHttpMethod.POST, url, headers, Some(body)))
+      IO {
+        executeRequest(tcpConnectionTimeout, NettyHttpMethod.POST, url, headers, Some(body))
+      }
     }
   }
 
@@ -39,7 +43,9 @@ class FinagleHttpClient extends HttpClient {
     override lazy val headers = h
     override lazy val body = b
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO(executeRequest(NettyHttpMethod.PUT, url, headers, Some(body)))
+      IO {
+        executeRequest(tcpConnectionTimeout, NettyHttpMethod.PUT, url, headers, Some(body))
+      }
     }
   }
 
@@ -47,7 +53,9 @@ class FinagleHttpClient extends HttpClient {
     override lazy val url = u
     override lazy val headers = h
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO(executeRequest(NettyHttpMethod.DELETE, url, headers))
+      IO {
+        executeRequest(tcpConnectionTimeout, NettyHttpMethod.DELETE, url, headers)
+      }
     }
   }
 
@@ -55,23 +63,22 @@ class FinagleHttpClient extends HttpClient {
     override lazy val url = u
     override lazy val headers = h
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO(executeRequest(NettyHttpMethod.HEAD, url, headers))
+      IO {
+        executeRequest(tcpConnectionTimeout, NettyHttpMethod.HEAD, url, headers)
+      }
     }
   }
 }
 
 object FinagleHttpClient {
 
-  def executeRequest(method: NettyHttpMethod,
+  def executeRequest(tcpConnectionTimeout: Duration,
+                     method: NettyHttpMethod,
                      url: URL,
                      headers: Headers,
                      mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
-    val client = createClient(url)
-    val req = mbBody.map { body =>
-      createNettyHttpRequest(method, url, headers, body)
-    }.getOrElse {
-      createNettyHttpRequest(method, url, headers)
-    }
+    val client = createClient(url, tcpConnectionTimeout)
+    val req = createNettyHttpRequest(method, url, headers, mbBody)
     client(req).toScalaPromise.map { res =>
       res.toNewmanHttpResponse | {
         throw new InvalidNettyResponse(res.getStatus)
@@ -79,7 +86,7 @@ object FinagleHttpClient {
     }
   }
 
-  def createClient(url: URL) = {
+  def createClient(url: URL, tcpConnectionTimeout: Duration) = {
     val host = url.getHost
     val port = url.getPort match {
       case -1 => 80
@@ -90,29 +97,34 @@ object FinagleHttpClient {
       .codec(Http())
       .hosts("%s:%s".format(host, port))
       .hostConnectionLimit(1)
+      .tcpConnectTimeout(tcpConnectionTimeout)
       .build()
   }
 
   def createNettyHttpRequest(method: NettyHttpMethod,
                              url: URL,
-                             headers: Headers): NettyHttpRequest = {
-    val request = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_1, method, url.getPath)
-    headers.foreach { headerList =>
-      headerList.list.foreach { header =>
-        request.setHeader(header._1, header._2)
-      }
+                             headers: Headers,
+                             mbBody: Option[RawBody]): NettyHttpRequest = {
+    val headersMap = headers.map { headerList =>
+      headerList.list.toMap
+    } | {
+      Map[String, String]()
     }
-    request
+
+    val mbChannelBuf: Option[ChannelBuffer] = mbBody.map { rawBody =>
+      rawBody.toChannelBuf
+    }
+    RequestBuilder()
+      .url(url)
+      .addHeaders(headersMap)
+      .build(method, mbChannelBuf)
   }
 
-  def createNettyHttpRequest(method: NettyHttpMethod,
-                             url: URL,
-                             headers: Headers,
-                             body: RawBody): NettyHttpRequest = {
-    val req = createNettyHttpRequest(method, url, headers)
-    val byteBuffer = ByteBuffer.wrap(body)
-    req.setContent(new ByteBufferBackedChannelBuffer(byteBuffer))
-    req
+  implicit class RawBodyW(rawBody: RawBody) {
+    def toChannelBuf: ChannelBuffer = {
+      val byteBuf = ByteBuffer.wrap(rawBody)
+      new ByteBufferBackedChannelBuffer(byteBuf)
+    }
   }
 
   implicit class NettyHttpResponseW(resp: NettyHttpResponse) {
@@ -146,4 +158,5 @@ object FinagleHttpClient {
   }
 
   class InvalidNettyResponse(nettyCode: HttpResponseStatus) extends Exception(s"Invalid netty response with code: ${nettyCode.getCode}")
+  val DefaultTcpConnectTimeout = Duration.fromMilliseconds(500)
 }

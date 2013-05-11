@@ -23,81 +23,19 @@ import com.stackmob.newman._
 import com.stackmob.newman.dsl._
 import org.specs2.matcher.MatchResult
 
-class ApacheHttpClientSpecs extends Specification { def is =
+class ApacheHttpClientSpecs extends Specification with ClientTests with ResponseMatcher { def is =
   "ApacheHttpClientSpecs".title                                                                                         ^ end ^
-  """
-  ApacheHttpClient is the HttpClient implementation that actually hits the internet
-  """                                                                                                                   ^ end ^
-  "The Client Should"                                                                                                   ^
-    "Correctly do GET requests"                                                                                         ! Get().succeeds ^
-    "Correctly do async GET requests"                                                                                   ! Get().succeedsAsync ^
-    "Correctly do POST requests"                                                                                        ! Post().succeeds ^
-    "Correctly do async POST requests"                                                                                  ! Post().succeedsAsync ^
-    "Correctly do PUT requests"                                                                                         ! Put().succeeds ^
-    "Correctly do async PUT requests"                                                                                   ! Put().succeedsAsync ^
-    "Correctly do DELETE requests"                                                                                      ! Delete().succeeds ^
-    "Correctly do async DELETE requests"                                                                                ! Delete().succeedsAsync ^
-    "Correctly do HEAD requests"                                                                                        ! Head().succeeds ^
-    "Correctly do async HEAD requests"                                                                                  ! Head().succeedsAsync ^
-                                                                                                                        end
-  trait Context extends BaseContext {
-    implicit protected val httpClient = new ApacheHttpClient
-
-    protected def execute[T](t: Builder,
-                             expectedCode: HttpResponseCode = HttpResponseCode.Ok)
-                            (fn: HttpResponse => MatchResult[T]) = {
-      val r = t.executeUnsafe
-      r.code must beEqualTo(expectedCode) and fn(r)
-    }
-
-    protected def executeAsync(t: Builder,
-                               expectedCode: HttpResponseCode = HttpResponseCode.Ok)
-                              (fn: HttpResponse => MatchResult[_]) = {
-      val rPromise = t.executeAsyncUnsafe
-      rPromise.map { r: HttpResponse =>
-        r.code must beEqualTo(expectedCode) and fn(r)
-      }.get
-    }
-
-    protected lazy val getURL = new URL("http://httpbin.org/get")
-    protected lazy val postURL = new URL("http://httpbin.org/post")
-    protected lazy val putURL = new URL("http://httpbin.org/put")
-    protected lazy val deleteURL = new URL("http://httpbin.org/delete")
-    protected lazy val headURL = new URL("http://httpbin.org/get")
-
-    implicit private val encoding = Constants.UTF8Charset
-
-    protected def ensureHttpOk(h: HttpResponse) = h.code must beEqualTo(HttpResponseCode.Ok)
-  }
-
-  case class Get() extends Context {
-    private val get = GET(getURL)
-    def succeeds = execute(get)(ensureHttpOk(_))
-    def succeedsAsync = executeAsync(get)(ensureHttpOk(_))
-  }
-
-  case class Post() extends Context {
-    private val post = POST(postURL)
-    def succeeds = execute(post)(ensureHttpOk(_))
-    def succeedsAsync = executeAsync(post)(ensureHttpOk(_))
-  }
-
-  case class Put() extends Context {
-    private val put = PUT(putURL)
-    def succeeds = execute(put)(ensureHttpOk(_))
-    def succeedsAsync = executeAsync(put)(ensureHttpOk(_))
-  }
-
-  case class Delete() extends Context {
-    private val delete = DELETE(deleteURL)
-    def succeeds = execute(delete)(ensureHttpOk(_))
-    def succeedsAsync = executeAsync(delete)(ensureHttpOk(_))
-  }
-
-  case class Head() extends Context {
-    private val head = HEAD(headURL)
-    def succeeds = execute(head)(ensureHttpOk(_))
-    def succeedsAsync = executeAsync(head)(ensureHttpOk(_))
-  }
-
+  "ApacheHttpClient is the HttpClient implementation that actually hits the internet"                                   ^ end ^
+  "get should work"                                                                                                     ! ClientTests(httpClient).get ^ end ^
+  "getAsync should work"                                                                                                ! ClientTests(httpClient).getAsync ^ end ^
+  "post should work"                                                                                                    ! ClientTests(httpClient).post ^ end ^
+  "postAsync should work"                                                                                               ! ClientTests(httpClient).postAsync ^ end ^
+  "put should work"                                                                                                     ! ClientTests(httpClient).put ^ end ^
+  "putAsync should work"                                                                                                ! ClientTests(httpClient).putAsync ^ end ^
+  "delete should work"                                                                                                  ! ClientTests(httpClient).delete ^ end ^
+  "deleteAsync should work"                                                                                             ! ClientTests(httpClient).deleteAsync ^ end ^
+  "head should work"                                                                                                    ! ClientTests(httpClient).head ^ end ^
+  "headAsync should work"                                                                                               ! ClientTests(httpClient).headAsync ^ end ^
+  end
+  private def httpClient = new ApacheHttpClient
 }
