@@ -2,20 +2,17 @@ package com.stackmob.newman
 
 import java.net.URL
 import com.stackmob.newman.request._
-import scalaz.effects._
 import scalaz.concurrent.{Strategy, Promise}
-import com.stackmob.newman.response.HttpResponse
+import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.twitter.util.{Future => TwitterFuture}
 import com.twitter.finagle.http._
 import com.twitter.finagle.builder.ClientBuilder
-import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse,
-  HttpRequest => NettyHttpRequest,
-  DefaultHttpRequest,
-  HttpVersion => NettyHttpVersion,
-  HttpMethod => NettyHttpMethod}
+import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse, HttpRequest => NettyHttpRequest, HttpVersion => NettyHttpVersion, HttpMethod => NettyHttpMethod, HttpResponseStatus, DefaultHttpRequest}
 import java.nio.ByteBuffer
 import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer
-
+import scalaz.effect.IO
+import scalaz.Scalaz._
+import collection.JavaConverters._
 
 /**
  * Created by IntelliJ IDEA.
@@ -33,7 +30,7 @@ class FinagleHttpClient extends HttpClient {
     override lazy val url = u
     override lazy val headers = h
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      io(executeRequest(NettyHttpMethod.GET, url, headers))
+      IO(executeRequest(NettyHttpMethod.GET, url, headers))
     }
   }
 
@@ -42,7 +39,7 @@ class FinagleHttpClient extends HttpClient {
     override lazy val headers = h
     override lazy val body = b
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      io(executeRequest(NettyHttpMethod.POST, url, headers, Some(body)))
+      IO(executeRequest(NettyHttpMethod.POST, url, headers, Some(body)))
     }
   }
 
@@ -51,7 +48,7 @@ class FinagleHttpClient extends HttpClient {
     override lazy val headers = h
     override lazy val body = b
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      io(executeRequest(NettyHttpMethod.PUT, url, headers, Some(body)))
+      IO(executeRequest(NettyHttpMethod.PUT, url, headers, Some(body)))
     }
   }
 
@@ -59,7 +56,7 @@ class FinagleHttpClient extends HttpClient {
     override lazy val url = u
     override lazy val headers = h
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      io(executeRequest(NettyHttpMethod.DELETE, url, headers))
+      IO(executeRequest(NettyHttpMethod.DELETE, url, headers))
     }
   }
 
@@ -67,17 +64,17 @@ class FinagleHttpClient extends HttpClient {
     override lazy val url = u
     override lazy val headers = h
     override def prepareAsync: IO[Promise[HttpResponse]] = {
-      io(executeRequest(NettyHttpMethod.HEAD, url, headers))
+      IO(executeRequest(NettyHttpMethod.HEAD, url, headers))
     }
   }
 }
 
 object FinagleHttpClient {
 
-  private[FinagleHttpClient] def executeRequest(method: NettyHttpMethod,
-                                                url: URL,
-                                                headers: Headers,
-                                                mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
+  def executeRequest(method: NettyHttpMethod,
+                     url: URL,
+                     headers: Headers,
+                     mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
     val client = createClient(url)
     val req = mbBody.map { body =>
       createNettyHttpRequest(method, url, headers, body)
@@ -85,11 +82,13 @@ object FinagleHttpClient {
       createNettyHttpRequest(method, url, headers)
     }
     client(req).toScalaPromise.map { res =>
-      res.toNewmanHttpResponse
+      res.toNewmanHttpResponse | {
+        throw new InvalidNettyResponse(res.getStatus)
+      }
     }
   }
 
-  private[FinagleHttpClient] def createClient(url: URL) = {
+  def createClient(url: URL) = {
     val host = url.getHost
     val port = url.getPort match {
       case -1 => 80
@@ -103,9 +102,9 @@ object FinagleHttpClient {
       .build()
   }
 
-  private[FinagleHttpClient] def createNettyHttpRequest(method: NettyHttpMethod,
-                                                        url: URL,
-                                                        headers: Headers): NettyHttpRequest = {
+  def createNettyHttpRequest(method: NettyHttpMethod,
+                             url: URL,
+                             headers: Headers): NettyHttpRequest = {
     val request = new DefaultHttpRequest(NettyHttpVersion.HTTP_1_1, method, url.getPath)
     headers.foreach { headerList =>
       headerList.list.foreach { header =>
@@ -115,41 +114,45 @@ object FinagleHttpClient {
     request
   }
 
-  private[FinagleHttpClient] def createNettyHttpRequest(method: NettyHttpMethod,
-                                                        url: URL,
-                                                        headers: Headers,
-                                                        body: RawBody): NettyHttpRequest = {
+  def createNettyHttpRequest(method: NettyHttpMethod,
+                             url: URL,
+                             headers: Headers,
+                             body: RawBody): NettyHttpRequest = {
     val req = createNettyHttpRequest(method, url, headers)
     val byteBuffer = ByteBuffer.wrap(body)
     req.setContent(new ByteBufferBackedChannelBuffer(byteBuffer))
     req
   }
 
-  private[FinagleHttpClient] sealed class NettyHttpResponseW(resp: NettyHttpResponse) {
-    def toNewmanHttpResponse: HttpResponse = {
-      //TODO: implement
-      sys.error("not yet implemented")
+  implicit class NettyHttpResponseW(resp: NettyHttpResponse) {
+    def toNewmanHttpResponse: Option[HttpResponse] = {
+      for {
+        code <- HttpResponseCode.fromInt(resp.getStatus.getCode)
+        rawHeaders <- Option(resp.getHeaders)
+        headers <- {
+          val tupList = rawHeaders.asScala.map { entry =>
+            entry.getKey -> entry.getValue
+          }
+          Option(tupList.toList.toNel)
+        }
+        body <- Option(resp.getContent.array)
+      } yield {
+        HttpResponse(code, headers, body)
+      }
     }
   }
-  private[FinagleHttpClient] implicit def nettyHttpResponseToW(resp: NettyHttpResponse): NettyHttpResponseW = {
-    new NettyHttpResponseW(resp)
-  }
 
-  private[FinagleHttpClient] sealed class TwitterFutureW[T](future: TwitterFuture[T]) {
+  implicit class TwitterFutureW[T](future: TwitterFuture[T]) {
     def toScalaPromise: Promise[T] = {
-      //use a naive strategy here so that the promise creation doesn't use a thread
-      //TODO: I'm not sure if this works
-      implicit val strategy = Strategy.Naive
-      val promise = new Promise[T]()
-      future.onSuccess { res =>
-        promise.fulfill(res)
-      }.onFailure { t =>
-        promise.break
+      val promise = Promise.emptyPromise[T](Strategy.Sequential)
+      future.onSuccess { result =>
+        promise.fulfill(result)
+      }.onFailure { throwable =>
+        promise.fulfill(throw throwable)
       }
       promise
     }
   }
-  private[FinagleHttpClient] implicit def twitterFutureToW[T](future: TwitterFuture[T]): TwitterFutureW[T] = {
-    new TwitterFutureW[T](future)
-  }
+
+  class InvalidNettyResponse(nettyCode: HttpResponseStatus) extends Exception(s"Invalid netty response with code: ${nettyCode.getCode}")
 }
