@@ -111,6 +111,11 @@ pomExtra := (
       <url>http://www.stackmob.com</url>
     </developer>
     <developer>
+      <id>wpalmeri</id>
+      <name>Will Palmeri</name>
+      <url>http://www.stackmob.com</url>
+    </developer>
+    <developer>
       <id>jrwest</id>
       <name>Jordan West</name>
       <url>http://github.com/jrwest</url>
