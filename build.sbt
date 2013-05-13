@@ -29,6 +29,7 @@ libraryDependencies ++= {
     "org.scalaz" %% "scalaz-concurrent" % scalazVersion,
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
+		"com.twitter" %% "finagle-http" % "6.2.0",
     "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion,
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
     "org.specs2" %% "specs2" % specs2Version % "test",
