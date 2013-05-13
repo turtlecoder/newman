@@ -22,7 +22,7 @@ libraryDependencies ++= {
   val specs2Version = "1.14"
   val mockitoVersion = "1.9.0"
   val scalazVersion = "7.0.0"
-  val liftJsonVersion = "2.5-RC5"
+  val liftJsonVersion = "2.5-RC6"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
     "org.scalaz" %% "scalaz-effect" % scalazVersion,
