@@ -136,14 +136,14 @@ object FinagleHttpClient {
       .build(method, mbChannelBuf)
   }
 
-  implicit class RawBodyW(rawBody: RawBody) {
+  implicit class RichRawBody(rawBody: RawBody) {
     def toChannelBuf: ChannelBuffer = {
       val byteBuf = ByteBuffer.wrap(rawBody)
       new ByteBufferBackedChannelBuffer(byteBuf)
     }
   }
 
-  implicit class NettyHttpResponseW(resp: NettyHttpResponse) {
+  implicit class RichNettyHttpResponse(resp: NettyHttpResponse) {
     def toNewmanHttpResponse: Option[HttpResponse] = {
       for {
         code <- HttpResponseCode.fromInt(resp.getStatus.getCode)
