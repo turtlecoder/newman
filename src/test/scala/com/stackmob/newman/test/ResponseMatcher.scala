@@ -19,26 +19,38 @@ package com.stackmob.newman.test
 import org.specs2.Specification
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import org.specs2.matcher.{Expectable, Matcher}
-import com.stackmob.newman.{Headers, RawBody}
+import com.stackmob.newman.{Headers, RawBody, Constants}
+import java.nio.charset.Charset
 
 trait ResponseMatcher { this: Specification =>
   class ResponseMatcher(expectedCode: HttpResponseCode,
-                        mbHeaders: Option[Headers] = None,
-                        mbBody: Option[RawBody] = None) extends Matcher[HttpResponse] {
+                        headers: Headers = None,
+                        mbBody: Option[String] = None)
+                       (implicit charset: Charset = Constants.UTF8Charset) extends Matcher[HttpResponse] {
     def apply[S <: HttpResponse](expectable: Expectable[S]) = {
       val actualResp = expectable.value
       val descr = expectable.description
       val codeRes = actualResp.code must beEqualTo(expectedCode)
-      result(codeRes,
-        s"$descr matches code $expectedCode",
-        s"$descr does not match code $expectedCode",
+      val bodyRes = mbBody must beSome.like {
+        case b: String => {
+          actualResp.bodyString must contain(b)
+        }
+      } or {
+        mbBody must beNone
+      }
+
+      val showBody = mbBody.getOrElse("(nothing)")
+      result(codeRes and bodyRes,
+        s"$descr matches code $expectedCode and contains body $showBody",
+        s"$descr does not match code $expectedCode and contain body $showBody",
         expectable)
     }
   }
 
   def beResponse(c: HttpResponseCode,
-                 mbHeaders: Option[Headers] = None,
-                 mbBody: Option[RawBody] = None) = {
-    new ResponseMatcher(c, mbHeaders, mbBody)
+                 headers: Headers = None,
+                 mbBody: Option[String] = None)
+                (implicit charset: Charset = Constants.UTF8Charset) = {
+    new ResponseMatcher(c, headers, mbBody)
   }
 }
