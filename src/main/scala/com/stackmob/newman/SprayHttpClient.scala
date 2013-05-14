@@ -17,16 +17,16 @@
 package com.stackmob.newman
 
 import akka.actor._
-import spray.client.HttpConduit
-import spray.io._
 import spray.http.{HttpRequest => SprayHttpRequest,
   HttpResponse => SprayHttpResponse,
-  HttpHeader => SprayHttpHeader,
   HttpMethod => SprayHttpMethod,
   HttpMethods => SprayHttpMethods,
   HttpEntity => SprayHttpEntity,
   EmptyEntity => SprayEmptyEntity}
 import spray.can.client.{HttpClient => NativeSprayHttpClient}
+import spray.client.HttpConduit
+import spray.http.HttpHeaders.RawHeader
+import spray.io.IOExtension
 import java.net.URL
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
@@ -34,6 +34,7 @@ import scalaz.effect.IO
 import scalaz.concurrent.{Strategy, Promise}
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.Scalaz._
+import com.stackmob.newman.response.HttpResponse
 
 class SprayHttpClient(actorSystem: ActorSystem = ActorSystem()) extends HttpClient {
   import SprayHttpClient._
@@ -60,11 +61,7 @@ class SprayHttpClient(actorSystem: ActorSystem = ActorSystem()) extends HttpClie
     val headerList = headers.map { headerNel =>
       val lst = headerNel.list
       lst.map { hdr =>
-        new SprayHttpHeader {
-          override lazy val name: String = hdr._1
-          override lazy val value: String = hdr._2
-          override lazy val lowercaseName: String = hdr._2.toLowerCase
-        }
+        RawHeader(hdr._1, hdr._2)
       }
     }.getOrElse(Nil)
     val entity = if(rawBody.length == 0) {
