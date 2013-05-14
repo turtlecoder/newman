@@ -122,8 +122,8 @@ object SprayHttpClient {
     override lazy val prepare: ExecutionContext = this
   }
 
-  private[SprayHttpClient] implicit class RichFuture[T](fut: Future[T]) {
-    def toPromise: Promise[T] = {
+  implicit class RichScalaFuture[T](fut: Future[T]) {
+    def toScalazPromise: Promise[T] = {
       val promise = Promise.emptyPromise[T](Strategy.Sequential)
       fut.map { result =>
         promise.fulfill(result)
@@ -155,7 +155,7 @@ object SprayHttpClient {
     def executeToNewmanPromise(req: SprayHttpRequest): Promise[HttpResponse] = {
       pipeline(req).map {
         res => res.toNewmanHttpResponse | (throw new InvalidSprayResponse(res.status.value))
-      }.toPromise
+      }.toScalazPromise
     }
   }
 
