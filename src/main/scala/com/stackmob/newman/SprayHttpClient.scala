@@ -16,38 +16,146 @@
 
 package com.stackmob.newman
 
-import scala.concurrent.Future
 import akka.actor._
 import spray.client.HttpConduit
 import spray.io._
-import spray.util._
-import spray.http._
-import HttpMethods._
+import spray.http.{HttpRequest => SprayHttpRequest,
+  HttpResponse => SprayHttpResponse,
+  HttpHeader => SprayHttpHeader,
+  HttpMethod => SprayHttpMethod,
+  HttpMethods => SprayHttpMethods,
+  HttpEntity => SprayHttpEntity,
+  EmptyEntity => SprayEmptyEntity}
 import spray.can.client.{HttpClient => NativeSprayHttpClient}
 import java.net.URL
 import com.stackmob.newman.request._
+import com.stackmob.newman.response._
+import scalaz.effect.IO
+import scalaz.concurrent.{Strategy, Promise}
+import scala.concurrent.{ExecutionContext, Future}
+import scalaz.Scalaz._
 
-class SprayHttpClient(sprayHttpClient: SprayHttpClient = SprayHttpClient.DefaultSprayHttpClient) extends HttpClient {
-  def get(url: URL, headers: Headers): GetRequest = {
-    sys.error("not yet implemented")
+class SprayHttpClient(actorSystem: ActorSystem = ActorSystem()) extends HttpClient {
+  import SprayHttpClient._
+
+  private lazy val ioBridge = IOExtension(actorSystem).ioBridge()
+  private class Client extends NativeSprayHttpClient(ioBridge)
+  private lazy val httpClient = actorSystem.actorOf(Props[Client])
+
+  private def pipeline(url: URL): SprayHttpRequest => Future[SprayHttpResponse] = {
+    val (host, port) = url.hostAndPort
+    val conduit = actorSystem.actorOf(
+      props = Props(classOf[HttpConduit], httpClient, host, port),
+      name = s"http-conduit-$host:$port"
+    )
+    HttpConduit.sendReceive(conduit)
   }
-  def post(url: URL, headers: Headers, body: RawBody): PostRequest = {
-    sys.error("not yet implemented")
+
+  private def request(method: SprayHttpMethod,
+                      url: URL,
+                      headers: Headers,
+                      rawBody: RawBody = RawBody.empty): SprayHttpRequest = {
+    val headerList = headers.map { headerNel =>
+      val lst = headerNel.list
+      lst.map { hdr =>
+        new SprayHttpHeader {
+          override lazy val name: String = hdr._1
+          override lazy val value: String = hdr._2
+          override lazy val lowercaseName: String = hdr._2.toLowerCase
+        }
+      }
+    }.getOrElse(Nil)
+    val entity = if(rawBody.length == 0) {
+      SprayEmptyEntity
+    } else {
+      SprayHttpEntity(rawBody)
+    }
+    SprayHttpRequest(method, url.getPath, headerList, entity)
   }
-  def put(url: URL, headers: Headers, body: RawBody): PutRequest = {
-    sys.error("not yet implemented")
+
+  def get(url: URL, headers: Headers) = GetRequest(url, headers) {
+    IO {
+      val req = request(SprayHttpMethods.GET, url, headers)
+      req.toNewmanPromise(pipeline(url))
+    }
   }
-  def delete(url: URL, headers: Headers): DeleteRequest = {
-    sys.error("not yet implemented")
+
+  def post(url: URL, headers: Headers, body: RawBody) = PostRequest(url, headers, body) {
+    IO {
+      val req = request(SprayHttpMethods.POST, url, headers, body)
+      req.toNewmanPromise(pipeline(url))
+    }
   }
-  def head(url: URL, headers: Headers): HeadRequest = {
-    sys.error("not yet implemented")
+
+  def put(url: URL, headers: Headers, body: RawBody) = PutRequest(url, headers, body) {
+    IO {
+      val req = request(SprayHttpMethods.PUT, url, headers, body)
+      req.toNewmanPromise(pipeline(url))
+    }
+  }
+
+  def delete(url: URL, headers: Headers) = DeleteRequest(url, headers) {
+    IO {
+      val req = request(SprayHttpMethods.DELETE, url, headers)
+      req.toNewmanPromise(pipeline(url))
+    }
+  }
+
+  def head(url: URL, headers: Headers) = HeadRequest(url, headers) {
+    IO {
+      val req = request(SprayHttpMethods.HEAD, url, headers)
+      req.toNewmanPromise(pipeline(url))
+    }
   }
 }
 
 object SprayHttpClient {
-  lazy val DefaultActorSystem = ActorSystem()
-  lazy val DefaultIOBridge = IOExtension(DefaultActorSystem).ioBridge()
-  class DefaultSprayHttpClient extends NativeSprayHttpClient(DefaultIOBridge)
-  lazy val DefaultSprayHttpClient = DefaultActorSystem.actorOf(Props[DefaultSprayHttpClient])
+  private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
+
+  private[SprayHttpClient] implicit class RichFuture[T](fut: Future[T]) {
+    private implicit val sequentialExecutionContext = new ExecutionContext {
+      def execute(runnable: Runnable) {
+        runnable.run()
+      }
+      def reportFailure(t: Throwable) {}
+      override lazy val prepare: ExecutionContext = this
+    }
+
+    def toPromise: Promise[T] = {
+      val promise = Promise.emptyPromise[T](Strategy.Sequential)
+      fut.map { result =>
+        promise.fulfill(result)
+      }.onFailure {
+        case t: Throwable => promise.fulfill(throw t)
+      }
+      promise
+    }
+  }
+
+  private[SprayHttpClient] implicit class RichSprayHttpResponse(resp: SprayHttpResponse) {
+    def toNewmanHttpResponse: Option[HttpResponse] = {
+      for {
+        code <- HttpResponseCode.fromInt(resp.status.value)
+        rawHeaders <- Option(resp.headers)
+        headers <- Option {
+          rawHeaders.map { hdr =>
+            hdr.name -> hdr.value
+          }.toNel
+        }
+        body <- Option(resp.entity.buffer)
+      } yield {
+        HttpResponse(code, headers, body)
+      }
+    }
+  }
+
+  private[SprayHttpClient] implicit class RichSprayHttpRequest(req: SprayHttpRequest) {
+    def toNewmanPromise(pipeline: SprayHttpRequest => Future[SprayHttpResponse]): Promise[HttpResponse] = {
+      pipeline(req).map { res =>
+        res.toNewmanHttpResponse | (throw new InvalidSprayResponse(res.status.value))
+      }.toPromise
+    }
+  }
+
+  private[SprayHttpClient] class InvalidSprayResponse(code: Int) extends Exception(s"Invalid spray HTTP response with code $code")
 }

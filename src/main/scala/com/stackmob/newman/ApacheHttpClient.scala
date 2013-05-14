@@ -87,36 +87,24 @@ class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTi
     HttpResponse(responseCode, responseHeaders.toNel, responseBody | RawBody.empty)
   }
 
-  override def get(u: URL, h: Headers): GetRequest = new GetRequest {
-    override val headers = h
-    override val url = u
-    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpGet, url, headers)
+  override def get(url: URL, headers: Headers): GetRequest = GetRequest(url, headers) {
+    executeRequest(new HttpGet, url, headers)
   }
 
-  override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest {
-    override val url = u
-    override val headers = h
-    override val body = b
-    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpPost, url, headers, Option(body))
+  override def post(url: URL, headers: Headers, body: RawBody): PostRequest = PostRequest(url, headers, body) {
+    executeRequest(new HttpPost, url, headers, Option(body))
   }
 
-  override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest {
-    override val url = u
-    override val headers = h
-    override val body = b
-    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpPut, url, headers, Option(body))
+  override def put(url: URL, headers: Headers, body: RawBody): PutRequest = PutRequest(url, headers, body) {
+    executeRequest(new HttpPut, url, headers, Option(body))
   }
 
-  override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest {
-    override val url = u
-    override val headers = h
-    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpDelete, url, headers)
+  override def delete(url: URL, headers: Headers): DeleteRequest = DeleteRequest(url, headers) {
+    executeRequest(new HttpDelete, url, headers)
   }
 
-  override def head(u: URL, h: Headers): HeadRequest = new HeadRequest {
-    override val url = u
-    override val headers = h
-    override def prepareAsync: IO[Promise[HttpResponse]] = executeRequest(new HttpHead, url, headers)
+  override def head(url: URL, headers: Headers): HeadRequest = HeadRequest(url, headers) {
+    executeRequest(new HttpHead, url, headers)
   }
 }
 
