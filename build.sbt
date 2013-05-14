@@ -15,6 +15,8 @@ scalaVersion := "2.10.1"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-feature")
 
+resolvers += "spray repo" at "http://repo.spray.io"
+
 libraryDependencies ++= {
   val httpCoreVersion = "4.2.1"
   val httpClientVersion = "4.2.1"
@@ -29,7 +31,9 @@ libraryDependencies ++= {
     "org.scalaz" %% "scalaz-concurrent" % scalazVersion,
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
-		"com.twitter" %% "finagle-http" % "6.2.0",
+    "com.twitter" %% "finagle-http" % "6.2.0",
+    "io.spray" % "spray-client" % "1.1-M7",
+    "com.typesafe.akka" %% "akka-actor" % "2.2-M3",
     "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion,
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
     "org.specs2" %% "specs2" % specs2Version % "test",
