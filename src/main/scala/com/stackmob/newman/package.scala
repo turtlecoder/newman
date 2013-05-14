@@ -78,7 +78,7 @@ package object newman extends NewmanPrivate {
      * convert the extended Promise to a {{scala.concurrent.Future[T]}}
      * @return the Future. will be completed when the extended promise is completed.
      */
-    def toFuture: ScalaFuture[T] = {
+    def toScalaFuture: ScalaFuture[T] = {
       val scalaProm = ScalaPromise[T]()
       prom.to(
         k = { result: T =>
