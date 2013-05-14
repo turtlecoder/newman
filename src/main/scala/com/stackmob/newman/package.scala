@@ -19,6 +19,8 @@ package com.stackmob
 import scalaz._
 import scalaz.effect.IO
 import scalaz.NonEmptyList._
+import scalaz.concurrent.{Promise => ScalazPromise}
+import scala.concurrent.{Promise => ScalaPromise, Future => ScalaFuture}
 import Scalaz._
 import java.nio.charset.Charset
 
@@ -63,5 +65,29 @@ package object newman extends NewmanPrivate {
     def apply(s: String, charset: Charset = Constants.UTF8Charset): Array[Byte] = s.getBytes(charset)
     def apply(b: Array[Byte]): Array[Byte] = b
     lazy val empty = Array[Byte]()
+  }
+
+  /**
+   * a class extension for Scalaz's {{Promise}}
+   * @param prom the promise that will be extended
+   * @tparam T the type that the promise contains
+   */
+  implicit class RichPromise[T](prom: ScalazPromise[T]) {
+    /**
+     * convert the extended Promise to a {{scala.concurrent.Future[T]}}
+     * @return the Future. will be completed when the extended promise is completed.
+     */
+    def toFuture: ScalaFuture[T] = {
+      val scalaProm = ScalaPromise[T]()
+      prom.to(
+        k = { result: T =>
+          scalaProm.success(result)
+        },
+        err = { throwable: Throwable =>
+          scalaProm.failure(throwable)
+        }
+      )
+      scalaProm.future
+    }
   }
 }
