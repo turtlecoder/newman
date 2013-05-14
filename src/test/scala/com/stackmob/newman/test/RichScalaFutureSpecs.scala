@@ -19,7 +19,8 @@ package com.stackmob.newman.test
 import org.specs2.Specification
 import scala.concurrent._
 import ExecutionContext.Implicits.global
-import com.stackmob.newman.SprayHttpClient.RichScalaFuture
+import com.stackmob.newman.SprayHttpClient
+import SprayHttpClient.RichScalaFuture
 
 class RichScalaFutureSpecs extends Specification { def is =
   "RichScalaFutureSpecs".title                                                                                          ^ end ^
