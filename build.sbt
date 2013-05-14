@@ -33,7 +33,7 @@ libraryDependencies ++= {
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
     "com.twitter" %% "finagle-http" % "6.2.0",
     "io.spray" % "spray-client" % "1.1-M7",
-    "com.typesafe.akka" %% "akka-actor" % "2.1.0-RC6",
+    "com.typesafe.akka" %% "akka-actor" % "2.1.0",
     "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion,
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
     "org.specs2" %% "specs2" % specs2Version % "test",
