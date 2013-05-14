@@ -23,6 +23,7 @@ import scalaz.concurrent.{Promise => ScalazPromise}
 import scala.concurrent.{Promise => ScalaPromise, Future => ScalaFuture}
 import Scalaz._
 import java.nio.charset.Charset
+import java.net.URL
 
 package object newman extends NewmanPrivate {
   type IOValidation[Fail, Success] = IO[Validation[Fail, Success]]
@@ -88,6 +89,17 @@ package object newman extends NewmanPrivate {
         }
       )
       scalaProm.future
+    }
+  }
+
+  implicit class RichURL(url: URL) {
+    def hostAndPort: (String, Int) = {
+      val host = url.getHost
+      val port = url.getPort match {
+        case -1 => 80
+        case other => other
+      }
+      host -> port
     }
   }
 }
