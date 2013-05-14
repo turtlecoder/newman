@@ -41,7 +41,7 @@ class SprayHttpClient(actorSystem: ActorSystem = ActorSystem()) extends HttpClie
   private lazy val ioBridge = IOExtension(actorSystem).ioBridge()
   private lazy val httpClient = {
     val clientProps = Props(new NativeSprayHttpClient(ioBridge))
-    actorSystem.actorOf(props = clientProps, name = s"http-client")
+    actorSystem.actorOf(props = clientProps, name = "http-client")
   }
 
   private def pipeline(url: URL): SprayHttpRequest => Future[SprayHttpResponse] = {
