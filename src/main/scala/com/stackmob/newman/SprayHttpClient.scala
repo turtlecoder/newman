@@ -39,15 +39,17 @@ class SprayHttpClient(actorSystem: ActorSystem = ActorSystem()) extends HttpClie
   import SprayHttpClient._
 
   private lazy val ioBridge = IOExtension(actorSystem).ioBridge()
-  private class Client extends NativeSprayHttpClient(ioBridge)
-  private lazy val httpClient = actorSystem.actorOf(Props[Client])
+  private lazy val httpClient = {
+    val clientProps = Props(new NativeSprayHttpClient(ioBridge))
+    actorSystem.actorOf(props = clientProps, name = s"http-client")
+  }
 
   private def pipeline(url: URL): SprayHttpRequest => Future[SprayHttpResponse] = {
     val (host, port) = url.hostAndPort
-    val conduit = actorSystem.actorOf(
-      props = Props(classOf[HttpConduit], httpClient, host, port),
-      name = s"http-conduit-$host:$port"
-    )
+    val conduit = {
+      val conduitProps = Props(new HttpConduit(httpClient, host, port))
+      actorSystem.actorOf(props = conduitProps, name = s"http-conduit-$host:$port")
+    }
     HttpConduit.sendReceive(conduit)
   }
 
@@ -76,35 +78,35 @@ class SprayHttpClient(actorSystem: ActorSystem = ActorSystem()) extends HttpClie
   def get(url: URL, headers: Headers) = GetRequest(url, headers) {
     IO {
       val req = request(SprayHttpMethods.GET, url, headers)
-      req.toNewmanPromise(pipeline(url))
+      pipeline(url).executeToNewmanPromise(req)
     }
   }
 
   def post(url: URL, headers: Headers, body: RawBody) = PostRequest(url, headers, body) {
     IO {
       val req = request(SprayHttpMethods.POST, url, headers, body)
-      req.toNewmanPromise(pipeline(url))
+      pipeline(url).executeToNewmanPromise(req)
     }
   }
 
   def put(url: URL, headers: Headers, body: RawBody) = PutRequest(url, headers, body) {
     IO {
       val req = request(SprayHttpMethods.PUT, url, headers, body)
-      req.toNewmanPromise(pipeline(url))
+      pipeline(url).executeToNewmanPromise(req)
     }
   }
 
   def delete(url: URL, headers: Headers) = DeleteRequest(url, headers) {
     IO {
       val req = request(SprayHttpMethods.DELETE, url, headers)
-      req.toNewmanPromise(pipeline(url))
+      pipeline(url).executeToNewmanPromise(req)
     }
   }
 
   def head(url: URL, headers: Headers) = HeadRequest(url, headers) {
     IO {
       val req = request(SprayHttpMethods.HEAD, url, headers)
-      req.toNewmanPromise(pipeline(url))
+      pipeline(url).executeToNewmanPromise(req)
     }
   }
 }
@@ -112,15 +114,15 @@ class SprayHttpClient(actorSystem: ActorSystem = ActorSystem()) extends HttpClie
 object SprayHttpClient {
   private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
 
-  private[SprayHttpClient] implicit class RichFuture[T](fut: Future[T]) {
-    private implicit val sequentialExecutionContext = new ExecutionContext {
-      def execute(runnable: Runnable) {
-        runnable.run()
-      }
-      def reportFailure(t: Throwable) {}
-      override lazy val prepare: ExecutionContext = this
+  private[SprayHttpClient] implicit val sequentialExecutionContext: ExecutionContext = new ExecutionContext {
+    def execute(runnable: Runnable) {
+      runnable.run()
     }
+    def reportFailure(t: Throwable) {}
+    override lazy val prepare: ExecutionContext = this
+  }
 
+  private[SprayHttpClient] implicit class RichFuture[T](fut: Future[T]) {
     def toPromise: Promise[T] = {
       val promise = Promise.emptyPromise[T](Strategy.Sequential)
       fut.map { result =>
@@ -149,10 +151,10 @@ object SprayHttpClient {
     }
   }
 
-  private[SprayHttpClient] implicit class RichSprayHttpRequest(req: SprayHttpRequest) {
-    def toNewmanPromise(pipeline: SprayHttpRequest => Future[SprayHttpResponse]): Promise[HttpResponse] = {
-      pipeline(req).map { res =>
-        res.toNewmanHttpResponse | (throw new InvalidSprayResponse(res.status.value))
+  private[SprayHttpClient] implicit class RichPipeline(pipeline: SprayHttpRequest => Future[SprayHttpResponse]) {
+    def executeToNewmanPromise(req: SprayHttpRequest): Promise[HttpResponse] = {
+      pipeline(req).map {
+        res => res.toNewmanHttpResponse | (throw new InvalidSprayResponse(res.status.value))
       }.toPromise
     }
   }
