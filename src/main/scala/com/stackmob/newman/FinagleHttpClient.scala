@@ -74,7 +74,7 @@ object FinagleHttpClient {
                      mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
     val client = createClient(url, tcpConnectionTimeout)
     val req = createNettyHttpRequest(method, url, headers, mbBody)
-    client(req).toScalaPromise.map { res =>
+    client(req).toScalazPromise.map { res =>
       res.toNewmanHttpResponse | {
         throw new InvalidNettyResponse(res.getStatus)
       }
@@ -137,7 +137,7 @@ object FinagleHttpClient {
   }
 
   implicit class TwitterFutureW[T](future: TwitterFuture[T]) {
-    def toScalaPromise: Promise[T] = {
+    def toScalazPromise: Promise[T] = {
       val promise = Promise.emptyPromise[T](Strategy.Sequential)
       future.onSuccess { result =>
         promise.fulfill(result)

@@ -23,16 +23,16 @@ import com.stackmob.newman.FinagleHttpClient._
 class TwitterFutureWSpecs extends Specification { def is =
   "TwitterFutureSpecs".title                                                                                            ^ end ^
   "TwitterFutureW is a class extension for com.twitter.util.Future"                                                     ^ end ^
-  "toScalaPromise should work properly"                                                                                 ! toScalaPromise ^ end ^
+  "toScalazPromise should work properly"                                                                                 ! toScalazPromise ^ end ^
   end
 
-  private def toScalaPromise = {
+  private def toScalazPromise = {
     val futureReturn = 1
     val fut = Future {
       futureReturn
     }
 
-    val prom = fut.toScalaPromise
+    val prom = fut.toScalazPromise
     prom.get must beEqualTo(futureReturn)
   }
 }
