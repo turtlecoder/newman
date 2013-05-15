@@ -14,25 +14,24 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.test
+package com.stackmob.newman.test.concurrent
 
 import org.specs2.Specification
-import scala.concurrent._
-import ExecutionContext.Implicits.global
-import com.stackmob.newman.SprayHttpClient
-import SprayHttpClient.RichScalaFuture
+import com.twitter.util._
+import com.stackmob.newman.concurrent.RichTwitterFuture
 
-class RichScalaFutureSpecs extends Specification { def is =
-  "RichScalaFutureSpecs".title                                                                                          ^ end ^
-  "RichScalaFuture is a class extension for scala.concurrent.Future"                                                    ^ end ^
-  "toScalazPromise should work properly"                                                                                ! toScalazPromise ^ end ^
+class RichTwitterFutureSpecs extends Specification { def is =
+  "RichTwitterFutureSpecs".title                                                                                        ^ end ^
+  "RichTwitterFuture is a class extension for com.twitter.util.Future"                                                  ^ end ^
+  "toScalazPromise should work properly"                                                                                 ! toScalazPromise ^ end ^
   end
 
   private def toScalazPromise = {
     val futureReturn = 1
-    val fut = future {
+    val fut = Future {
       futureReturn
     }
+
     val prom = fut.toScalazPromise
     prom.get must beEqualTo(futureReturn)
   }

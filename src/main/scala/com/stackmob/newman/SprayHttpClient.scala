@@ -35,12 +35,13 @@ import java.net.URL
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
 import scalaz.effect.IO
-import scalaz.concurrent.{Strategy, Promise}
-import scala.concurrent.{ExecutionContext, Future}
+import scalaz.concurrent.Promise
+import scala.concurrent.Future
 import scalaz.Scalaz._
 import com.stackmob.newman.response.HttpResponse
 import scalaz.NonEmptyList
 import java.util.UUID
+import com.stackmob.newman.concurrent.{RichScalaFuture, SequentialExecutionContext}
 
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
                       defaultMediaType: SprayMediaType = SprayMediaTypes.`application/json`,
@@ -124,26 +125,6 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
 
 object SprayHttpClient {
   private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
-
-  private[SprayHttpClient] implicit val sequentialExecutionContext: ExecutionContext = new ExecutionContext {
-    def execute(runnable: Runnable) {
-      runnable.run()
-    }
-    def reportFailure(t: Throwable) {}
-    override lazy val prepare: ExecutionContext = this
-  }
-
-  implicit class RichScalaFuture[T](fut: Future[T]) {
-    def toScalazPromise: Promise[T] = {
-      val promise = Promise.emptyPromise[T](Strategy.Sequential)
-      fut.map { result =>
-        promise.fulfill(result)
-      }.onFailure {
-        case t: Throwable => promise.fulfill(throw t)
-      }
-      promise
-    }
-  }
 
   implicit class RichHeaders(headers: Headers) {
     def getContentType(defaultMediaType: SprayMediaType): SprayContentType = {

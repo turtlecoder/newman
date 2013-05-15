@@ -18,9 +18,9 @@ package com.stackmob.newman
 
 import java.net.URL
 import com.stackmob.newman.request._
-import scalaz.concurrent.{Strategy, Promise}
+import scalaz.concurrent.Promise
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import com.twitter.util.{Future => TwitterFuture, Duration}
+import com.twitter.util.Duration
 import com.twitter.finagle.http._
 import com.twitter.finagle.builder.ClientBuilder
 import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse, HttpRequest => NettyHttpRequest, HttpMethod => NettyHttpMethod, HttpResponseStatus}
@@ -30,6 +30,7 @@ import scalaz.effect.IO
 import scalaz.Scalaz._
 import collection.JavaConverters._
 import FinagleHttpClient._
+import com.stackmob.newman.concurrent.RichTwitterFuture
 
 class FinagleHttpClient(tcpConnectionTimeout: Duration = DefaultTcpConnectTimeout) extends HttpClient {
 
@@ -133,18 +134,6 @@ object FinagleHttpClient {
       } yield {
         HttpResponse(code, headers, body)
       }
-    }
-  }
-
-  implicit class TwitterFutureW[T](future: TwitterFuture[T]) {
-    def toScalazPromise: Promise[T] = {
-      val promise = Promise.emptyPromise[T](Strategy.Sequential)
-      future.onSuccess { result =>
-        promise.fulfill(result)
-      }.onFailure { throwable =>
-        promise.fulfill(throw throwable)
-      }
-      promise
     }
   }
 
