@@ -21,6 +21,7 @@ import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import org.specs2.matcher.{Expectable, Matcher}
 import com.stackmob.newman.{Headers, HeaderList, Constants}
 import com.stackmob.newman.Headers.HeadersShow
+import com.stackmob.newman.HeaderList.HeaderListShow
 import java.nio.charset.Charset
 import scalaz.Scalaz._
 
@@ -38,7 +39,8 @@ trait ResponseMatcher { this: Specification =>
       val headerRes = mbHeaderLists must beSome.like {
         case tup: (HeaderList, HeaderList) => {
           val (actualHeaderList, expectedHeaderList) = tup
-          actualHeaderList.list must contain(expectedHeaderList.list)
+          val (actualHeaderString, expectedHeaderString) = actualHeaderList.shows -> expectedHeaderList.shows
+          actualHeaderString must contain(expectedHeaderString)
         }
       } or {
         mbHeaderLists must beNone
@@ -48,7 +50,8 @@ trait ResponseMatcher { this: Specification =>
         case pieces: List[String] => {
           pieces must haveAllElementsLike {
             case piece => {
-              actualResp.bodyString must contain(piece)
+              val actualBody = actualResp.bodyString
+              actualBody must contain(piece)
             }
           }
         }
@@ -62,9 +65,10 @@ trait ResponseMatcher { this: Specification =>
         pieces.mkString(", ")
       }.getOrElse("(nothing)")
 
-      result(codeRes and headerRes and bodyRes,
-        s"$descr matches code $expectedCode, contains headers $showHeaders and contains body pieces $showBody",
-        s"$descr does not match code $expectedCode, contain headers $showHeaders and contain body pieces $showBody",
+      val totalRes = codeRes and headerRes and bodyRes
+      result(totalRes,
+        s"$descr matches code $expectedCode, contains headers ${headers.shows} and contains body pieces $showBody",
+        s"$descr does not match code $expectedCode, contain headers ${headers.shows} and contain body pieces $showBody",
         expectable)
     }
   }

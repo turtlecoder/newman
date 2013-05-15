@@ -32,6 +32,16 @@ package object newman extends NewmanPrivate {
   type HeaderList = NonEmptyList[Header]
   type Headers = Option[HeaderList]
 
+  object HeaderList {
+    implicit val HeaderListShow = new Show[HeaderList] {
+      override def shows(headerList: HeaderList): String = {
+        headerList.list.map { header =>
+          s"${header._1}=${header._2}"
+        }.mkString("&")
+      }
+    }
+  }
+
   object Headers {
     implicit val HeadersEqual = new Equal[Headers] {
       override def equal(headers1: Headers, headers2: Headers): Boolean = (headers1, headers2) match {
@@ -45,9 +55,10 @@ package object newman extends NewmanPrivate {
       Monoid.instance((mbH1, mbH2) => (mbH1 tuple mbH2).map(h => h._1.append(h._2)), Headers.empty)
 
     implicit val HeadersShow = new Show[Headers] {
+      import HeaderList.HeaderListShow
       override def shows(h: Headers): String = {
         val s = ~h.map { headerList: HeaderList =>
-          headerList.list.map(h => h._1 + "=" + h._2).mkString("&")
+          headerList.shows
         }
         s
       }

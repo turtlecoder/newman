@@ -26,22 +26,12 @@ import scalaz.Scalaz._
 trait ClientTests { this: Specification with ResponseMatcher =>
   implicit private val charset = Constants.UTF8Charset
 
-  private implicit class RichStringTuple(tup: (String, String)) {
-    /**
-     * calculates the string representation of a request header, in the JSON body
-     * @return the string representation
-     */
-    def headerString = {
-      """"%s": "%s"""".format(tup._1, tup._2)
-    }
-  }
-
   class ClientTests(implicit client: HttpClient) {
-    private lazy val DefaultExpectedBody: String = ("Host" -> "httpbin.org").headerString
+    private lazy val DefaultExpectedBodyPieces = List("Host", "httpbin.org")
     private  def execute[T](t: Builder,
                             expectedCode: HttpResponseCode = HttpResponseCode.Ok,
-                            expectedHeaders: Headers = None,
-                            mbExpectedBodyPieces: Option[List[String]] = List(DefaultExpectedBody).some) = {
+                            expectedHeaders: Headers = Headers("Content-Type" -> "application/json"),
+                            mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
       val r = t.executeUnsafe
       r must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
     }
@@ -49,16 +39,15 @@ trait ClientTests { this: Specification with ResponseMatcher =>
     private def executeAsync(t: Builder,
                              expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                              expectedHeaders: Headers = None,
-                             mbExpectedBodyPieces: Option[List[String]] = List(DefaultExpectedBody).some) = {
+                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
       val rPromise = t.executeAsyncUnsafe
       rPromise.map { r: HttpResponse =>
         r must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
       }.get
     }
 
-    private lazy val headerTup = "X-StackMob-Test-Header" -> "X-StackMob-Test-Value"
+    private lazy val headerTup = "X-Stackmob-Test-Header" -> "X-StackMob-Test-Value"
     //part of the JSON body should contain the header, in this format
-    private lazy val headerBody = headerTup.headerString
     private lazy val headers = Headers(headerTup)
 
     private lazy val getURL = new URL("http://httpbin.org/get")
@@ -72,34 +61,34 @@ trait ClientTests { this: Specification with ResponseMatcher =>
 
     private lazy val getBuilder = GET(getURL).addHeaders(headers)
     def get = {
-      execute(getBuilder, mbExpectedBodyPieces = List(DefaultExpectedBody, headerBody).some)
+      execute(getBuilder, mbExpectedBodyPieces = (headerTup._1 :: headerTup._2 :: DefaultExpectedBodyPieces).some)
     }
     def getAsync = {
-      executeAsync(getBuilder)
+      executeAsync(getBuilder, mbExpectedBodyPieces = (headerTup._1 :: headerTup._2 :: DefaultExpectedBodyPieces).some)
     }
 
     private val postBuilder = POST(postURL).addBody(body).addHeaders(headers)
     def post = {
-      execute(postBuilder, mbExpectedBodyPieces = List(bodyString).some)
+      execute(postBuilder, mbExpectedBodyPieces = (headerTup._1 :: headerTup._2 :: "data" :: bodyString :: DefaultExpectedBodyPieces).some)
     }
     def postAsync = {
-      executeAsync(postBuilder, mbExpectedBodyPieces = List(bodyString).some)
+      executeAsync(postBuilder, mbExpectedBodyPieces = (headerTup._1 :: headerTup._2 :: "data" :: bodyString :: DefaultExpectedBodyPieces).some)
     }
 
     private val putBuilder = PUT(putURL).addBody(body).addHeaders(headers)
     def put = {
-      execute(putBuilder, mbExpectedBodyPieces = List(bodyString).some)
+      execute(putBuilder, mbExpectedBodyPieces = (headerTup._1 :: headerTup._2 :: "data" :: bodyString :: DefaultExpectedBodyPieces).some)
     }
     def putAsync = {
-      executeAsync(putBuilder, mbExpectedBodyPieces = List(bodyString).some)
+      executeAsync(putBuilder, mbExpectedBodyPieces = (headerTup._1 :: headerTup._2 :: "data" :: bodyString :: DefaultExpectedBodyPieces).some)
     }
 
     private val deleteBuilder = DELETE(deleteURL).addHeaders(headers)
     def delete = {
-      execute(deleteBuilder)
+      execute(deleteBuilder, mbExpectedBodyPieces = (headerTup._1 :: headerTup._2 :: DefaultExpectedBodyPieces).some)
     }
     def deleteAsync = {
-      executeAsync(deleteBuilder)
+      executeAsync(deleteBuilder, mbExpectedBodyPieces = (headerTup._1 :: headerTup._2 :: DefaultExpectedBodyPieces).some)
     }
 
     private val headBuilder = HEAD(headURL).addHeaders(headers)
