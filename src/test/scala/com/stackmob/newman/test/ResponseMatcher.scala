@@ -19,38 +19,60 @@ package com.stackmob.newman.test
 import org.specs2.Specification
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import org.specs2.matcher.{Expectable, Matcher}
-import com.stackmob.newman.{Headers, RawBody, Constants}
+import com.stackmob.newman.{Headers, HeaderList, Constants}
+import com.stackmob.newman.Headers.HeadersShow
 import java.nio.charset.Charset
+import scalaz.Scalaz._
 
 trait ResponseMatcher { this: Specification =>
   class ResponseMatcher(expectedCode: HttpResponseCode,
                         headers: Headers = None,
-                        mbBody: Option[String] = None)
+                        mbBodyPieces: Option[List[String]] = None)
                        (implicit charset: Charset = Constants.UTF8Charset) extends Matcher[HttpResponse] {
     def apply[S <: HttpResponse](expectable: Expectable[S]) = {
       val actualResp = expectable.value
       val descr = expectable.description
       val codeRes = actualResp.code must beEqualTo(expectedCode)
-      val bodyRes = mbBody must beSome.like {
-        case b: String => {
-          actualResp.bodyString must contain(b)
+
+      val mbHeaderLists = actualResp.headers tuple headers
+      val headerRes = mbHeaderLists must beSome.like {
+        case tup: (HeaderList, HeaderList) => {
+          val (actualHeaderList, expectedHeaderList) = tup
+          actualHeaderList.list must contain(expectedHeaderList.list)
         }
       } or {
-        mbBody must beNone
+        mbHeaderLists must beNone
       }
 
-      val showBody = mbBody.getOrElse("(nothing)")
-      result(codeRes and bodyRes,
-        s"$descr matches code $expectedCode and contains body $showBody",
-        s"$descr does not match code $expectedCode and contain body $showBody",
+      val bodyRes = mbBodyPieces must beSome.like {
+        case pieces: List[String] => {
+          pieces must haveAllElementsLike {
+            case piece => {
+              actualResp.bodyString must contain(piece)
+            }
+          }
+        }
+      } or {
+        mbBodyPieces must beNone
+      }
+
+      val showHeaders = headers.shows
+
+      val showBody = mbBodyPieces.map { pieces =>
+        pieces.mkString(", ")
+      }.getOrElse("(nothing)")
+
+      result(codeRes and headerRes and bodyRes,
+        s"$descr matches code $expectedCode, contains headers $showHeaders and contains body pieces $showBody",
+        s"$descr does not match code $expectedCode, contain headers $showHeaders and contain body pieces $showBody",
         expectable)
     }
   }
 
   def beResponse(c: HttpResponseCode,
                  headers: Headers = None,
-                 mbBody: Option[String] = None)
+                 mbBodyPieces: Option[List[String]] = None)
                 (implicit charset: Charset = Constants.UTF8Charset) = {
-    new ResponseMatcher(c, headers, mbBody)
+    new ResponseMatcher(c, headers, mbBodyPieces)
   }
 }
