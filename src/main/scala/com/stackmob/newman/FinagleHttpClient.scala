@@ -33,55 +33,34 @@ import FinagleHttpClient._
 
 class FinagleHttpClient(tcpConnectionTimeout: Duration = DefaultTcpConnectTimeout) extends HttpClient {
 
-  override def get(u: URL, h: Headers): GetRequest = new GetRequest {
-    override lazy val url = u
-    override lazy val headers = h
-    override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO {
-        executeRequest(tcpConnectionTimeout, NettyHttpMethod.GET, url, headers)
-      }
+  override def get(url: URL, headers: Headers) = GetRequest(url, headers) {
+    IO {
+      executeRequest(tcpConnectionTimeout, NettyHttpMethod.GET, url, headers)
     }
   }
 
-  override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest {
-    override lazy val url = u
-    override lazy val headers = h
-    override lazy val body = b
-    override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO {
-        executeRequest(tcpConnectionTimeout, NettyHttpMethod.POST, url, headers, Some(body))
-      }
+  override def post(url: URL, headers: Headers, body: RawBody) = PostRequest(url, headers, body) {
+    IO {
+      executeRequest(tcpConnectionTimeout, NettyHttpMethod.POST, url, headers, Some(body))
     }
   }
 
-  override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest {
-    override lazy val url = u
-    override lazy val headers = h
-    override lazy val body = b
-    override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO {
-        executeRequest(tcpConnectionTimeout, NettyHttpMethod.PUT, url, headers, Some(body))
-      }
+
+  override def put(url: URL, headers: Headers, body: RawBody) = PutRequest(url, headers, body) {
+    IO {
+      executeRequest(tcpConnectionTimeout, NettyHttpMethod.PUT, url, headers, Some(body))
     }
   }
 
-  override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest {
-    override lazy val url = u
-    override lazy val headers = h
-    override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO {
-        executeRequest(tcpConnectionTimeout, NettyHttpMethod.DELETE, url, headers)
-      }
+  override def delete(url: URL, headers: Headers) = DeleteRequest(url, headers) {
+    IO {
+      executeRequest(tcpConnectionTimeout, NettyHttpMethod.DELETE, url, headers)
     }
   }
 
-  override def head(u: URL, h: Headers): HeadRequest = new HeadRequest {
-    override lazy val url = u
-    override lazy val headers = h
-    override def prepareAsync: IO[Promise[HttpResponse]] = {
-      IO {
-        executeRequest(tcpConnectionTimeout, NettyHttpMethod.HEAD, url, headers)
-      }
+  override def head(url: URL, headers: Headers) = HeadRequest(url, headers) {
+    IO {
+      executeRequest(tcpConnectionTimeout, NettyHttpMethod.HEAD, url, headers)
     }
   }
 }
@@ -95,7 +74,7 @@ object FinagleHttpClient {
                      mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
     val client = createClient(url, tcpConnectionTimeout)
     val req = createNettyHttpRequest(method, url, headers, mbBody)
-    client(req).toScalaPromise.map { res =>
+    client(req).toScalazPromise.map { res =>
       res.toNewmanHttpResponse | {
         throw new InvalidNettyResponse(res.getStatus)
       }
@@ -103,11 +82,7 @@ object FinagleHttpClient {
   }
 
   def createClient(url: URL, tcpConnectionTimeout: Duration) = {
-    val host = url.getHost
-    val port = url.getPort match {
-      case -1 => 80
-      case other => other
-    }
+    val (host, port) = url.hostAndPort
 
     ClientBuilder()
       .codec(Http())
@@ -162,7 +137,7 @@ object FinagleHttpClient {
   }
 
   implicit class TwitterFutureW[T](future: TwitterFuture[T]) {
-    def toScalaPromise: Promise[T] = {
+    def toScalazPromise: Promise[T] = {
       val promise = Promise.emptyPromise[T](Strategy.Sequential)
       future.onSuccess { result =>
         promise.fulfill(result)

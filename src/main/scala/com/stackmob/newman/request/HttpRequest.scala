@@ -135,20 +135,62 @@ object HttpRequestWithBody {
 trait PostRequest extends HttpRequestWithBody {
   override val requestType = HttpRequestType.POST
 }
+object PostRequest {
+  def apply(u: URL, h: Headers, r: RawBody)
+           (async: => IO[Promise[HttpResponse]]): PostRequest = new PostRequest {
+    override lazy val url = u
+    override lazy val headers = h
+    override lazy val body = r
+    override lazy val prepareAsync = async
+  }
+}
 
 trait PutRequest extends HttpRequestWithBody {
   override val requestType = HttpRequestType.PUT
+}
+object PutRequest {
+  def apply(u: URL, h: Headers, r: RawBody)
+           (async: => IO[Promise[HttpResponse]]): PutRequest = new PutRequest {
+    override lazy val url = u
+    override lazy val headers = h
+    override lazy val body = r
+    override lazy val prepareAsync = async
+  }
 }
 
 sealed trait HttpRequestWithoutBody extends HttpRequest
 trait DeleteRequest extends HttpRequestWithoutBody {
   override val requestType = HttpRequestType.DELETE
 }
+object DeleteRequest {
+  def apply(u: URL, h: Headers)
+           (async: => IO[Promise[HttpResponse]]): DeleteRequest = new DeleteRequest {
+    override lazy val url: URL = u
+    override lazy val headers = h
+    override lazy val prepareAsync = async
+  }
+}
 
 trait HeadRequest extends HttpRequestWithoutBody {
   override val requestType = HttpRequestType.HEAD
 }
+object HeadRequest {
+  def apply(u: URL, h: Headers)
+           (async: => IO[Promise[HttpResponse]]): HeadRequest = new HeadRequest {
+    override lazy val url: URL = u
+    override lazy val headers = h
+    override lazy val prepareAsync = async
+  }
+}
 
 trait GetRequest extends HttpRequestWithoutBody {
   override val requestType = HttpRequestType.GET
+}
+object GetRequest {
+  def apply(u: URL, h: Headers)
+           (async: => IO[Promise[HttpResponse]]): GetRequest = new GetRequest {
+    override lazy val url: URL = u
+    override lazy val headers = h
+    override lazy val prepareAsync = async
+  }
 }

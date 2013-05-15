@@ -17,21 +17,22 @@
 package com.stackmob.newman.test
 
 import org.specs2.Specification
-import com.twitter.util._
-import com.stackmob.newman.FinagleHttpClient._
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import com.stackmob.newman.SprayHttpClient
+import SprayHttpClient.RichScalaFuture
 
-class TwitterFutureWSpecs extends Specification { def is =
-  "TwitterFutureSpecs".title                                                                                            ^ end ^
-  "TwitterFutureW is a class extension for com.twitter.util.Future"                                                     ^ end ^
-  "toScalazPromise should work properly"                                                                                 ! toScalazPromise ^ end ^
+class RichScalaFutureSpecs extends Specification { def is =
+  "RichScalaFutureSpecs".title                                                                                          ^ end ^
+  "RichScalaFuture is a class extension for scala.concurrent.Future"                                                    ^ end ^
+  "toScalazPromise should work properly"                                                                                ! toScalazPromise ^ end ^
   end
 
   private def toScalazPromise = {
     val futureReturn = 1
-    val fut = Future {
+    val fut = future {
       futureReturn
     }
-
     val prom = fut.toScalazPromise
     prom.get must beEqualTo(futureReturn)
   }

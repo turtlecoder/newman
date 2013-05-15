@@ -19,8 +19,11 @@ package com.stackmob
 import scalaz._
 import scalaz.effect.IO
 import scalaz.NonEmptyList._
+import scalaz.concurrent.{Promise => ScalazPromise}
+import scala.concurrent.{Promise => ScalaPromise, Future => ScalaFuture}
 import Scalaz._
 import java.nio.charset.Charset
+import java.net.URL
 
 package object newman extends NewmanPrivate {
   type IOValidation[Fail, Success] = IO[Validation[Fail, Success]]
@@ -28,6 +31,16 @@ package object newman extends NewmanPrivate {
   type Header = (String, String)
   type HeaderList = NonEmptyList[Header]
   type Headers = Option[HeaderList]
+
+  object HeaderList {
+    implicit val HeaderListShow = new Show[HeaderList] {
+      override def shows(headerList: HeaderList): String = {
+        headerList.list.map { header =>
+          s"${header._1}=${header._2}"
+        }.mkString("&")
+      }
+    }
+  }
 
   object Headers {
     implicit val HeadersEqual = new Equal[Headers] {
@@ -42,9 +55,10 @@ package object newman extends NewmanPrivate {
       Monoid.instance((mbH1, mbH2) => (mbH1 tuple mbH2).map(h => h._1.append(h._2)), Headers.empty)
 
     implicit val HeadersShow = new Show[Headers] {
+      import HeaderList.HeaderListShow
       override def shows(h: Headers): String = {
         val s = ~h.map { headerList: HeaderList =>
-          headerList.list.map(h => h._1 + "=" + h._2).mkString("&")
+          headerList.shows
         }
         s
       }
@@ -63,5 +77,40 @@ package object newman extends NewmanPrivate {
     def apply(s: String, charset: Charset = Constants.UTF8Charset): Array[Byte] = s.getBytes(charset)
     def apply(b: Array[Byte]): Array[Byte] = b
     lazy val empty = Array[Byte]()
+  }
+
+  /**
+   * a class extension for Scalaz's {{Promise}}
+   * @param prom the promise that will be extended
+   * @tparam T the type that the promise contains
+   */
+  implicit class RichPromise[T](prom: ScalazPromise[T]) {
+    /**
+     * convert the extended Promise to a {{scala.concurrent.Future[T]}}
+     * @return the Future. will be completed when the extended promise is completed.
+     */
+    def toScalaFuture: ScalaFuture[T] = {
+      val scalaProm = ScalaPromise[T]()
+      prom.to(
+        k = { result: T =>
+          scalaProm.success(result)
+        },
+        err = { throwable: Throwable =>
+          scalaProm.failure(throwable)
+        }
+      )
+      scalaProm.future
+    }
+  }
+
+  implicit class RichURL(url: URL) {
+    def hostAndPort: (String, Int) = {
+      val host = url.getHost
+      val port = url.getPort match {
+        case -1 => 80
+        case other => other
+      }
+      host -> port
+    }
   }
 }
