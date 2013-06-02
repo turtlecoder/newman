@@ -24,16 +24,16 @@ libraryDependencies ++= {
   val specs2Version = "1.14"
   val mockitoVersion = "1.9.0"
   val scalazVersion = "7.0.0"
-  val liftJsonVersion = "2.5-RC6"
+  val liftJsonVersion = "2.5"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
     "org.scalaz" %% "scalaz-effect" % scalazVersion,
     "org.scalaz" %% "scalaz-concurrent" % scalazVersion,
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
-    "com.twitter" %% "finagle-http" % "6.2.0",
     "io.spray" % "spray-client" % "1.1-M7",
     "com.typesafe.akka" %% "akka-actor" % "2.1.0",
+    "com.twitter" %% "finagle-http" % "6.4.0",
     "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion,
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
     "org.specs2" %% "specs2" % specs2Version % "test",
