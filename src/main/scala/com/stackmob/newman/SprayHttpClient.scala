@@ -69,7 +69,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
     } | Nil
 
     val entity: SprayHttpEntity = {
-      if(rawBody.length == 0) {
+      if (rawBody.length === 0) {
         SprayEmptyEntity
       } else {
         val contentType = headers.getContentType(defaultMediaType)
@@ -123,6 +123,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
 }
 
 object SprayHttpClient {
+
   private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
 
   implicit class RichHeaders(headers: Headers) {
@@ -180,8 +181,7 @@ object SprayHttpClient {
   }
 
   private[SprayHttpClient] implicit class RichPipeline(pipeline: Future[SprayHttpResponse]) {
-    def executeToNewmanPromise(req: SprayHttpRequest,
-                               defaultContentType: SprayContentType): Promise[HttpResponse] = {
+    def executeToNewmanPromise(req: SprayHttpRequest, defaultContentType: SprayContentType): Promise[HttpResponse] = {
       pipeline.map { res =>
         res.toNewmanHttpResponse(defaultContentType) | (throw new InvalidSprayResponse(res.status.intValue))
       }.toScalazPromise
@@ -189,4 +189,5 @@ object SprayHttpClient {
   }
 
   private[SprayHttpClient] class InvalidSprayResponse(code: Int) extends Exception(s"Invalid spray HTTP response with code $code")
+
 }
