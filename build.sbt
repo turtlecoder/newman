@@ -11,7 +11,7 @@ name := "newman"
 
 organization := "com.stackmob"
 
-scalaVersion := "2.10.1"
+scalaVersion := "2.10.2"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-feature")
 
@@ -33,7 +33,7 @@ libraryDependencies ++= {
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
     "io.spray" % "spray-client" % "1.1-M7",
     "com.typesafe.akka" %% "akka-actor" % "2.1.0",
-    "com.twitter" %% "finagle-http" % "6.4.0",
+    "com.twitter" %% "finagle-http" % "6.5.0",
     "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion,
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
     "org.specs2" %% "specs2" % specs2Version % "test",
