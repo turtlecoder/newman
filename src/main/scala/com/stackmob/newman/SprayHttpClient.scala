@@ -44,6 +44,7 @@ import akka.pattern.ask
 import spray.can.Http
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
+import com.stackmob.newman.concurrent.{RichScalaFuture, SequentialExecutionContext}
 
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
                       defaultMediaType: SprayMediaType = SprayMediaTypes.`application/json`,
@@ -72,7 +73,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
         SprayEmptyEntity
       } else {
         val contentType = headers.getContentType(defaultMediaType)
-        SprayHttpBody(contentType, rawBody)
+        SprayHttpEntity(contentType, rawBody)
       }
     }
 
