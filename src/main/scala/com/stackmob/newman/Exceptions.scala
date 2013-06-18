@@ -17,5 +17,6 @@
 package com.stackmob.newman
 
 object Exceptions {
+  case class InternalException(m: String, t: Option[Throwable]) extends Exception(m, t.orNull)
   case class UnknownHttpStatusCodeException(i: Int) extends Exception("Unknown HTTP status code %d".format(i))
 }
