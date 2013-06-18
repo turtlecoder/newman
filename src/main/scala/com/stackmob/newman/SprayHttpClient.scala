@@ -17,20 +17,19 @@
 package com.stackmob.newman
 
 import akka.actor._
-import spray.http.{HttpRequest => SprayHttpRequest,
+import spray.http.{Uri,
+  HttpRequest => SprayHttpRequest,
   HttpResponse => SprayHttpResponse,
   HttpMethod => SprayHttpMethod,
   HttpMethods => SprayHttpMethods,
   HttpBody => SprayHttpBody,
+  ContentTypes => SprayContentTypes,
   ContentType => SprayContentType,
   HttpEntity => SprayHttpEntity,
   EmptyEntity => SprayEmptyEntity,
   MediaTypes => SprayMediaTypes,
   MediaType => SprayMediaType}
-import spray.can.client.{HttpClient => NativeSprayHttpClient}
-import spray.client.HttpConduit
 import spray.http.HttpHeaders.RawHeader
-import spray.io.IOExtension
 import java.net.URL
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
@@ -40,90 +39,95 @@ import scala.concurrent.Future
 import scalaz.Scalaz._
 import com.stackmob.newman.response.HttpResponse
 import scalaz.NonEmptyList
-import java.util.UUID
+import akka.io.{IO => AkkaIO}
+import akka.pattern.ask
+import spray.can.Http
+import akka.util.Timeout
+import java.util.concurrent.TimeUnit
 import com.stackmob.newman.concurrent.{RichScalaFuture, SequentialExecutionContext}
+import com.stackmob.newman.Exceptions.InternalException
 
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
                       defaultMediaType: SprayMediaType = SprayMediaTypes.`application/json`,
-                      defaultContentType: SprayContentType = SprayContentType(SprayMediaTypes.`application/json`)) extends HttpClient {
+                      defaultContentType: SprayContentType = SprayContentTypes.`application/json`,
+                      timeout: Timeout = Timeout(5, TimeUnit.SECONDS)) extends HttpClient {
 
   import SprayHttpClient._
 
-  private lazy val ioBridge = IOExtension(actorSystem).ioBridge()
-  private lazy val httpClient = {
-    val clientProps = Props(new NativeSprayHttpClient(ioBridge))
-    actorSystem.actorOf(props = clientProps, name = s"http-client-${UUID.randomUUID()}")
-  }
 
-  private def pipeline(url: URL): SprayHttpRequest => Future[SprayHttpResponse] = {
-    val (host, port) = url.hostAndPort
-    val conduit = {
-      val conduitProps = Props(new HttpConduit(httpClient, host, port))
-      actorSystem.actorOf(props = conduitProps, name = s"http-conduit-$host:$port-${UUID.randomUUID()}")
+  private implicit val clientActorSystem: ActorSystem = actorSystem
+  private implicit val clientTimeout: Timeout = timeout
+
+  private def perform(method: SprayHttpMethod,
+                      url: URL,
+                      headers: Headers,
+                      rawBody: RawBody = RawBody.empty): IO[Promise[HttpResponse]] = {
+    IO {
+      val resp = (AkkaIO(Http) ? request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
+      resp.executeToNewmanPromise(defaultContentType)
+    } except {
+      case c: ClassCastException => throw InternalException("Unexpected return type", c.some)
+      case t: Throwable => throw t
     }
-    HttpConduit.sendReceive(conduit)
   }
 
   private def request(method: SprayHttpMethod,
                       url: URL,
                       headers: Headers,
-                      rawBody: RawBody = RawBody.empty): SprayHttpRequest = {
+                      rawBody: RawBody): SprayHttpRequest = {
     val headerList = headers.map { headerNel =>
       val lst = headerNel.list
       lst.map { hdr =>
         RawHeader(hdr._1, hdr._2)
       }
-    }.getOrElse(Nil)
+    } | Nil
 
-    val entity: SprayHttpEntity = if(rawBody.length == 0) {
-      SprayEmptyEntity
-    } else {
-      val contentType = headers.getContentType(defaultMediaType)
-      SprayHttpBody(contentType, rawBody)
+    val entity: SprayHttpEntity = {
+      if (rawBody.length === 0) {
+        SprayEmptyEntity
+      } else {
+        val contentType = headers.getContentType(defaultMediaType)
+        SprayHttpEntity(contentType, rawBody)
+      }
     }
 
-    //we call parseQuery and parseHeaders here so that the caller of this function get the request into the proper state
-    val (_, req) = SprayHttpRequest(method, url.getPath, headerList, entity).parseQuery.parseHeaders
-    req
+    SprayHttpRequest(method, Uri(url.toString), headerList, entity)
   }
 
-  def get(url: URL, headers: Headers) = GetRequest(url, headers) {
-    IO {
-      val req = request(SprayHttpMethods.GET, url, headers)
-      pipeline(url).executeToNewmanPromise(req, defaultContentType)
-    }
-  }
-
-  def post(url: URL, headers: Headers, body: RawBody) = PostRequest(url, headers, body) {
-    IO {
-      val req = request(SprayHttpMethods.POST, url, headers, body)
-      pipeline(url).executeToNewmanPromise(req, defaultContentType)
+  override def get(url: URL, headers: Headers): GetRequest = {
+    GetRequest(url, headers) {
+      perform(SprayHttpMethods.GET, url, headers)
     }
   }
 
-  def put(url: URL, headers: Headers, body: RawBody) = PutRequest(url, headers, body) {
-    IO {
-      val req = request(SprayHttpMethods.PUT, url, headers, body)
-      pipeline(url).executeToNewmanPromise(req, defaultContentType)
+  override def post(url: URL, headers: Headers, body: RawBody): PostRequest = {
+    PostRequest(url, headers, body) {
+      perform(SprayHttpMethods.POST, url, headers, body)
     }
   }
 
-  def delete(url: URL, headers: Headers) = DeleteRequest(url, headers) {
-    IO {
-      val req = request(SprayHttpMethods.DELETE, url, headers)
-      pipeline(url).executeToNewmanPromise(req, defaultContentType)
+  override def put(url: URL, headers: Headers, body: RawBody): PutRequest = {
+    PutRequest(url, headers, body) {
+      perform(SprayHttpMethods.PUT, url, headers, body)
     }
   }
 
-  def head(url: URL, headers: Headers) = HeadRequest(url, headers) {
-    IO {
-      val req = request(SprayHttpMethods.HEAD, url, headers)
-      pipeline(url).executeToNewmanPromise(req, defaultContentType)
+  override def delete(url: URL, headers: Headers): DeleteRequest = {
+    DeleteRequest(url, headers) {
+      perform(SprayHttpMethods.DELETE, url, headers)
     }
   }
+
+  override def head(url: URL, headers: Headers): HeadRequest = {
+    HeadRequest(url, headers) {
+      perform(SprayHttpMethods.HEAD, url, headers)
+    }
+  }
+
 }
 
 object SprayHttpClient {
+
   private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
 
   implicit class RichHeaders(headers: Headers) {
@@ -138,8 +142,8 @@ object SprayHttpClient {
       val mediaType: SprayMediaType = mbContentTypeHeader.map { header =>
         val (_, value) = header
         value.split("/").toList match {
-          case mainType :: subType :: Nil => SprayMediaTypes.CustomMediaType(mainType, subType)
-          case mainType :: Nil => SprayMediaTypes.CustomMediaType(mainType, "")
+          case mainType :: subType :: Nil => SprayMediaType.custom(mainType, subType)
+          case mainType :: Nil => SprayMediaType.custom(mainType, "")
           case _ => defaultMediaType
         }
       } | {
@@ -153,7 +157,7 @@ object SprayHttpClient {
   private[SprayHttpClient] implicit class RichSprayHttpResponse(resp: SprayHttpResponse) {
     def toNewmanHttpResponse(defaultContentType: SprayContentType): Option[HttpResponse] = {
       for {
-        code <- HttpResponseCode.fromInt(resp.status.value)
+        code <- HttpResponseCode.fromInt(resp.status.intValue)
         rawHeaders <- Option(resp.headers)
         headers <- Option {
           rawHeaders.map { hdr =>
@@ -180,14 +184,14 @@ object SprayHttpClient {
     }
   }
 
-  private[SprayHttpClient] implicit class RichPipeline(pipeline: SprayHttpRequest => Future[SprayHttpResponse]) {
-    def executeToNewmanPromise(req: SprayHttpRequest,
-                               defaultContentType: SprayContentType): Promise[HttpResponse] = {
-      pipeline(req).map { res =>
-        res.toNewmanHttpResponse(defaultContentType) | (throw new InvalidSprayResponse(res.status.value))
+  private[SprayHttpClient] implicit class RichPipeline(pipeline: Future[SprayHttpResponse]) {
+    def executeToNewmanPromise(defaultContentType: SprayContentType): Promise[HttpResponse] = {
+      pipeline.map { res =>
+        res.toNewmanHttpResponse(defaultContentType) | (throw new InvalidSprayResponse(res.status.intValue))
       }.toScalazPromise
     }
   }
 
   private[SprayHttpClient] class InvalidSprayResponse(code: Int) extends Exception(s"Invalid spray HTTP response with code $code")
+
 }
