@@ -63,12 +63,11 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
                       headers: Headers,
                       rawBody: RawBody = RawBody.empty): IO[Promise[HttpResponse]] = {
     IO {
-      try {
-        val resp = (AkkaIO(Http) ? request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
-        resp.executeToNewmanPromise(defaultContentType)
-      } catch {
-        case c: ClassCastException => throw InternalException("Unexpected return type", c.some)
-      }
+      val resp = (AkkaIO(Http) ? request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
+      resp.executeToNewmanPromise(defaultContentType)
+    } except {
+      case c: ClassCastException => throw InternalException("Unexpected return type", c.some)
+      case t: Throwable => throw t
     }
   }
 
