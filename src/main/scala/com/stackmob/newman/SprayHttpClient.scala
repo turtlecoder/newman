@@ -18,6 +18,7 @@ package com.stackmob.newman
 
 import akka.actor._
 import spray.http.{Uri,
+  HttpHeaders => SprayHttpHeaders,
   HttpRequest => SprayHttpRequest,
   HttpResponse => SprayHttpResponse,
   HttpMethod => SprayHttpMethod,
@@ -26,9 +27,7 @@ import spray.http.{Uri,
   ContentTypes => SprayContentTypes,
   ContentType => SprayContentType,
   HttpEntity => SprayHttpEntity,
-  EmptyEntity => SprayEmptyEntity,
-  MediaTypes => SprayMediaTypes,
-  MediaType => SprayMediaType}
+  EmptyEntity => SprayEmptyEntity}
 import spray.http.HttpHeaders.RawHeader
 import java.net.URL
 import com.stackmob.newman.request._
@@ -46,9 +45,9 @@ import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 import com.stackmob.newman.concurrent.{RichScalaFuture, SequentialExecutionContext}
 import com.stackmob.newman.Exceptions.InternalException
+import spray.http.parser.HttpParser
 
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
-                      defaultMediaType: SprayMediaType = SprayMediaTypes.`application/json`,
                       defaultContentType: SprayContentType = SprayContentTypes.`application/json`,
                       timeout: Timeout = Timeout(5, TimeUnit.SECONDS)) extends HttpClient {
 
@@ -86,7 +85,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
       if (rawBody.length === 0) {
         SprayEmptyEntity
       } else {
-        val contentType = headers.getContentType(defaultMediaType)
+        val contentType = headers.getContentType(defaultContentType)
         SprayHttpEntity(contentType, rawBody)
       }
     }
@@ -131,26 +130,11 @@ object SprayHttpClient {
   private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
 
   implicit class RichHeaders(headers: Headers) {
-    def getContentType(defaultMediaType: SprayMediaType): SprayContentType = {
-      val mbContentTypeHeader = headers.flatMap { lst: HeaderList =>
-        lst.list.find { hdr =>
-          val (name, _) = hdr
-          name.toLowerCase === "content-type"
-        }
-      }
-
-      val mediaType: SprayMediaType = mbContentTypeHeader.map { header =>
-        val (_, value) = header
-        value.split("/").toList match {
-          case mainType :: subType :: Nil => SprayMediaType.custom(mainType, subType)
-          case mainType :: Nil => SprayMediaType.custom(mainType, "")
-          case _ => defaultMediaType
-        }
-      } | {
-        defaultMediaType
-      }
-
-      SprayContentType(mediaType, None)
+    def getContentType(defaultContentType: SprayContentType): SprayContentType = {
+      headers.flatMap { lst: HeaderList =>
+        val results = lst.list.map(x => HttpParser.parseHeader(RawHeader(x._1, x._2))).collect({ case Right(c) => c })
+        results.collect({ case c @ SprayHttpHeaders.`Content-Type`(_) => c }).map(_.contentType).headOption
+      } | defaultContentType
     }
   }
 
