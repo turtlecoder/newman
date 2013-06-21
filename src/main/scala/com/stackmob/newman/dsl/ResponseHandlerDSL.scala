@@ -82,10 +82,10 @@ import net.liftweb.json.scalaz.JsonScalaz._
  * See `expectNoContent` for more info.
  *
  */
-
 trait ResponseHandlerDSL {
   case class ResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])],
-                                               respIO: IO[HttpResponse])(implicit errorConv: Throwable => Failure) {
+                                               respIO: IO[HttpResponse])
+                                              (implicit errorConv: Throwable => Failure) {
 
     /**
      * Adds a handler (a function that is called when the code matches the given function) and returns a new ResponseHandler
@@ -105,7 +105,8 @@ trait ResponseHandlerDSL {
      * @return
      */
     def handleCode(code: HttpResponseCode)(handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
-      handleCodesSuchThat({c: HttpResponseCode => c === code})(handler)
+      handleCodesSuchThat({c: HttpResponseCode =>
+        c === code})(handler)
     }
 
     /**
@@ -172,7 +173,4 @@ trait ResponseHandlerDSL {
       }
     }
   }
-
-  case class UnhandledResponseCode(code: HttpResponseCode, body: String)
-    extends Exception("unhandled response code %d and body %s".format(code.code, body))
 }

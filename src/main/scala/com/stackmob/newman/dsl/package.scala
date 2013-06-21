@@ -21,12 +21,13 @@ import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import scalaz.effect.IO
 import java.net.URL
 import scalaz.Validation
+import scalaz.concurrent.Promise
 import net.liftweb.json.scalaz.JsonScalaz._
 import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
 import language.implicitConversions
 
-package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHandlerDSL {
+package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHandlerDSL with AsyncResponseHandlerDSL {
 
   sealed trait Protocol {
     def name: String
@@ -48,6 +49,9 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
   implicit def responseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]): IOValidation[Failure, Success] = {
     handler.toIO
   }
+
+  case class UnhandledResponseCode(code: HttpResponseCode, body: String)
+    extends Exception("unhandled response code %d and body %s".format(code.code, body))
 
   implicit class RichIOHttpResponse(value: IO[HttpResponse]) {
 
@@ -92,6 +96,9 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
                                          (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
       ResponseHandler(emptyHandlerList[Failure,Success], value).expectNoContent(successValue)
     }
+  }
+
+  implicit class RichIOPromiseHttpResponse(value: IO[Promise[HttpResponse]]) {
 
   }
 

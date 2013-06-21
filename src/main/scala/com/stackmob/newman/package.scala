@@ -18,6 +18,7 @@ package com.stackmob
 
 import scalaz._
 import scalaz.effect.IO
+import scalaz.concurrent.Promise
 import scalaz.NonEmptyList._
 import scalaz.concurrent.{Promise => ScalazPromise}
 import scala.concurrent.{Promise => ScalaPromise, Future => ScalaFuture}
@@ -27,6 +28,7 @@ import java.net.URL
 
 package object newman extends NewmanPrivate {
   type IOValidation[Fail, Success] = IO[Validation[Fail, Success]]
+  type IOPromiseValidation[Fail, Success] = IO[Promise[Validation[Fail, Success]]]
 
   type Header = (String, String)
   type HeaderList = NonEmptyList[Header]
