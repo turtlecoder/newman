@@ -24,6 +24,7 @@ import Scalaz._
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.{RawBody, Headers}
 import com.stackmob.newman.Constants._
+import com.stackmob.newman.dsl._
 
 class ResponseHandlerDSLSpecs extends Specification { def is =
   "ResponseHandlerDSLSpecs".title                                                                                       ^
@@ -37,14 +38,16 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
     "return non throwable error types if specified & the IO throws"                                                     ! CustomErrors().returnsErrorCorrectly ^
     "return successful validation of nonthrowable error type if specified"                                              ! CustomErrors().returnsSuccessCorrectly ^
                                                                                                                         end
-  trait Context
+  private trait Context
 
-  import com.stackmob.newman.dsl._
-
-  case class ThrowingIO() extends Context {
+  private case class ThrowingIO() extends Context {
     def returnsFailure: SpecsResult = {
       val ex = new Exception("test exception")
-      val respIO = IO((throw ex): HttpResponse).handleCode(HttpResponseCode.Ok)(_ => ().success)
+      val respIO = IO {
+        (throw ex): HttpResponse
+      }.handleCode(HttpResponseCode.Ok) { _ =>
+        ().success[Throwable]
+      }
       respIO.unsafePerformIO().toEither must beLeft.like {
         case e => e must beEqualTo(ex)
       }
@@ -66,7 +69,7 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
     }
   }
 
-  case class CustomErrors() extends CustomErrorContext {
+  private case class CustomErrors() extends CustomErrorContext {
     def returnsErrorCorrectly: SpecsResult = {
       val exceptionMessage = "test exception"
       val ex = new Exception(exceptionMessage)
@@ -86,7 +89,7 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
     }
   }
 
-  trait CustomErrorContext extends Context {
+  private trait CustomErrorContext extends Context {
     case class CustomErrorForSpecs(msg: String)
 
     implicit def exToCustomError(ex: Throwable): CustomErrorForSpecs = new CustomErrorForSpecs(ex.getMessage())
