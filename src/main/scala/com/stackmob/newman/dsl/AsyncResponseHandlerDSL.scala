@@ -122,7 +122,13 @@ trait AsyncResponseHandlerDSL {
     def default(handler: HttpResponse => Validation[Failure, Success]): IOPromiseValidation[Failure, Success] = {
       respIO.map { responseProm: Promise[HttpResponse] =>
         responseProm.map { response =>
-          handlers.reverse.find(_._1(response.code)).map(_._2 apply response) | handler(response)
+          handlers.reverse.find { functionTup =>
+            functionTup._1.apply(response.code)
+          }.map { functionTup =>
+            functionTup._2.apply(response)
+          } | {
+            handler(response)
+          }
         }
       }.except { t =>
         errorConv(t).fail[Success].pure[Promise].pure[IO]
@@ -131,7 +137,7 @@ trait AsyncResponseHandlerDSL {
 
     def toIO: IOPromiseValidation[Failure, Success] = {
       default { resp =>
-        errorConv(UnhandledResponseCode(resp.code, resp.bodyString)).fail[Success]
+        errorConv.apply(UnhandledResponseCode(resp.code, resp.bodyString)).fail[Success]
       }
     }
   }

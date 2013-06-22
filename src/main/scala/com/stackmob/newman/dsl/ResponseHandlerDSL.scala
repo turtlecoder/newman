@@ -163,8 +163,16 @@ trait ResponseHandlerDSL {
      */
     def default(handler: HttpResponse => Validation[Failure, Success]): IOValidation[Failure, Success] = {
       respIO.map { response =>
-        handlers.reverse.find(_._1(response.code)).map(_._2 apply response) | handler(response)
-      }.except(t => errorConv(t).fail[Success].pure[IO])
+        handlers.reverse.find { functionTup =>
+          functionTup._1(response.code)
+        }.map { functionTup =>
+          functionTup._2.apply(response)
+        } | {
+          handler(response)
+        }
+      }.except { t =>
+        errorConv(t).fail[Success].pure[IO]
+      }
     }
 
     def toIO: IOValidation[Failure, Success] = {
