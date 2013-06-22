@@ -119,7 +119,7 @@ trait AsyncResponseHandlerDSL {
     /**
      * Provide a default handler for all unhandled status codes. Must be the last handler in the chain
      */
-    def default(handler: HttpResponse => Validation[Failure, Success]): IOPromiseValidation[Failure, Success] = {
+    private def default(handler: HttpResponse => Validation[Failure, Success]): IOPromiseValidation[Failure, Success] = {
       respIO.map { responseProm: Promise[HttpResponse] =>
         responseProm.map { response =>
           handlers.reverse.find { functionTup =>
