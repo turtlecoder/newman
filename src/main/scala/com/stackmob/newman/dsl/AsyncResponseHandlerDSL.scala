@@ -27,12 +27,12 @@ import com.stackmob.newman.Constants._
 import com.stackmob.newman._
 import com.stackmob.newman.response.HttpResponse.JSONParsingError
 
-/**
- * the same thing as {{{com.stackmob.newman.dsl.ResponseHandlerDSL}}}, except for asynchronous response handling
- */
 trait AsyncResponseHandlerDSL {
   type IOPromise[T] = IO[Promise[T]]
 
+  /**
+   * the same thing as {{{com.stackmob.newman.dsl.ResponseHandlerDSL}}}, except for asynchronous response handling
+   */
   case class AsyncResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])],
                                                     respIO: IOPromise[HttpResponse])
                                                    (implicit errorConv: Throwable => Failure) {
