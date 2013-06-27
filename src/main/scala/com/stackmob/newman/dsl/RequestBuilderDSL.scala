@@ -29,7 +29,9 @@ import net.liftweb.json._
 
 trait RequestBuilderDSL {
   private val HeadersPrependLens: Headers @> Headers = lensu(
-    get = {h: Headers => h },
+    get = { h: Headers =>
+      h
+    },
     set = { (existing: Headers, toPrepend: Headers) =>
       (existing, toPrepend) match {
         case (Some(e), Some(t)) => Some(t :::> e.list)
@@ -41,15 +43,21 @@ trait RequestBuilderDSL {
   )
 
   private val BodyPrependLens: Array[Byte] @> Array[Byte] = lensu(
-    get = { b: Array[Byte] => b },
-    set = { (existing: Array[Byte], toPrepend: Array[Byte]) => toPrepend ++ existing }
+    get = { b: Array[Byte] =>
+      b
+    },
+    set = { (existing: Array[Byte], toPrepend: Array[Byte]) =>
+      toPrepend ++ existing
+    }
   )
 
   sealed trait Builder {
     protected type T <: Builder
 
     def toRequest: HttpRequest
-    def headers: Headers = none
+    def headers: Headers = {
+      none
+    }
 
     def addHeaders(toAdd: Headers): T
     def addHeaders(toAdd: Header): T
@@ -69,19 +77,41 @@ trait RequestBuilderDSL {
 
     override type T = HeaderBuilder
 
-    override def addHeaders(toAdd: Headers): HeaderBuilder = HeaderBuilder(fn, HeadersPrependLens.set(headers, toAdd))
-    override def addHeaders(h: Header, tail: Header*): HeaderBuilder = addHeaders(Headers(h, tail:_*))
-    override def addHeaders(toAdd: HeaderList): HeaderBuilder = addHeaders(Headers(toAdd))
-    override def addHeaders(toAdd: List[Header]): HeaderBuilder = addHeaders(Headers(toAdd))
+    override def addHeaders(toAdd: Headers): HeaderBuilder = {
+      new HeaderBuilder(fn, HeadersPrependLens.set(headers, toAdd))
+    }
+    override def addHeaders(h: Header, tail: Header*): HeaderBuilder = {
+      addHeaders(Headers(h, tail:_*))
+    }
+    override def addHeaders(toAdd: HeaderList): HeaderBuilder = {
+      addHeaders(Headers(toAdd))
+    }
+    override def addHeaders(toAdd: List[Header]): HeaderBuilder = {
+      addHeaders(Headers(toAdd))
+    }
 
-    override def setHeaders(toSet: Headers): HeaderBuilder = HeaderBuilder(fn, toSet)
-    override def setHeaders(toSet:Header): HeaderBuilder = setHeaders(Headers(toSet))
-    override def setHeaders(h: Header, tail: Header*): HeaderBuilder = setHeaders(Headers(h, tail:_*))
-    override def setHeaders(toSet: HeaderList): HeaderBuilder = setHeaders(Headers(toSet))
-    override def setHeaders(toSet: List[Header]): HeaderBuilder = setHeaders(Headers(toSet))
-    override def addHeaders(toAdd: Header): HeaderBuilder = addHeaders(Headers(toAdd))
+    override def setHeaders(toSet: Headers): HeaderBuilder = {
+      new HeaderBuilder(fn, toSet)
+    }
+    override def setHeaders(toSet:Header): HeaderBuilder = {
+      setHeaders(Headers(toSet))
+    }
+    override def setHeaders(h: Header, tail: Header*): HeaderBuilder = {
+      setHeaders(Headers(h, tail:_*))
+    }
+    override def setHeaders(toSet: HeaderList): HeaderBuilder = {
+      setHeaders(Headers(toSet))
+    }
+    override def setHeaders(toSet: List[Header]): HeaderBuilder = {
+      setHeaders(Headers(toSet))
+    }
+    override def addHeaders(toAdd: Header): HeaderBuilder = {
+      addHeaders(Headers(toAdd))
+    }
 
-    override def toRequest: HttpRequest = fn(headers)
+    override def toRequest: HttpRequest = {
+      fn(headers)
+    }
   }
 
   case class HeaderAndBodyBuilder(fn: (Headers, RawBody) => HttpRequestWithBody,
@@ -90,10 +120,20 @@ trait RequestBuilderDSL {
     extends Builder {
 
     override type T = HeaderAndBodyBuilder
-    def addBody(b: RawBody): HeaderAndBodyBuilder = HeaderAndBodyBuilder(fn, headers, BodyPrependLens.set(body, b))
-    def addBody(s: String)(implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = addBody(s.getBytes(charset))
-    def setBody(b: RawBody): HeaderAndBodyBuilder = HeaderAndBodyBuilder(fn, headers, b)
-    def setBodyString(s: String)(implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = setBody(s.getBytes(charset))
+    def addBody(b: RawBody): HeaderAndBodyBuilder = {
+      new HeaderAndBodyBuilder(fn, headers, BodyPrependLens.set(body, b))
+    }
+    def addBody(s: String)
+               (implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = {
+      addBody(s.getBytes(charset))
+    }
+    def setBody(b: RawBody): HeaderAndBodyBuilder = {
+      new HeaderAndBodyBuilder(fn, headers, b)
+    }
+    def setBodyString(s: String)
+                     (implicit charset: Charset = UTF8Charset): HeaderAndBodyBuilder = {
+      setBody(s.getBytes(charset))
+    }
 
     import net.liftweb.json.scalaz.JsonScalaz._
     def setBody[A <: AnyRef](value: A)
@@ -104,38 +144,70 @@ trait RequestBuilderDSL {
       setBodyString(bodyString)
     }
 
-    override def addHeaders(toAdd: Headers): HeaderAndBodyBuilder = HeaderAndBodyBuilder(fn, HeadersPrependLens.set(headers, toAdd), body)
-    override def addHeaders(toAdd: HeaderList): HeaderAndBodyBuilder = addHeaders(Headers(toAdd))
-    override def addHeaders(toAdd: List[Header]): HeaderAndBodyBuilder = addHeaders(Headers(toAdd))
-    override def addHeaders(toAdd: Header): HeaderAndBodyBuilder = addHeaders(Headers(toAdd))
-    override def addHeaders(h: Header, tail: Header*): HeaderAndBodyBuilder = addHeaders(Headers(h, tail:_*))
+    override def addHeaders(toAdd: Headers): HeaderAndBodyBuilder = {
+      new HeaderAndBodyBuilder(fn, HeadersPrependLens.set(headers, toAdd), body)
+    }
+    override def addHeaders(toAdd: HeaderList): HeaderAndBodyBuilder = {
+      addHeaders(Headers(toAdd))
+    }
+    override def addHeaders(toAdd: List[Header]): HeaderAndBodyBuilder = {
+      addHeaders(Headers(toAdd))
+    }
+    override def addHeaders(toAdd: Header): HeaderAndBodyBuilder = {
+      addHeaders(Headers(toAdd))
+    }
+    override def addHeaders(h: Header, tail: Header*): HeaderAndBodyBuilder = {
+      addHeaders(Headers(h, tail:_*))
+    }
 
-    override def setHeaders(toSet: Headers): HeaderAndBodyBuilder = HeaderAndBodyBuilder(fn, toSet, body)
-    override def setHeaders(toSet:Header): HeaderAndBodyBuilder = setHeaders(Headers(toSet))
-    override def setHeaders(h: Header, tail: Header*): HeaderAndBodyBuilder = setHeaders(Headers(h, tail:_*))
-    override def setHeaders(toSet: HeaderList): HeaderAndBodyBuilder = setHeaders(Headers(toSet))
-    override def setHeaders(toSet: List[Header]): HeaderAndBodyBuilder = setHeaders(Headers(toSet))
+    override def setHeaders(toSet: Headers): HeaderAndBodyBuilder = {
+      new HeaderAndBodyBuilder(fn, toSet, body)
+    }
+    override def setHeaders(toSet:Header): HeaderAndBodyBuilder = {
+      setHeaders(Headers(toSet))
+    }
+    override def setHeaders(h: Header, tail: Header*): HeaderAndBodyBuilder = {
+      setHeaders(Headers(h, tail:_*))
+    }
+    override def setHeaders(toSet: HeaderList): HeaderAndBodyBuilder = {
+      setHeaders(Headers(toSet))
+    }
+    override def setHeaders(toSet: List[Header]): HeaderAndBodyBuilder = {
+      setHeaders(Headers(toSet))
+    }
 
-    override def toRequest: HttpRequest = fn(headers, body)
+    override def toRequest: HttpRequest = {
+      fn(headers, body)
+    }
   }
 
-  def GET(url: URL)(implicit client: HttpClient): HeaderBuilder = HeaderBuilder { h: Headers =>
-    client.get(url, h)
+  def GET(url: URL)(implicit client: HttpClient): HeaderBuilder = {
+    new HeaderBuilder({ h: Headers =>
+      client.get(url, h)
+    })
   }
 
-  def PUT(url: URL)(implicit client: HttpClient): HeaderAndBodyBuilder = HeaderAndBodyBuilder { (h: Headers, b: RawBody) =>
-    client.put(url, h, b)
+  def PUT(url: URL)(implicit client: HttpClient): HeaderAndBodyBuilder = {
+    new HeaderAndBodyBuilder({ (h: Headers, b: RawBody) =>
+      client.put(url, h, b)
+    })
   }
 
-  def POST(url: URL)(implicit client: HttpClient): HeaderAndBodyBuilder = HeaderAndBodyBuilder { (h: Headers, b: RawBody) =>
-    client.post(url, h, b)
+  def POST(url: URL)(implicit client: HttpClient): HeaderAndBodyBuilder = {
+    new HeaderAndBodyBuilder({ (h: Headers, b: RawBody) =>
+      client.post(url, h, b)
+    })
   }
 
-  def DELETE(url: URL)(implicit client: HttpClient): HeaderBuilder = HeaderBuilder { h: Headers =>
-    client.delete(url, h)
+  def DELETE(url: URL)(implicit client: HttpClient): HeaderBuilder = {
+    new HeaderBuilder({ h: Headers =>
+      client.delete(url, h)
+    })
   }
 
-  def HEAD(url: URL)(implicit client: HttpClient): HeaderBuilder = HeaderBuilder { h: Headers =>
-    client.head(url, h)
+  def HEAD(url: URL)(implicit client: HttpClient): HeaderBuilder = {
+    new HeaderBuilder({ h: Headers =>
+      client.head(url, h)
+    })
   }
 }

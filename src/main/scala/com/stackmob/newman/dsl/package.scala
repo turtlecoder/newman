@@ -66,19 +66,19 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
     def handleCodesSuchThat[Failure, Success](check: HttpResponseCode => Boolean)
                                              (handler: HttpResponse => Validation[Failure, Success])
                                              (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure, Success], value).handleCodesSuchThat(check)(handler)
+      new ResponseHandler(emptyHandlerList[Failure, Success], value).handleCodesSuchThat(check)(handler)
     }
 
     def handleCode[Failure, Success](code: HttpResponseCode)
                                     (handler: HttpResponse => Validation[Failure, Success])
                                     (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCode(code)(handler)
+      new ResponseHandler(emptyHandlerList[Failure,Success], value).handleCode(code)(handler)
     }
 
     def handleCodes[Failure, Success](codes: Seq[HttpResponseCode])
                                      (handler: HttpResponse => Validation[Failure, Success])
                                      (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).handleCodes(codes)(handler)
+      new ResponseHandler(emptyHandlerList[Failure,Success], value).handleCodes(codes)(handler)
     }
 
     def expectJSONBody[Failure, Success](code: HttpResponseCode)
@@ -86,7 +86,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
                                          m: Manifest[Success],
                                          charset: Charset = UTF8Charset,
                                          errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, m, charset)
+      new ResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, m, charset)
     }
 
     def handleJSONBody[Failure, S, Success](code: HttpResponseCode)
@@ -95,12 +95,12 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
                                             m: Manifest[S],
                                             charset: Charset = UTF8Charset,
                                             errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, m, charset)
+      new ResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, m, charset)
     }
 
     def expectNoContent[Failure, Success](successValue: Success)
                                          (implicit errorConv: Throwable => Failure): ResponseHandler[Failure, Success] = {
-      ResponseHandler(emptyHandlerList[Failure,Success], value).expectNoContent(successValue)
+      new ResponseHandler(emptyHandlerList[Failure,Success], value).expectNoContent(successValue)
     }
   }
 
@@ -109,19 +109,19 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
     def handleCodesSuchThat[Failure, Success](check: HttpResponseCode => Boolean)
                                              (handler: HttpResponse => Validation[Failure, Success])
                                              (implicit errorConv: Throwable => Failure): AsyncResponseHandler[Failure, Success] = {
-      AsyncResponseHandler(emptyHandlerList[Failure, Success], value).handleCodesSuchThat(check)(handler)
+      new AsyncResponseHandler(emptyHandlerList[Failure, Success], value).handleCodesSuchThat(check)(handler)
     }
 
     def handleCode[Failure, Success](code: HttpResponseCode)
                                     (handler: HttpResponse => Validation[Failure, Success])
                                     (implicit errorConv: Throwable => Failure): AsyncResponseHandler[Failure, Success] = {
-      AsyncResponseHandler(emptyHandlerList[Failure,Success], value).handleCode(code)(handler)
+      new AsyncResponseHandler(emptyHandlerList[Failure,Success], value).handleCode(code)(handler)
     }
 
     def handleCodes[Failure, Success](codes: Seq[HttpResponseCode])
                                      (handler: HttpResponse => Validation[Failure, Success])
                                      (implicit errorConv: Throwable => Failure): AsyncResponseHandler[Failure, Success] = {
-      AsyncResponseHandler(emptyHandlerList[Failure,Success], value).handleCodes(codes)(handler)
+      new AsyncResponseHandler(emptyHandlerList[Failure,Success], value).handleCodes(codes)(handler)
     }
 
     def expectJSONBody[Failure, Success](code: HttpResponseCode)
@@ -129,7 +129,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
                                          m: Manifest[Success],
                                          charset: Charset = UTF8Charset,
                                          errorConv: Throwable => Failure): AsyncResponseHandler[Failure, Success] = {
-      AsyncResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, m, charset)
+      new AsyncResponseHandler(emptyHandlerList[Failure,Success], value).expectJSONBody(code)(reader, m, charset)
     }
 
     def handleJSONBody[Failure, S, Success](code: HttpResponseCode)
@@ -138,12 +138,12 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
                                             m: Manifest[S],
                                             charset: Charset = UTF8Charset,
                                             errorConv: Throwable => Failure): AsyncResponseHandler[Failure, Success] = {
-      AsyncResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, m, charset)
+      new AsyncResponseHandler(emptyHandlerList[Failure,Success], value).handleJSONBody(code)(handler)(reader, m, charset)
     }
 
     def expectNoContent[Failure, Success](successValue: Success)
                                          (implicit errorConv: Throwable => Failure): AsyncResponseHandler[Failure, Success] = {
-      AsyncResponseHandler(emptyHandlerList[Failure,Success], value).expectNoContent(successValue)
+      new AsyncResponseHandler(emptyHandlerList[Failure,Success], value).expectNoContent(successValue)
     }
   }
 
