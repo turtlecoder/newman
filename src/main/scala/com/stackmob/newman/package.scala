@@ -103,6 +103,24 @@ package object newman extends NewmanPrivate {
       )
       scalaProm.future
     }
+
+    /**
+     * catch exceptions thrown inside the promise
+     * @param fn the function to convert the thrown exception into the expected return type
+     * @return a new promise, which will not throw
+     */
+    def except(fn: Throwable => T): ScalazPromise[T] = {
+      val returnPromise = Promise.emptyPromise[T](prom.strategy) //emptyPromise uses the same strategy as the extended promise
+
+      def onSuccess(response: T) {
+        returnPromise.fulfill(response)
+      }
+      def onFailure(t: Throwable) {
+        returnPromise.fulfill(fn(t))
+      }
+      returnPromise.to(k = onSuccess, err = onFailure)
+      returnPromise
+    }
   }
 
   implicit class RichURL(url: URL) {
