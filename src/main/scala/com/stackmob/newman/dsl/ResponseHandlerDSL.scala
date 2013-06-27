@@ -104,7 +104,8 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCode(code: HttpResponseCode)(handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
+    def handleCode(code: HttpResponseCode)
+                  (handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
       handleCodesSuchThat(_ === code)(handler)
     }
 
@@ -114,7 +115,8 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCodes(codes: Seq[HttpResponseCode])(handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
+    def handleCodes(codes: Seq[HttpResponseCode])
+                   (handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
       handleCodesSuchThat(codes.contains(_))(handler)
     }
 
@@ -125,7 +127,8 @@ trait ResponseHandlerDSL {
      * made, however, if there are there is no effect on the handling of the response.
      * @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
-    def expectJSONBody(code: HttpResponseCode)(implicit reader: JSONR[Success], m: Manifest[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
+    def expectJSONBody(code: HttpResponseCode)
+                      (implicit reader: JSONR[Success], m: Manifest[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
       handleJSONBody[Success](code)(_.success[Failure])
     }
 

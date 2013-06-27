@@ -110,7 +110,8 @@ package object newman extends NewmanPrivate {
      * @return a new promise, which will not throw
      */
     def except(fn: Throwable => T): ScalazPromise[T] = {
-      val returnPromise = Promise.emptyPromise[T](prom.strategy) //emptyPromise uses the same strategy as the extended promise
+      //emptyPromise uses the same strategy as the extended promise
+      val returnPromise = Promise.emptyPromise[T](prom.strategy)
 
       def onSuccess(response: T) {
         returnPromise.fulfill(response)
