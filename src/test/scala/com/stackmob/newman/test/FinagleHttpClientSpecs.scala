@@ -34,5 +34,6 @@ class FinagleHttpClientSpecs extends Specification with ClientTests with Respons
   "head should work"                                                                                                    ! ClientTests(client).head ^ end ^
   "headAsync should work"                                                                                               ! ClientTests(client).headAsync ^ end ^
   end
-  private def client = new FinagleHttpClient(tcpConnectionTimeout = Duration.fromMilliseconds(1000))
+  private val oneSecond = Duration.fromSeconds(1)
+  private def client = new FinagleHttpClient(tcpConnectionTimeout = oneSecond, requestTimeout = oneSecond)
 }

@@ -79,8 +79,6 @@ publishArtifact in Test := true
 
 testOptions in Test += Tests.Argument("html", "console")
 
-pomIncludeRepository := { _ => false }
-
 pomExtra := (
   <url>https://github.com/stackmob/newman</url>
   <licenses>
