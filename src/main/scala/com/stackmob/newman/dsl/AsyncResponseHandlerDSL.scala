@@ -129,6 +129,8 @@ trait AsyncResponseHandlerDSL {
           } | {
             handler(response)
           }
+        }.except { t: Throwable =>
+          errorConv(t).fail[Success]
         }
       }.except { t =>
         errorConv(t).fail[Success].pure[Promise].pure[IO]
