@@ -105,8 +105,7 @@ trait ResponseHandlerDSL {
      * @return
      */
     def handleCode(code: HttpResponseCode)(handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
-      handleCodesSuchThat({c: HttpResponseCode =>
-        c === code})(handler)
+      handleCodesSuchThat(_ === code)(handler)
     }
 
     /**
