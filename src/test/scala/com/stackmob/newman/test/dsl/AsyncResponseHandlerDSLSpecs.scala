@@ -26,17 +26,15 @@ import com.stackmob.newman.Constants._
 import com.stackmob.newman.dsl._
 
 class AsyncResponseHandlerDSLSpecs extends Specification { def is =
-  "AsyncResponseHandlerDSLSpecs".title                                                                                  ^
-  """
-  ResponseHandlerDSL is a DSL used to handle responses with Newman
-  """                                                                                                                   ^
+  "AsyncResponseHandlerDSLSpecs".title                                                                                  ^ end ^
+  "ResponseHandlerDSL is a DSL used to handle responses with Newman"                                                    ^ end ^
   "The DSL should"                                                                                                      ^
     "return a Failure if the IO throws"                                                                                 ! ThrowingIO().returnsFailure ^
     "return a Success if the IO doesn't throw, types aren't specified, and Unit is returned"                            ! ThrowingIO().returnsEmptySuccess ^
     "return a Success if the IO doesn't throw, types aren't specified, and non-Unit is returned"                        ! ThrowingIO().returnsNonEmptySuccess ^
     "return non throwable error types if specified & the IO throws"                                                     ! CustomErrors().returnsErrorCorrectly ^
     "return successful validation of nonthrowable error type if specified"                                              ! CustomErrors().returnsSuccessCorrectly ^
-                                                                                                                        end
+  end
 
   private trait Context
 
@@ -117,8 +115,9 @@ class AsyncResponseHandlerDSLSpecs extends Specification { def is =
 
   private trait CustomErrorContext extends Context {
     case class CustomErrorForSpecs(msg: String)
-
-    implicit def exToCustomError(ex: Throwable): CustomErrorForSpecs = new CustomErrorForSpecs(ex.getMessage())
+    implicit def exToCustomError(ex: Throwable): CustomErrorForSpecs = {
+      new CustomErrorForSpecs(ex.getMessage)
+    }
   }
 
 

@@ -119,7 +119,7 @@ package object newman extends NewmanPrivate {
       def onFailure(t: Throwable) {
         returnPromise.fulfill(fn(t))
       }
-      returnPromise.to(k = onSuccess, err = onFailure)
+      prom.to(k = onSuccess, err = onFailure)
       returnPromise
     }
   }
