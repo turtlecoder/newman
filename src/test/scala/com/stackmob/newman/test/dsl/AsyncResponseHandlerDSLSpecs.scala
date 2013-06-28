@@ -16,74 +16,98 @@
 
 package com.stackmob.newman.test.dsl
 
+import scalaz.Scalaz._
 import org.specs2.Specification
-import org.specs2.execute.{Result => SpecsResult}
-import scalaz._
-import effect.IO
-import Scalaz._
+import scalaz.concurrent.Promise
+import scalaz.effect.IO
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.{RawBody, Headers}
 import com.stackmob.newman.Constants._
 import com.stackmob.newman.dsl._
 
-class ResponseHandlerDSLSpecs extends Specification { def is =
-  "ResponseHandlerDSLSpecs".title                                                                                       ^
-  """
-  ResponseHandlerDSL is a DSL used to handle responses with Newman
-  """                                                                                                                   ^
+class AsyncResponseHandlerDSLSpecs extends Specification { def is =
+  "AsyncResponseHandlerDSLSpecs".title                                                                                  ^ end ^
+  "ResponseHandlerDSL is a DSL used to handle responses with Newman"                                                    ^ end ^
   "The DSL should"                                                                                                      ^
     "return a Failure if the IO throws"                                                                                 ! ThrowingIO().returnsFailure ^
     "return a Success if the IO doesn't throw, types aren't specified, and Unit is returned"                            ! ThrowingIO().returnsEmptySuccess ^
     "return a Success if the IO doesn't throw, types aren't specified, and non-Unit is returned"                        ! ThrowingIO().returnsNonEmptySuccess ^
     "return non throwable error types if specified & the IO throws"                                                     ! CustomErrors().returnsErrorCorrectly ^
     "return successful validation of nonthrowable error type if specified"                                              ! CustomErrors().returnsSuccessCorrectly ^
-                                                                                                                        end
+  end
+
   private trait Context
 
   private case class ThrowingIO() extends Context {
-    def returnsFailure: SpecsResult = {
+    def returnsFailure = {
       val ex = new Exception("test exception")
       val respIO = IO {
-        (throw ex): HttpResponse
+        Promise {
+          (throw ex): HttpResponse
+        }: Promise[HttpResponse]
       }.handleCode(HttpResponseCode.Ok) { _ =>
         ().success[Throwable]
       }
-      respIO.unsafePerformIO().toEither must beLeft.like {
+      respIO.unsafePerformIO().get.toEither must beLeft.like {
         case e => e must beEqualTo(ex)
       }
     }
 
-    def returnsEmptySuccess: SpecsResult = {
-      val respIO = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)).handleCode(HttpResponseCode.Ok)(_ => ().success)
-      respIO.unsafePerformIO().toEither must beRight.like {
+    def returnsEmptySuccess = {
+      val respIO = IO {
+        Promise {
+          HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
+        }
+      }.handleCode(HttpResponseCode.Ok) { _ =>
+        ().success[Throwable]
+      }
+      respIO.unsafePerformIO().get.toEither must beRight.like {
         case e => e must beEqualTo(())
       }
     }
 
-    def returnsNonEmptySuccess: SpecsResult = {
+    def returnsNonEmptySuccess = {
       val bodyString = "test body"
-      val respIO = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode(HttpResponseCode.Ok){resp => resp.bodyString.success}
-      respIO.unsafePerformIO().toEither must beRight.like {
+      val respIO = IO {
+        Promise {
+          HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))
+        }
+      }.handleCode(HttpResponseCode.Ok){ resp =>
+        resp.bodyString.success[Throwable]
+      }
+      respIO.unsafePerformIO().get.toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }
   }
 
   private case class CustomErrors() extends CustomErrorContext {
-    def returnsErrorCorrectly: SpecsResult = {
+    def returnsErrorCorrectly = {
       val exceptionMessage = "test exception"
       val ex = new Exception(exceptionMessage)
       val customError = new CustomErrorForSpecs(exceptionMessage)
-      val respIO: IO[Validation[CustomErrorForSpecs, Unit]] = IO((throw ex): HttpResponse).handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok)(_ => ().success)
-      respIO.unsafePerformIO().toEither must beLeft.like {
+      val respIO = IO {
+        Promise {
+          (throw ex): HttpResponse
+        }
+      }.handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok) { _ =>
+        ().success
+      }
+      respIO.unsafePerformIO().get.toEither must beLeft.like {
         case e => e must beEqualTo(customError)
       }
     }
 
-    def returnsSuccessCorrectly: SpecsResult = {
+    def returnsSuccessCorrectly = {
       val bodyString = "test body"
-      val respIO: IO[Validation[CustomErrorForSpecs, String]] = IO(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){resp => resp.bodyString.success}
-      respIO.unsafePerformIO().toEither must beRight.like {
+      val respIO = IO {
+        Promise {
+          HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))
+        }
+      }.handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){ resp =>
+        resp.bodyString.success
+      }
+      respIO.unsafePerformIO().get.toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }
@@ -91,8 +115,10 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
 
   private trait CustomErrorContext extends Context {
     case class CustomErrorForSpecs(msg: String)
-
-    implicit def exToCustomError(ex: Throwable): CustomErrorForSpecs = new CustomErrorForSpecs(ex.getMessage())
+    implicit def exToCustomError(ex: Throwable): CustomErrorForSpecs = {
+      new CustomErrorForSpecs(ex.getMessage)
+    }
   }
+
 
 }

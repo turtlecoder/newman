@@ -24,11 +24,21 @@ trait URLBuilderDSL {
 
   val DefaultPort = 80
 
-  def url(protocol: Protocol, host: String, port: Int, path: Path): PathBuilder = PathBuilder(protocol, host, port, path)
-  def url(protocol: Protocol, host: String, path: Path): PathBuilder = url(protocol, host, DefaultPort, path)
-  def url(protocol: Protocol, host: String, port: Int): PathBuilder = url(protocol, host, port, empty)
-  def url(protocol: Protocol, host: String): PathBuilder = url(protocol, host, DefaultPort, empty)
-  def url(host: String): PathBuilder = url(http, host, DefaultPort, empty)
+  def url(protocol: Protocol, host: String, port: Int, path: Path): PathBuilder = {
+    new PathBuilder(protocol, host, port, path)
+  }
+  def url(protocol: Protocol, host: String, path: Path): PathBuilder = {
+    url(protocol, host, DefaultPort, path)
+  }
+  def url(protocol: Protocol, host: String, port: Int): PathBuilder = {
+    url(protocol, host, port, empty)
+  }
+  def url(protocol: Protocol, host: String): PathBuilder = {
+    url(protocol, host, DefaultPort, empty)
+  }
+  def url(host: String): PathBuilder = {
+    url(http, host, DefaultPort, empty)
+  }
 
   trait URLCapable {
     def protocol: Protocol
@@ -58,7 +68,7 @@ trait URLBuilderDSL {
                                 path: Path,
                                 override val query: List[(String, String)] = Nil) extends URLCapable {
     def &(queryStringElt: (String, String)): QueryStringBuilder = {
-      QueryStringBuilder(protocol, host, port, path, query :+ queryStringElt)
+      new QueryStringBuilder(protocol, host, port, path, query :+ queryStringElt)
     }
   }
 
@@ -68,17 +78,27 @@ case class PathBuilder(protocol: Protocol,
                        host: String,
                        port: Int,
                        path: Path = Path.empty) extends URLCapable {
-  def /(pathElt: String): PathBuilder = PathBuilder(protocol, host, port, path / pathElt)
-  def /(path: Path): PathBuilder = PathBuilder(protocol, host, port, path)
+  def /(pathElt: String): PathBuilder = {
+    new PathBuilder(protocol, host, port, path / pathElt)
+  }
+  def /(path: Path): PathBuilder = {
+    new PathBuilder(protocol, host, port, path)
+  }
   def ?(queryStringElts: (String, String)*): QueryStringBuilder = {
-    QueryStringBuilder(protocol, host, port, path, queryStringElts.toList)
+    new QueryStringBuilder(protocol, host, port, path, queryStringElts.toList)
   }
 }
 
 case class Path(list: List[String]) {
-  def /(s: String): Path = copy(list :+ s)
-  def /(p: Path): Path = copy(list ++ p.list)
-  override def toString: String = list.mkString("/")
+  def /(s: String): Path = {
+    copy(list :+ s)
+  }
+  def /(p: Path): Path = {
+    copy(list ++ p.list)
+  }
+  override def toString: String = {
+    list.mkString("/")
+  }
 }
 
 object Path {

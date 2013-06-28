@@ -82,10 +82,10 @@ import net.liftweb.json.scalaz.JsonScalaz._
  * See `expectNoContent` for more info.
  *
  */
-
 trait ResponseHandlerDSL {
   case class ResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])],
-                                               respIO: IO[HttpResponse])(implicit errorConv: Throwable => Failure) {
+                                               respIO: IO[HttpResponse])
+                                              (implicit errorConv: Throwable => Failure) {
 
     /**
      * Adds a handler (a function that is called when the code matches the given function) and returns a new ResponseHandler
@@ -104,8 +104,9 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCode(code: HttpResponseCode)(handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
-      handleCodesSuchThat({c: HttpResponseCode => c === code})(handler)
+    def handleCode(code: HttpResponseCode)
+                  (handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
+      handleCodesSuchThat(_ === code)(handler)
     }
 
     /**
@@ -114,7 +115,8 @@ trait ResponseHandlerDSL {
      * @param handler function to call when response with given code is encountered
      * @return
      */
-    def handleCodes(codes: Seq[HttpResponseCode])(handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
+    def handleCodes(codes: Seq[HttpResponseCode])
+                   (handler: HttpResponse => Validation[Failure, Success]): ResponseHandler[Failure, Success] = {
       handleCodesSuchThat(codes.contains(_))(handler)
     }
 
@@ -125,7 +127,8 @@ trait ResponseHandlerDSL {
      * made, however, if there are there is no effect on the handling of the response.
      * @return a new [[com.stackmob.newman.dsl.ResponseHandler]]
      */
-    def expectJSONBody(code: HttpResponseCode)(implicit reader: JSONR[Success], m: Manifest[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
+    def expectJSONBody(code: HttpResponseCode)
+                      (implicit reader: JSONR[Success], m: Manifest[Success], charset: Charset = UTF8Charset): ResponseHandler[Failure, Success] = {
       handleJSONBody[Success](code)(_.success[Failure])
     }
 
@@ -162,8 +165,16 @@ trait ResponseHandlerDSL {
      */
     def default(handler: HttpResponse => Validation[Failure, Success]): IOValidation[Failure, Success] = {
       respIO.map { response =>
-        handlers.reverse.find(_._1(response.code)).map(_._2 apply response) | handler(response)
-      }.except(t => errorConv(t).fail[Success].pure[IO])
+        handlers.reverse.find { functionTup =>
+          functionTup._1(response.code)
+        }.map { functionTup =>
+          functionTup._2.apply(response)
+        } | {
+          handler(response)
+        }
+      }.except { t =>
+        errorConv(t).fail[Success].pure[IO]
+      }
     }
 
     def toIO: IOValidation[Failure, Success] = {
@@ -172,7 +183,4 @@ trait ResponseHandlerDSL {
       }
     }
   }
-
-  case class UnhandledResponseCode(code: HttpResponseCode, body: String)
-    extends Exception("unhandled response code %d and body %s".format(code.code, body))
 }

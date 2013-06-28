@@ -18,6 +18,7 @@ package com.stackmob
 
 import scalaz._
 import scalaz.effect.IO
+import scalaz.concurrent.Promise
 import scalaz.NonEmptyList._
 import scalaz.concurrent.{Promise => ScalazPromise}
 import scala.concurrent.{Promise => ScalaPromise, Future => ScalaFuture}
@@ -27,6 +28,7 @@ import java.net.URL
 
 package object newman extends NewmanPrivate {
   type IOValidation[Fail, Success] = IO[Validation[Fail, Success]]
+  type IOPromiseValidation[Fail, Success] = IO[Promise[Validation[Fail, Success]]]
 
   type Header = (String, String)
   type HeaderList = NonEmptyList[Header]
@@ -100,6 +102,25 @@ package object newman extends NewmanPrivate {
         }
       )
       scalaProm.future
+    }
+
+    /**
+     * catch exceptions thrown inside the promise
+     * @param fn the function to convert the thrown exception into the expected return type
+     * @return a new promise, which will not throw
+     */
+    def except(fn: Throwable => T): ScalazPromise[T] = {
+      //emptyPromise uses the same strategy as the extended promise
+      val returnPromise = Promise.emptyPromise[T](prom.strategy)
+
+      def onSuccess(response: T) {
+        returnPromise.fulfill(response)
+      }
+      def onFailure(t: Throwable) {
+        returnPromise.fulfill(fn(t))
+      }
+      prom.to(k = onSuccess, err = onFailure)
+      returnPromise
     }
   }
 
