@@ -122,6 +122,17 @@ package object newman extends NewmanPrivate {
       prom.to(k = onSuccess, err = onFailure)
       returnPromise
     }
+
+    def ensure(action: => Unit): ScalazPromise[T] = {
+      prom.to(
+        k = { t: T =>
+          action
+        }, err = { t: Throwable =>
+          action
+        }
+      )
+      prom
+    }
   }
 
   implicit class RichURL(url: URL) {

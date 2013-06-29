@@ -88,10 +88,12 @@ object FinagleHttpClient {
     val req = createNettyHttpRequest(method, url, headers, mbBody)
 
     client(req).toScalazPromise.map { res =>
-      client.close()
       res.toNewmanHttpResponse | {
         throw new InvalidNettyResponse(res.getStatus)
       }
+    }.ensure {
+      client.close()
+      ()
     }
   }
 
