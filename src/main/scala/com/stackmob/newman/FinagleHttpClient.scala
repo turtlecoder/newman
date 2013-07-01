@@ -70,35 +70,31 @@ class FinagleHttpClient(tcpConnectionTimeout: Duration = DefaultTcpConnectTimeou
 
 object FinagleHttpClient {
 
-  def executeRequest(tcpConnectionTimeout: Duration,
-                     requestTimeout: Duration,
-                     numConnsPerHost: Int,
-                     method: NettyHttpMethod,
-                     url: URL,
-                     headers: Headers,
-                     mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
-    val client = createClient(url, tcpConnectionTimeout, requestTimeout, numConnsPerHost)
-    val req = createNettyHttpRequest(method, url, headers, mbBody)
-    client(req).toScalazPromise.map { res =>
-      res.toNewmanHttpResponse | {
-        throw new InvalidNettyResponse(res.getStatus)
-      }
-    }
-  }
-
-  def createClient(url: URL,
-                   tcpConnectionTimeout: Duration,
-                   requestTimeout: Duration,
-                   numConnsPerHost: Int) = {
+  private[FinagleHttpClient] def executeRequest(tcpConnectionTimeout: Duration,
+                                                requestTimeout: Duration,
+                                                numConnsPerHost: Int,
+                                                method: NettyHttpMethod,
+                                                url: URL,
+                                                headers: Headers,
+                                                mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
     val (host, port) = url.hostAndPort
-
-    ClientBuilder()
+    val client = ClientBuilder()
       .codec(Http())
-      .hosts("%s:%s".format(host, port))
+      .hosts(s"$host:$port")
       .hostConnectionLimit(numConnsPerHost)
       .tcpConnectTimeout(tcpConnectionTimeout)
       .requestTimeout(requestTimeout)
       .build()
+    val req = createNettyHttpRequest(method, url, headers, mbBody)
+
+    client(req).toScalazPromise.map { res =>
+      res.toNewmanHttpResponse | {
+        throw new InvalidNettyResponse(res.getStatus)
+      }
+    }.ensure {
+      client.close()
+      ()
+    }
   }
 
   def createNettyHttpRequest(method: NettyHttpMethod,
