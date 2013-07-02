@@ -41,18 +41,31 @@ import scalaz.NonEmptyList
 import akka.io.{IO => AkkaIO}
 import akka.pattern.ask
 import spray.can.Http
+import spray.can.Http.HostConnectorSetup
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 import com.stackmob.newman.concurrent.{RichScalaFuture, SequentialExecutionContext}
 import com.stackmob.newman.Exceptions.InternalException
 import spray.http.parser.HttpParser
+import SprayHttpClient._
 
+/**
+ * an {{{HttpClient}}} backed by the Spray HTTP library.
+ * the documentation for this library is at http://spray.io/documentation/1.2-M8/spray-client/ as of this writing
+ * (note that versions may change, so adjust that URL as necessary)
+ * @param actorSystem the backing {{{actorSystem}}} from which all request/response handler actors are created
+ * @param defaultContentType the default content type with which to send requests
+ * @param timeout the request timeout
+ * @param hostConnectorSetupFn TODO: fill in
+ * @param mbCloseCmd TODO: fill in
+ */
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
                       defaultContentType: SprayContentType = SprayContentTypes.`application/json`,
-                      timeout: Timeout = Timeout(5, TimeUnit.SECONDS)) extends HttpClient {
+                      timeout: Timeout = Timeout(5, TimeUnit.SECONDS),
+                      hostConnectorSetupFn: HostConnectorSetupFn = DefaultHostConnectorSetupFn,
+                      mbCloseCmd: Option[Http.CloseCommand] = None) extends HttpClient {
 
   import SprayHttpClient._
-
 
   private implicit val clientActorSystem: ActorSystem = actorSystem
   private implicit val clientTimeout: Timeout = timeout
@@ -62,15 +75,30 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
                       headers: Headers,
                       rawBody: RawBody = RawBody.empty): IO[Promise[HttpResponse]] = {
     IO {
-      val resp = (AkkaIO(Http) ? request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
-      resp.executeToNewmanPromise(defaultContentType)
+      val request = buildRequest(method, url, headers, rawBody)
+      val hostConnectorSetup: HostConnectorSetup = hostConnectorSetupFn(url)
+      val actorRef = AkkaIO(Http)
+      val resp = (actorRef ? (request -> hostConnectorSetup)).mapTo[SprayHttpResponse]
+
+//      resp.executeToScalazPromise(defaultContentType).map { resp =>
+//        //when the response is fully returned by the server, send the close command if one exists
+//        mbCloseCmd.map { closeCmd =>
+//          actorRef ! closeCmd
+//        }
+//        resp
+//      }
+      val respProm = resp.executeToScalazPromise(defaultContentType)
+      mbCloseCmd.map { closeCmd =>
+        actorRef ! closeCmd
+      }
+      respProm
     } except {
       case c: ClassCastException => throw InternalException("Unexpected return type", c.some)
       case t: Throwable => throw t
     }
   }
 
-  private def request(method: SprayHttpMethod,
+  private def buildRequest(method: SprayHttpMethod,
                       url: URL,
                       headers: Headers,
                       rawBody: RawBody): SprayHttpRequest = {
@@ -127,6 +155,12 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
 
 object SprayHttpClient {
 
+  type HostConnectorSetupFn = URL => HostConnectorSetup
+
+  private[SprayHttpClient] def DefaultHostConnectorSetupFn(url: URL): HostConnectorSetup = {
+    HostConnectorSetup(url.getHost)
+  }
+
   private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
 
   implicit class RichHeaders(headers: Headers) {
@@ -169,7 +203,7 @@ object SprayHttpClient {
   }
 
   private[SprayHttpClient] implicit class RichPipeline(pipeline: Future[SprayHttpResponse]) {
-    def executeToNewmanPromise(defaultContentType: SprayContentType): Promise[HttpResponse] = {
+    def executeToScalazPromise(defaultContentType: SprayContentType): Promise[HttpResponse] = {
       pipeline.map { res =>
         res.toNewmanHttpResponse(defaultContentType) | (throw new InvalidSprayResponse(res.status.intValue))
       }.toScalazPromise

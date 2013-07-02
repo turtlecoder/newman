@@ -18,6 +18,14 @@ package com.stackmob.newman.test
 
 import org.specs2.Specification
 import com.stackmob.newman.SprayHttpClient
+import java.net.URL
+import spray.can.Http
+import spray.can.Http.HostConnectorSetup
+import spray.can.client.{HostConnectorSettings, ClientConnectionSettings}
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
+import spray.can.parsing.ParserSettings
+import akka.actor.ActorSystem
 
 class SprayHttpClientSpecs extends Specification with ClientTests with ResponseMatcher { def is =
   "SprayHttpClientSpecs".title                                                                                          ^ end ^
@@ -33,7 +41,39 @@ class SprayHttpClientSpecs extends Specification with ClientTests with ResponseM
   "head should work"                                                                                                    ! ClientTests(client).head ^ end ^
   "headAsync should work"                                                                                               ! ClientTests(client).headAsync ^ end ^
   end
-  private def client = new SprayHttpClient()
 
+  /**
+   * the SprayHttpClient used in testing. tuned to maximize test speed.
+   * see https://github.com/spray/spray/blob/master/spray-can/src/main/resources/reference.conf
+   * for an explanation of most of these config options.
+   * @return the client
+   */
+  private def client = new SprayHttpClient(hostConnectorSetupFn = { url: URL =>
+    val requestTimeout = Duration(500, TimeUnit.MILLISECONDS)
+    val idleTimeout = Duration.Inf
+    val reapingCycle = Duration(100, TimeUnit.MILLISECONDS)
+    val connectingTimeout = Duration(500, TimeUnit.MILLISECONDS)
+    val clientConnSettings = ClientConnectionSettings(
+      userAgentHeader = "Stackmob/Newman (automated testing)",
+      sslEncryption = false,
+      idleTimeout = idleTimeout,
+      requestTimeout = requestTimeout,
+      reapingCycle = reapingCycle,
+      responseChunkAggregationLimit = 500,
+      requestSizeHint = 250,
+      connectingTimeout = connectingTimeout,
+      parserSettings = ParserSettings.apply(ActorSystem())
+    )
+    val hostConnectorSettings = HostConnectorSettings(
+      maxConnections = 2,
+      maxRetries = 1,
+      pipelining = false,
+      idleTimeout = idleTimeout,
+      connectionSettings = clientConnSettings
+    )
+    HostConnectorSetup(url.getHost, port = 80, settings = Some(hostConnectorSettings))
+  })
+//  private def client = new SprayHttpClient()
+//  private def client = new SprayHttpClient(mbCloseCmd = Some(Http.Close))
 
 }
