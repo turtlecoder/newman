@@ -30,6 +30,7 @@ import com.stackmob.newman.request._
 import com.stackmob.newman.test.caching._
 import collection.JavaConverters._
 import org.specs2.matcher.MatchResult
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   "ETagAwareApacheHttpClientSpecs".title                                                                                ^

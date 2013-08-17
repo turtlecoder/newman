@@ -18,7 +18,6 @@ package com.stackmob.newman
 
 import java.net.URL
 import com.stackmob.newman.request._
-import scalaz.concurrent.Promise
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.twitter.util.Duration
 import com.twitter.finagle.http._
@@ -31,6 +30,8 @@ import scalaz.Scalaz._
 import collection.JavaConverters._
 import FinagleHttpClient._
 import com.stackmob.newman.concurrent.RichTwitterFuture
+import scala.concurrent.Future
+import com.stackmob.newman.concurrent.SequentialExecutionContext
 
 class FinagleHttpClient(tcpConnectionTimeout: Duration = DefaultTcpConnectTimeout,
                         requestTimeout: Duration = DefaultRequestTimeout,
@@ -76,7 +77,7 @@ object FinagleHttpClient {
                                                 method: NettyHttpMethod,
                                                 url: URL,
                                                 headers: Headers,
-                                                mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
+                                                mbBody: Option[RawBody] = None): Future[HttpResponse] = {
     val (host, port) = url.hostAndPort
     val client = ClientBuilder()
       .codec(Http())
@@ -87,14 +88,17 @@ object FinagleHttpClient {
       .build()
     val req = createNettyHttpRequest(method, url, headers, mbBody)
 
-    client(req).toScalazPromise.map { res =>
+    val scalaFut = client(req).toScalaFuture.map { res =>
       res.toNewmanHttpResponse | {
         throw new InvalidNettyResponse(res.getStatus)
       }
-    }.ensure {
+    }(SequentialExecutionContext)
+
+    scalaFut.onComplete { _ =>
       client.close()
-      ()
-    }
+    }(SequentialExecutionContext)
+
+    scalaFut
   }
 
   def createNettyHttpRequest(method: NettyHttpMethod,

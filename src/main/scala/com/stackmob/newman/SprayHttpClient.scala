@@ -33,7 +33,6 @@ import java.net.URL
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
 import scalaz.effect.IO
-import scalaz.concurrent.Promise
 import scala.concurrent.Future
 import scalaz.Scalaz._
 import com.stackmob.newman.response.HttpResponse
@@ -43,7 +42,7 @@ import akka.pattern.ask
 import spray.can.Http
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
-import com.stackmob.newman.concurrent.{RichScalaFuture, SequentialExecutionContext}
+import com.stackmob.newman.concurrent.SequentialExecutionContext
 import com.stackmob.newman.Exceptions.InternalException
 import spray.http.parser.HttpParser
 
@@ -60,7 +59,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
   private def perform(method: SprayHttpMethod,
                       url: URL,
                       headers: Headers,
-                      rawBody: RawBody = RawBody.empty): IO[Promise[HttpResponse]] = {
+                      rawBody: RawBody = RawBody.empty): IO[Future[HttpResponse]] = {
     IO {
       val resp = (AkkaIO(Http) ? request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
       resp.executeToNewmanPromise(defaultContentType)
@@ -169,10 +168,10 @@ object SprayHttpClient {
   }
 
   private[SprayHttpClient] implicit class RichPipeline(pipeline: Future[SprayHttpResponse]) {
-    def executeToNewmanPromise(defaultContentType: SprayContentType): Promise[HttpResponse] = {
+    def executeToNewmanPromise(defaultContentType: SprayContentType): Future[HttpResponse] = {
       pipeline.map { res =>
         res.toNewmanHttpResponse(defaultContentType) | (throw new InvalidSprayResponse(res.status.intValue))
-      }.toScalazPromise
+      }
     }
   }
 

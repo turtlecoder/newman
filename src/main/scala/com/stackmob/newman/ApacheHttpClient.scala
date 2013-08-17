@@ -19,7 +19,7 @@ package com.stackmob.newman
 import scalaz._
 import Scalaz._
 import scalaz.effect.IO
-import scalaz.concurrent._
+import scala.concurrent.{Future, ExecutionContext}
 import org.apache.http.params.HttpConnectionParams
 import response.HttpResponseCode
 import org.apache.http.util.EntityUtils
@@ -41,7 +41,7 @@ class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTi
                        val connectionTimeout: Int = ApacheHttpClient.DefaultConnectionTimeout,
                        val maxConnectionsPerRoute: Int = ApacheHttpClient.DefaultMaxConnectionsPerRoute,
                        val maxTotalConnections: Int = ApacheHttpClient.DefaultMaxTotalConnections,
-                       val strategy: Strategy = Strategy.Executor(newmanThreadPool)) extends HttpClient {
+                       val requestContext: ExecutionContext = newmanRequestExecutionContext) extends HttpClient {
 
   private val connManager: ClientConnectionManager = {
     val cm = new PoolingClientConnectionManager()
@@ -58,12 +58,16 @@ class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTi
     client
   }
 
-  private def wrapIOPromise[T](t: => T): IO[Promise[T]] = IO(Promise(t)(strategy))
+  private def wrapIOPromise[T](t: => T): IO[Future[T]] = {
+    IO {
+      Future(t)(requestContext)
+    }
+  }
 
   protected def executeRequest(httpMessage: HttpRequestBase,
                                url: URL,
                                headers: Headers,
-                               body: Option[RawBody] = none): IO[Promise[HttpResponse]] = wrapIOPromise {
+                               body: Option[RawBody] = none): IO[Future[HttpResponse]] = wrapIOPromise {
     httpMessage.setURI(url.toURI)
     headers.foreach { list: NonEmptyList[(String, String)] =>
       list.foreach {tup: (String, String) =>
@@ -115,9 +119,10 @@ object ApacheHttpClient {
   private[ApacheHttpClient] val DefaultMaxTotalConnections = 100
   private val threadNumber = new AtomicInteger(1)
   lazy val newmanThreadPool = Executors.newCachedThreadPool(new ThreadFactory() {
-
     override def newThread(r: Runnable): Thread = {
       new Thread(r, "newman-" + threadNumber.getAndIncrement)
     }
   })
+
+  lazy val newmanRequestExecutionContext = ExecutionContext.fromExecutorService(newmanThreadPool)
 }

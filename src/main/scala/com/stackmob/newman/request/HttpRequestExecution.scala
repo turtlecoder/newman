@@ -16,17 +16,18 @@
 
 package com.stackmob.newman.request
 
-import scalaz.concurrent.Promise
 import scalaz.effect.IO
 import scalaz._
 import Scalaz._
 import scalaz.NonEmptyList._
 import com.stackmob.newman.response.HttpResponse
+import scala.concurrent._
+import scala.concurrent.duration.Duration
 
 object HttpRequestExecution {
   type RequestResponsePair = (HttpRequest, HttpResponse)
   type RequestResponsePairList = NonEmptyList[RequestResponsePair]
-  type RequestPromiseResponsePair = (HttpRequest, Promise[HttpResponse])
+  type RequestPromiseResponsePair = (HttpRequest, Future[HttpResponse])
   type RequestPromiseResponsePairList = NonEmptyList[RequestPromiseResponsePair]
 
   /**
@@ -34,8 +35,10 @@ object HttpRequestExecution {
    * @param requests the requests to execute, in order of execution
    * @return an IO representing a list of each request and its response
    */
-  def sequencedRequests(requests: NonEmptyList[HttpRequest]): IO[RequestResponsePairList] = {
-    val ioList: NonEmptyList[IO[RequestResponsePair]] = requests.map(req => req.pure[IO] tuple req.prepare)
+  def sequencedRequests(requests: NonEmptyList[HttpRequest], d: Duration)(implicit ctx: ExecutionContext): IO[RequestResponsePairList] = {
+    val ioList: NonEmptyList[IO[RequestResponsePair]] = requests.map { req =>
+      req.pure[IO] tuple req.prepare(d)
+    }
     ioList.sequence[IO, RequestResponsePair]
   }
 
@@ -46,16 +49,22 @@ object HttpRequestExecution {
    * @return an IO representing a list of each request and its response
    */
   def chainedRequests(firstReq: HttpRequest,
-               remainingRequests: NonEmptyList[HttpResponse => HttpRequest]): IO[RequestResponsePairList] = {
+                      remainingRequests: NonEmptyList[HttpResponse => HttpRequest],
+                      d: Duration)
+                     (implicit ctx: ExecutionContext): IO[RequestResponsePairList] = {
     val firstReqIO = firstReq.pure[IO]
-    val firstRespIO = firstReq.prepare
+    val firstRespIO = firstReq.prepare(d)
     type RunningList = NonEmptyList[IO[(HttpRequest, HttpResponse)]]
     val runningList: RunningList = nels(firstReqIO tuple firstRespIO)
     val (_, _, list) = remainingRequests.list.foldLeft((firstReqIO, firstRespIO, runningList)) {
       (running: (IO[HttpRequest], IO[HttpResponse], RunningList), cur: HttpResponse => HttpRequest) =>
         val (_, lastRespIO, runningList) = running
-        val newReqIO = lastRespIO.map(cur(_))
-        val newRespIO = newReqIO.flatMap(_.prepare)
+        val newReqIO = lastRespIO.map { req =>
+          cur(req)
+        }
+        val newRespIO = newReqIO.flatMap { req =>
+          req.prepare(d)
+        }
         val newRunningList = runningList :::> List(newReqIO tuple newRespIO)
         (newReqIO, newRespIO, newRunningList)
     }
@@ -69,9 +78,11 @@ object HttpRequestExecution {
    *                 (HttpRequest, HttpResponse) pairs will match the ordering of the HttpRequests passed in
    * @return an IO representing a list of each request, and a promise representing its response
    */
-  def concurrentRequests(requests: NonEmptyList[HttpRequest]): IO[RequestPromiseResponsePairList] = requests.map { req: HttpRequest =>
-    val reqIO: IO[HttpRequest] = req.pure[IO]
-    val respIO: IO[Promise[HttpResponse]] = req.prepareAsync
-    reqIO tuple respIO
-  }.sequence[IO, RequestPromiseResponsePair]
+  def concurrentRequests(requests: NonEmptyList[HttpRequest]): IO[RequestPromiseResponsePairList] = {
+    requests.map { req: HttpRequest =>
+      val reqIO: IO[HttpRequest] = req.pure[IO]
+      val respIO: IO[Future[HttpResponse]] = req.prepareAsync
+      reqIO tuple respIO
+    }.sequence[IO, RequestPromiseResponsePair]
+  }
 }
