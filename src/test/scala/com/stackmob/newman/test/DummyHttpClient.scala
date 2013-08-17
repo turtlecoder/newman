@@ -21,10 +21,8 @@ import com.stackmob.newman._
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
 import java.util.concurrent.CopyOnWriteArrayList
-import scalaz._
-import Scalaz._
 import scalaz.effect.IO
-import scalaz.concurrent._
+import scala.concurrent.Future
 
 class DummyHttpClient(val responseToReturn: () => HttpResponse = () => DummyHttpClient.CannedResponse) extends HttpClient {
   import DummyHttpClient._
@@ -67,7 +65,11 @@ object DummyHttpClient {
   val CannedResponse = HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
   trait DummyExecutor extends HttpRequest { this: HttpRequest =>
     def responseToReturn: () => HttpResponse
-    override def prepareAsync = responseToReturn().pure[Promise].pure[IO]
+    override def prepareAsync = {
+      IO {
+        Future.successful(responseToReturn())
+      }
+    }
   }
 
   case class DummyGetRequest(override val url: URL,

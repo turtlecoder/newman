@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.test
+package com.stackmob.newman
+package test
 
 import com.stackmob.newman.{Headers, Constants, HttpClient}
 import org.specs2.Specification
@@ -22,28 +23,34 @@ import com.stackmob.newman.dsl._
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import java.net.URL
 import scalaz.Scalaz._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
 
 trait ClientTests { this: Specification with ResponseMatcher =>
   implicit private val charset = Constants.UTF8Charset
-
+  private val dur = Duration(250, TimeUnit.MILLISECONDS)
   class ClientTests(implicit client: HttpClient) {
     private lazy val DefaultExpectedBodyPieces = List("Host", "httpbin.org")
     private  def execute[T](t: Builder,
                             expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                             expectedHeaders: Headers = Headers("Content-Type" -> "application/json"),
                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
-      val r = t.executeUnsafe
+      val r = t.executeUnsafe(dur)
       r must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
     }
 
     private def executeAsync(t: Builder,
                              expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                              expectedHeaders: Headers = None,
-                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
-      val rPromise = t.executeAsyncUnsafe
-      rPromise.map { r: HttpResponse =>
+                             mbExpectedBodyPieces: Option[List[String]] = {
+                               DefaultExpectedBodyPieces.some
+                             }) = {
+      val rFuture = t.executeAsyncUnsafe.map { r: HttpResponse =>
         r must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
-      }.get
+      }
+      Await.result(rFuture, dur)
     }
 
     private lazy val headerTup = "X-Stackmob-Test-Header" -> "X-StackMob-Test-Value"

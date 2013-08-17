@@ -18,12 +18,15 @@ package com.stackmob.newman.test.dsl
 
 import scalaz.Scalaz._
 import org.specs2.Specification
-import scalaz.concurrent.Promise
 import scalaz.effect.IO
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.{RawBody, Headers}
 import com.stackmob.newman.Constants._
 import com.stackmob.newman.dsl._
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class AsyncResponseHandlerDSLSpecs extends Specification { def is =
   "AsyncResponseHandlerDSLSpecs".title                                                                                  ^ end ^
@@ -36,32 +39,29 @@ class AsyncResponseHandlerDSLSpecs extends Specification { def is =
     "return successful validation of nonthrowable error type if specified"                                              ! CustomErrors().returnsSuccessCorrectly ^
   end
 
+  private val dur = Duration(250, TimeUnit.MILLISECONDS)
   private trait Context
 
   private case class ThrowingIO() extends Context {
     def returnsFailure = {
       val ex = new Exception("test exception")
       val respIO = IO {
-        Promise {
-          (throw ex): HttpResponse
-        }: Promise[HttpResponse]
+        Future.failed[HttpResponse](ex)
       }.handleCode(HttpResponseCode.Ok) { _ =>
         ().success[Throwable]
       }
-      respIO.unsafePerformIO().get.toEither must beLeft.like {
+      Await.result(respIO.unsafePerformIO(), dur).toEither must beLeft.like {
         case e => e must beEqualTo(ex)
       }
     }
 
     def returnsEmptySuccess = {
       val respIO = IO {
-        Promise {
-          HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
-        }
+        Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty))
       }.handleCode(HttpResponseCode.Ok) { _ =>
         ().success[Throwable]
       }
-      respIO.unsafePerformIO().get.toEither must beRight.like {
+      Await.result(respIO.unsafePerformIO(), dur).toEither must beRight.like {
         case e => e must beEqualTo(())
       }
     }
@@ -69,13 +69,11 @@ class AsyncResponseHandlerDSLSpecs extends Specification { def is =
     def returnsNonEmptySuccess = {
       val bodyString = "test body"
       val respIO = IO {
-        Promise {
-          HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))
-        }
+        Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset)))
       }.handleCode(HttpResponseCode.Ok){ resp =>
         resp.bodyString.success[Throwable]
       }
-      respIO.unsafePerformIO().get.toEither must beRight.like {
+      Await.result(respIO.unsafePerformIO(), dur).toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }
@@ -87,13 +85,11 @@ class AsyncResponseHandlerDSLSpecs extends Specification { def is =
       val ex = new Exception(exceptionMessage)
       val customError = new CustomErrorForSpecs(exceptionMessage)
       val respIO = IO {
-        Promise {
-          (throw ex): HttpResponse
-        }
+        Future.failed(ex)
       }.handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok) { _ =>
         ().success
       }
-      respIO.unsafePerformIO().get.toEither must beLeft.like {
+      Await.result(respIO.unsafePerformIO(), dur).toEither must beLeft.like {
         case e => e must beEqualTo(customError)
       }
     }
@@ -101,13 +97,11 @@ class AsyncResponseHandlerDSLSpecs extends Specification { def is =
     def returnsSuccessCorrectly = {
       val bodyString = "test body"
       val respIO = IO {
-        Promise {
-          HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))
-        }
+        Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset)))
       }.handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){ resp =>
         resp.bodyString.success
       }
-      respIO.unsafePerformIO().get.toEither must beRight.like {
+      Await.result(respIO.unsafePerformIO(), dur).toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }

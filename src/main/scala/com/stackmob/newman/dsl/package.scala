@@ -21,10 +21,10 @@ import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import scalaz.effect.IO
 import java.net.URL
 import scalaz.Validation
-import scalaz.concurrent.Promise
 import net.liftweb.json.scalaz.JsonScalaz._
 import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
+import scala.concurrent.{ExecutionContext, Future}
 import language.implicitConversions
 
 package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHandlerDSL with AsyncResponseHandlerDSL {
@@ -95,7 +95,8 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    * @tparam Success the success type of the handler
    * @return the resultant {{{IO[Promise[Validation[Failure, Success]]]}}}
    */
-  implicit def asyncResponseHandlerToResponse[Failure, Success](handler: AsyncResponseHandler[Failure, Success]): IOPromiseValidation[Failure, Success] = {
+  implicit def asyncResponseHandlerToResponse[Failure, Success](handler: AsyncResponseHandler[Failure, Success])
+                                                               (implicit ctx: ExecutionContext): IOFutureValidation[Failure, Success] = {
     handler.toIO
   }
 
@@ -187,7 +188,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    *
    * @param value the extended {{{IO}}}
    */
-  implicit class RichIOPromiseHttpResponse(value: IO[Promise[HttpResponse]]) {
+  implicit class RichIOFutureHttpResponse(value: IO[Future[HttpResponse]]) {
 
     /**
      * see {{{AsyncResponseHandler#handleCodesSuchThat}}}

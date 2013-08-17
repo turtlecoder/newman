@@ -24,6 +24,9 @@ import java.net.URL
 import scalaz._
 import Scalaz._
 import scalaz.NonEmptyList._
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class DSLSpecs extends Specification { def is =
   "DSLSpecs".title                                                                                                      ^
@@ -67,7 +70,7 @@ class DSLSpecs extends Specification { def is =
     "correctly set a body when passed a string"                                                                         ! HeaderAndBodyTransformerTest().correctlySetsStringBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
                                                                                                                         end
-
+  private val dur = Duration(250, TimeUnit.MILLISECONDS)
   trait Context extends BaseContext {
     implicit protected val client = new DummyHttpClient
     protected val u: URL = url(http, "stackmob.com").toURL
@@ -83,7 +86,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe(dur) must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.getRequests.size() must beEqualTo(1))
     }
   }
@@ -97,7 +100,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe(dur) must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.postRequests.size() must beEqualTo(1))
     }
   }
@@ -111,7 +114,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrecty: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe(dur) must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.putRequests.size() must beEqualTo(1))
     }
   }
@@ -124,7 +127,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe(dur) must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.deleteRequests.size must beEqualTo(1))
     }
   }
@@ -136,7 +139,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.executeUnsafe(dur) must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.headRequests.size must beEqualTo(1))
     }
   }

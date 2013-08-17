@@ -29,6 +29,10 @@ import com.stackmob.newman.request._
 import HttpRequestExecution._
 import com.stackmob.newman.response._
 import com.stackmob.newman._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
 
 class HttpRequestExecutionSpecs extends Specification { def is =
   "HttpRequestExecutionSpecs".title                                                                                     ^
@@ -45,6 +49,7 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     "execute concurrent requests correctly"                                                                             ! ExecuteConcurrent().executesCorrectly ^
     "fail if one concurrent request failed"                                                                             ! ExecuteConcurrent().allFailIfOneFails ^
                                                                                                                         end
+  private val dur = Duration(250, TimeUnit.MILLISECONDS)
 
   trait Context extends BaseContext {
     protected lazy val requestURL = new URL("http://stackmob.com")
@@ -73,13 +78,13 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     def executesCorrectly: SpecsResult = {
       val requestList = nels(request1, request2)
       val expectedRequestResponseList = nels(request1 -> response1, request2 -> response2)
-      val res = sequencedRequests(requestList)
+      val res = sequencedRequests(requestList, dur)
       res.unsafePerformIO().list must beEqualTo(expectedRequestResponseList.list)
     }
 
     def allFailIfOneFails: SpecsResult = {
       val requestList = nels(request1, throwingRequest)
-      val res = sequencedRequests(requestList)
+      val res = sequencedRequests(requestList, dur)
       ensureThrows(res, exception)
     }
   }
@@ -94,17 +99,17 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     private def throwingChain(prevResp: HttpResponse): HttpRequest = throw exception
     def executesCorrectly: SpecsResult = {
       val requestList = request1 :: request2 :: request3 :: Nil
-      val res = chainedRequests(request1, nels(chain1 _, chain2 _))
+      val res = chainedRequests(request1, nels(chain1 _, chain2 _), dur)
       res.unsafePerformIO().list must beEqualTo(requestList.zip(List(response1, response2, response3)))
     }
 
     def allFailIfOneRequestFails: SpecsResult = {
-      val res = chainedRequests(request1, nels(chain1 _, chainThatReturnsThrowingRequest _))
+      val res = chainedRequests(request1, nels(chain1 _, chainThatReturnsThrowingRequest _), dur)
       ensureThrows(res, exception)
     }
 
     def allFailIfOneChainMethodFails: SpecsResult = {
-      val res = chainedRequests(request1, nels(chain1 _, throwingChain _))
+      val res = chainedRequests(request1, nels(chain1 _, throwingChain _), dur)
       ensureThrows(res, exception)
     }
   }
@@ -113,16 +118,22 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     def executesCorrectly: SpecsResult = {
       val requestList = nels(request1, request2)
       val expectedRequestResponseList = nels(request1 -> response1, request2 -> response2)
-      val res = concurrentRequests(requestList).map { list: RequestPromiseResponsePairList =>
-        list.map(pair => pair._1 -> pair._2.get)
+      val res = concurrentRequests(requestList).map { list: RequestFutureResponsePairList =>
+        list.map { tup =>
+          val (req, respFut) = tup
+          req -> Await.result(respFut, dur)
+        }
       }
       res.unsafePerformIO().list must beEqualTo(expectedRequestResponseList.list)
     }
 
     def allFailIfOneFails: SpecsResult = {
       val requestList = nels(request1, throwingRequest)
-      val res = concurrentRequests(requestList).map { list: RequestPromiseResponsePairList =>
-        list.map(pair => pair._1 -> pair._2.get)
+      val res = concurrentRequests(requestList).map { list: RequestFutureResponsePairList =>
+        list.map { tup =>
+          val (req, respFut) = tup
+          req -> Await.result(respFut, dur)
+        }
       }
       ensureThrows(res, exception)
     }

@@ -23,7 +23,6 @@ import scalaz.Validation._
 import Scalaz._
 import scalaz.effect.IO
 import scalaz.NonEmptyList._
-import scalaz.concurrent._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 import com.stackmob.newman.{Constants, HttpClient}
@@ -115,7 +114,7 @@ trait HttpRequest {
     chainedRequests(this, remainingRequests, d)
   }
 
-  def concurrentlyWith(otherRequests: NonEmptyList[HttpRequest]): IO[RequestPromiseResponsePairList] = {
+  def concurrentlyWith(otherRequests: NonEmptyList[HttpRequest]): IO[RequestFutureResponsePairList] = {
     concurrentRequests(nel(this, otherRequests.list))
   }
 }

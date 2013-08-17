@@ -27,8 +27,8 @@ import scala.concurrent.duration.Duration
 object HttpRequestExecution {
   type RequestResponsePair = (HttpRequest, HttpResponse)
   type RequestResponsePairList = NonEmptyList[RequestResponsePair]
-  type RequestPromiseResponsePair = (HttpRequest, Future[HttpResponse])
-  type RequestPromiseResponsePairList = NonEmptyList[RequestPromiseResponsePair]
+  type RequestFutureResponsePair = (HttpRequest, Future[HttpResponse])
+  type RequestFutureResponsePairList = NonEmptyList[RequestFutureResponsePair]
 
   /**
    * run a series of requests in sequence (ie: next one begins executing when the previous one completes)
@@ -78,11 +78,11 @@ object HttpRequestExecution {
    *                 (HttpRequest, HttpResponse) pairs will match the ordering of the HttpRequests passed in
    * @return an IO representing a list of each request, and a promise representing its response
    */
-  def concurrentRequests(requests: NonEmptyList[HttpRequest]): IO[RequestPromiseResponsePairList] = {
+  def concurrentRequests(requests: NonEmptyList[HttpRequest]): IO[RequestFutureResponsePairList] = {
     requests.map { req: HttpRequest =>
       val reqIO: IO[HttpRequest] = req.pure[IO]
       val respIO: IO[Future[HttpResponse]] = req.prepareAsync
       reqIO tuple respIO
-    }.sequence[IO, RequestPromiseResponsePair]
+    }.sequence[IO, RequestFutureResponsePair]
   }
 }

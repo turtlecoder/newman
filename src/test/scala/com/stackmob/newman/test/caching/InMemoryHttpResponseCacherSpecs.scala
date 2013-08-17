@@ -24,6 +24,9 @@ import org.specs2.{ScalaCheck, Specification}
 import org.scalacheck._
 import Prop._
 import request._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
 
 class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { def is =
   "InMemoryHttpResponseCacherSpecs".title                                                                               ^ end ^
@@ -31,10 +34,11 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
   "The cacher should correctly round trip an HttpRequest"                                                               ! roundTripSucceeds ^ end ^
   "The cacher should correctly expire items after their TTL"                                                            ! ttlSucceeds ^ end ^
                                                                                                                         end
+  private val dur = Duration(250, TimeUnit.MILLISECONDS)
   private val client = new DummyHttpClient()
 
   private def getResponse(request: HttpRequest) = {
-    request.prepare.unsafePerformIO()
+    request.prepare(dur).unsafePerformIO()
   }
 
   private def roundTripSucceeds = forAll(genHttpRequest(client)) { request =>

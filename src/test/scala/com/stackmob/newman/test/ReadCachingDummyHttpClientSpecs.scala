@@ -25,8 +25,11 @@ import com.stackmob.newman.response.HttpResponse
 import org.scalacheck._
 import Prop._
 import java.net.URL
+import java.util.concurrent.TimeUnit
 import com.stackmob.newman._
 import com.stackmob.newman.request.HttpRequestWithoutBody
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 class ReadCachingDummyHttpClientSpecs
   extends Specification
@@ -39,7 +42,9 @@ class ReadCachingDummyHttpClientSpecs
   "get should read through to the cache"                                                                                ! getReadsThroughToCache ^ end ^
   "head should read from the cache if there is a cache entry already"                                                   ! headReadsOnlyFromCache ^ end ^
   "head should read through to the cache"                                                                               ! headReadsThroughToCache ^ end ^
-  "POST, PUT, DELETE should not touch the cache"                                                                        ! postPutDeleteIgnoreCache ^ end
+  "POST, PUT, DELETE should not touch the cache"                                                                        ! postPutDeleteIgnoreCache ^ end ^
+  end
+  private val dur = Duration(250, TimeUnit.MILLISECONDS)
 
   private val genNoHttpResponse: Gen[Option[HttpResponse]] = Gen.value(Option.empty[HttpResponse])
   private val genAlwaysHttpResponse: Gen[Option[HttpResponse]] = for {
@@ -74,7 +79,7 @@ class ReadCachingDummyHttpClientSpecs
       val client = createClient(dummyClient, dummyCache, milliseconds)
 
       val req = fn(client, url, headers)
-      val resp = req.executeUnsafe
+      val resp = req.executeUnsafe(dur)
       //the response should match what's in the cache, not what's in the underlying client
       val respMatches = dummyCache.cannedGet must beSome.like {
         case r => {
@@ -102,7 +107,7 @@ class ReadCachingDummyHttpClientSpecs
 
       val client = createClient(dummyClient, dummyCache, oneMinute)
       val req = createRequest(client, url, headers)
-      val resp = req.executeUnsafe
+      val resp = req.executeUnsafe(dur)
       val respVerified = resp must beEqualTo(dummyClient.responseToReturn())
       //there should be a single client call after the cache miss
       val respClientVerified = verifyClientInteraction(dummyClient, createClientInteraction(1))
@@ -142,9 +147,9 @@ class ReadCachingDummyHttpClientSpecs
     genPositiveMilliseconds) { (url, headers, body, dummyClient, dummyCache, milliseconds) =>
     val client = new ReadCachingHttpClient(dummyClient, dummyCache, milliseconds)
 
-    val postRes = client.post(url, headers, body).executeUnsafe must beEqualTo(dummyClient.responseToReturn())
-    val putRes = client.put(url, headers, body).executeUnsafe must beEqualTo(dummyClient.responseToReturn())
-    val deleteRes = client.delete(url, headers).executeUnsafe must beEqualTo(dummyClient.responseToReturn())
+    val postRes = client.post(url, headers, body).executeUnsafe(dur) must beEqualTo(dummyClient.responseToReturn())
+    val putRes = client.put(url, headers, body).executeUnsafe(dur) must beEqualTo(dummyClient.responseToReturn())
+    val deleteRes = client.delete(url, headers).executeUnsafe(dur) must beEqualTo(dummyClient.responseToReturn())
 
     postRes and
     putRes and
