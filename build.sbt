@@ -23,11 +23,8 @@ libraryDependencies ++= {
   val scalaCheckVersion = "1.10.1"
   val specs2Version = "1.14"
   val mockitoVersion = "1.9.0"
-  val scalazVersion = "7.0.0"
   val liftJsonVersion = "2.5"
   Seq(
-    "org.scalaz" %% "scalaz-core" % scalazVersion,
-    "org.scalaz" %% "scalaz-effect" % scalazVersion,
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
     "io.spray" % "spray-client" % "1.2-M8",
