@@ -21,8 +21,6 @@ import java.net.URL
 import scalaz._
 import scalaz.Validation._
 import Scalaz._
-import scalaz.effect.IO
-import scalaz.NonEmptyList._
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 import com.stackmob.newman.{Constants, HttpClient}
@@ -31,7 +29,7 @@ import java.security.MessageDigest
 import com.stackmob.newman.response._
 import com.stackmob.newman.caching._
 import org.apache.commons.codec.binary.Hex
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Await, Future}
 import scala.concurrent.duration._
 
 trait HttpRequest {
@@ -42,37 +40,20 @@ trait HttpRequest {
   private lazy val defaultDuration = 500.milliseconds
 
   /**
-   * prepares an IO that represents executing the HTTP request and returning the response
-   * @return an IO representing the HTTP request that executes in the calling thread and
-   *         returns the resulting HttpResponse
+   * submit this request and return a {{{scala.concurrent.Future}}} that will contain the response
+   * @return the Future that represents the running request
    */
-  def prepare(d: Duration = defaultDuration)(implicit ctx: ExecutionContext): IO[HttpResponse] = {
-    prepareAsync.map { fut =>
-      Await.result(fut, d)
+  def apply: Future[HttpResponse]
+
+  /**
+   * submits the request and blocks until the given duration is up or the response comes back
+   * @param d the maximum amount of time to wait for the response before failing
+   * @return a success if the response came back succeessfully in the time limit, a failure otherwise
+   */
+  def block(d: Duration = defaultDuration): Validation[Throwable, HttpResponse] = {
+    Validation.fromTryCatch {
+      Await.result(apply, d)
     }
-  }
-
-  /**
-   * prepares an IO that represents a promise that executes the HTTP request and returns the response.
-   * note: all other prepare and execute methods call this one
-   * @return an IO representing the HTTP request that executes in a promise and returns the resulting HttpResponse
-   */
-  def prepareAsync: IO[Future[HttpResponse]]
-
-  /**
-   * alias for prepare.unsafePerformIO(). executes the HTTP request immediately in the calling thread
-   * @return the HttpResponse that was returned from this HTTP request
-   */
-  def executeUnsafe(d: Duration = defaultDuration)(implicit ctx: ExecutionContext): HttpResponse = {
-    prepare(defaultDuration).unsafePerformIO()
-  }
-
-  /**
-   * alias for prepareAsync.unsafePerformIO(). executes the HTTP request in a Promise
-   * @return a promise representing the HttpResponse that was returned from this HTTP request
-   */
-  def executeAsyncUnsafe: Future[HttpResponse] = {
-    prepareAsync.unsafePerformIO()
   }
 
   def toJValue(implicit client: HttpClient): JValue = {
@@ -109,13 +90,25 @@ trait HttpRequest {
     Hex.encodeHexString(md5.digest(str.getBytes(Constants.UTF8Charset)))
   }
 
-  def andThen(remainingRequests: NonEmptyList[HttpResponse => HttpRequest], d: Duration)
-             (implicit ctx: ExecutionContext): IO[RequestResponsePairList] = {
-    chainedRequests(this, remainingRequests, d)
+  /**
+   * execute this request first, and then a series of other requests each after the previous finished
+   * @param otherRequests the other requests to execute, in the given order
+   * @return a list of request / response pairs. each request will start immediately after the previous response has finished.
+   *         the first request will start immediately
+   */
+  def andThen(otherRequests: List[HttpRequest])
+             (implicit ctx: ExecutionContext): List[ReqRespFut] = {
+    sequencedRequests(this :: otherRequests)
   }
 
-  def concurrentlyWith(otherRequests: NonEmptyList[HttpRequest]): IO[RequestFutureResponsePairList] = {
-    concurrentRequests(nel(this, otherRequests.list))
+  /**
+   * execute this request concurrently with a series of others
+   * @param otherRequests the other requests to execute
+   * @return a set of all the requests executed (including this one) and the futures representing their responses
+   */
+  def concurrentlyWith(otherRequests: List[HttpRequest])
+                      (implicit ctx: ExecutionContext): Set[ReqRespFut] = {
+    concurrentRequests(this :: otherRequests)
   }
 }
 
@@ -149,11 +142,11 @@ trait PostRequest extends HttpRequestWithBody {
 }
 object PostRequest {
   def apply(u: URL, h: Headers, r: RawBody)
-           (async: => IO[Future[HttpResponse]]): PostRequest = new PostRequest {
+           (async: => Future[HttpResponse]): PostRequest = new PostRequest {
     override lazy val url = u
     override lazy val headers = h
     override lazy val body = r
-    override lazy val prepareAsync = async
+    override lazy val apply = async
   }
 }
 
@@ -162,11 +155,11 @@ trait PutRequest extends HttpRequestWithBody {
 }
 object PutRequest {
   def apply(u: URL, h: Headers, r: RawBody)
-           (async: => IO[Future[HttpResponse]]): PutRequest = new PutRequest {
+           (async: => Future[HttpResponse]): PutRequest = new PutRequest {
     override lazy val url = u
     override lazy val headers = h
     override lazy val body = r
-    override lazy val prepareAsync = async
+    override lazy val apply = async
   }
 }
 
@@ -176,10 +169,10 @@ trait DeleteRequest extends HttpRequestWithoutBody {
 }
 object DeleteRequest {
   def apply(u: URL, h: Headers)
-           (async: => IO[Future[HttpResponse]]): DeleteRequest = new DeleteRequest {
+           (async: => Future[HttpResponse]): DeleteRequest = new DeleteRequest {
     override lazy val url: URL = u
     override lazy val headers = h
-    override lazy val prepareAsync = async
+    override lazy val apply = async
   }
 }
 
@@ -188,10 +181,10 @@ trait HeadRequest extends HttpRequestWithoutBody {
 }
 object HeadRequest {
   def apply(u: URL, h: Headers)
-           (async: => IO[Future[HttpResponse]]): HeadRequest = new HeadRequest {
+           (async: => Future[HttpResponse]): HeadRequest = new HeadRequest {
     override lazy val url: URL = u
     override lazy val headers = h
-    override lazy val prepareAsync = async
+    override lazy val apply = async
   }
 }
 
@@ -200,9 +193,9 @@ trait GetRequest extends HttpRequestWithoutBody {
 }
 object GetRequest {
   def apply(u: URL, h: Headers)
-           (async: => IO[Future[HttpResponse]]): GetRequest = new GetRequest {
+           (async: => Future[HttpResponse]): GetRequest = new GetRequest {
     override lazy val url: URL = u
     override lazy val headers = h
-    override lazy val prepareAsync = async
+    override lazy val apply = async
   }
 }
