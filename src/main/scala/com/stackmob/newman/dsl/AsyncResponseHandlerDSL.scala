@@ -19,7 +19,6 @@ package com.stackmob.newman.dsl
 import scalaz.Scalaz._
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import scalaz.Validation
-import scalaz.effect.IO
 import net.liftweb.json.scalaz.JsonScalaz._
 import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
@@ -28,13 +27,12 @@ import com.stackmob.newman.response.HttpResponse.JSONParsingError
 import scala.concurrent.{ExecutionContext, Future}
 
 trait AsyncResponseHandlerDSL {
-  type IOFuture[T] = IO[Future[T]]
 
   /**
    * the same thing as {{{com.stackmob.newman.dsl.ResponseHandlerDSL}}}, except for asynchronous response handling
    */
   case class AsyncResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])],
-                                                    respIO: IOFuture[HttpResponse])
+                                                    respFuture: Future[HttpResponse])
                                                    (implicit errorConv: Throwable => Failure) {
 
     /**
@@ -120,9 +118,9 @@ trait AsyncResponseHandlerDSL {
      * Provide a default handler for all unhandled status codes. Must be the last handler in the chain
      */
     def default(handler: HttpResponse => Validation[Failure, Success])
-               (implicit ctx: ExecutionContext): IOFutureValidation[Failure, Success] = {
-      respIO.map { responseProm: Future[HttpResponse] =>
-        responseProm.map { response =>
+               (implicit ctx: ExecutionContext): FutureValidation[Failure, Success] = {
+      try {
+        respFuture.map { response =>
           handlers.reverse.find { functionTup =>
             functionTup._1.apply(response.code)
           }.map { functionTup =>
@@ -133,12 +131,12 @@ trait AsyncResponseHandlerDSL {
         }.recover {
           case t: Throwable => errorConv(t).fail[Success]
         }
-      }.except { t =>
-        Future.successful(errorConv(t).fail[Success]).pure[IO]
+      } catch {
+        case t: Throwable => Future.successful(errorConv(t).fail[Success])
       }
     }
 
-    def toIO(implicit ctx: ExecutionContext): IOFutureValidation[Failure, Success] = {
+    def toFutureValidation(implicit ctx: ExecutionContext): FutureValidation[Failure, Success] = {
       default { resp =>
         errorConv.apply(UnhandledResponseCode(resp.code, resp.bodyString)).fail[Success]
       }

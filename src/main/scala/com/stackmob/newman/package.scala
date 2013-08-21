@@ -17,7 +17,6 @@
 package com.stackmob
 
 import scalaz._
-import scalaz.effect.IO
 import scalaz.NonEmptyList._
 import scala.concurrent._
 import Scalaz._
@@ -25,8 +24,7 @@ import java.nio.charset.Charset
 import java.net.URL
 
 package object newman extends NewmanPrivate {
-  type IOValidation[Fail, Success] = IO[Validation[Fail, Success]]
-  type IOFutureValidation[Fail, Success] = IO[Future[Validation[Fail, Success]]]
+  type FutureValidation[Fail, Success] = Future[Validation[Fail, Success]]
 
   type Header = (String, String)
   type HeaderList = NonEmptyList[Header]

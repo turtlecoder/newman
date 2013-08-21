@@ -18,7 +18,6 @@ package com.stackmob.newman
 
 import request.HttpRequest
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import scalaz.effect.IO
 import java.net.URL
 import scalaz.Validation
 import net.liftweb.json.scalaz.JsonScalaz._
@@ -83,8 +82,8 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    * @tparam Success the success type of the handler
    * @return the resultant {{{IO[Validation[Failure, Success]]}}}
    */
-  implicit def responseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]): IOValidation[Failure, Success] = {
-    handler.toIO
+  implicit def responseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]): Validation[Failure, Success] = {
+    handler.toValidation
   }
 
   /**
@@ -96,8 +95,8 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    * @return the resultant {{{IO[Promise[Validation[Failure, Success]]]}}}
    */
   implicit def asyncResponseHandlerToResponse[Failure, Success](handler: AsyncResponseHandler[Failure, Success])
-                                                               (implicit ctx: ExecutionContext): IOFutureValidation[Failure, Success] = {
-    handler.toIO
+                                                               (implicit ctx: ExecutionContext): FutureValidation[Failure, Success] = {
+    handler.toFutureValidation
   }
 
   /**
@@ -120,7 +119,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    *
    * @param value the extended {{{IO}}}
    */
-  implicit class RichIOHttpResponse(value: IO[HttpResponse]) {
+  implicit class RichIOHttpResponse(value: HttpResponse) {
 
     /**
      * see {{{ResponseHandler#handleCodesSuchThat}}}
@@ -188,7 +187,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    *
    * @param value the extended {{{IO}}}
    */
-  implicit class RichIOFutureHttpResponse(value: IO[Future[HttpResponse]]) {
+  implicit class RichIOFutureHttpResponse(value: Future[HttpResponse]) {
 
     /**
      * see {{{AsyncResponseHandler#handleCodesSuchThat}}}
