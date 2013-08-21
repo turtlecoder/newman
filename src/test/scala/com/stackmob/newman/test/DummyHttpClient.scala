@@ -21,10 +21,9 @@ import com.stackmob.newman._
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
 import java.util.concurrent.CopyOnWriteArrayList
-import scalaz.effect.IO
 import scala.concurrent.Future
 
-class DummyHttpClient(val responseToReturn: () => HttpResponse = () => DummyHttpClient.CannedResponse) extends HttpClient {
+class DummyHttpClient(val responseToReturn: Future[HttpResponse] = DummyHttpClient.CannedResponseFuture) extends HttpClient {
   import DummyHttpClient._
 
   val getRequests = new CopyOnWriteArrayList[(URL, Headers)]()
@@ -63,34 +62,31 @@ class DummyHttpClient(val responseToReturn: () => HttpResponse = () => DummyHttp
 
 object DummyHttpClient {
   val CannedResponse = HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
+  val CannedResponseFuture = Future.successful(CannedResponse)
   trait DummyExecutor extends HttpRequest { this: HttpRequest =>
-    def responseToReturn: () => HttpResponse
-    override def prepareAsync = {
-      IO {
-        Future.successful(responseToReturn())
-      }
-    }
+    def responseToReturn: Future[HttpResponse]
+    override def apply = responseToReturn
   }
 
   case class DummyGetRequest(override val url: URL,
                              override val headers: Headers,
-                             override val responseToReturn: () => HttpResponse) extends GetRequest with DummyExecutor
+                             override val responseToReturn: Future[HttpResponse]) extends GetRequest with DummyExecutor
 
   case class DummyPostRequest(override val url: URL,
                               override val headers: Headers,
                               override val body: RawBody,
-                              override val responseToReturn: () => HttpResponse) extends PostRequest with DummyExecutor
+                              override val responseToReturn: Future[HttpResponse]) extends PostRequest with DummyExecutor
 
   case class DummyPutRequest(override val url: URL,
                              override val headers: Headers,
                              override val body: RawBody,
-                             override val responseToReturn: () => HttpResponse) extends PutRequest with DummyExecutor
+                             override val responseToReturn: Future[HttpResponse]) extends PutRequest with DummyExecutor
 
   case class DummyDeleteRequest(override val url: URL,
                                 override val headers: Headers,
-                                override val responseToReturn: () => HttpResponse) extends DeleteRequest with DummyExecutor
+                                override val responseToReturn: Future[HttpResponse]) extends DeleteRequest with DummyExecutor
 
   case class DummyHeadRequest(override val url: URL,
                               override val headers: Headers,
-                              override val responseToReturn: () => HttpResponse) extends HeadRequest with DummyExecutor
+                              override val responseToReturn: Future[HttpResponse]) extends HeadRequest with DummyExecutor
 }
