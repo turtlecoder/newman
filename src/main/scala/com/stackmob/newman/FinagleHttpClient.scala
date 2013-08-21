@@ -25,7 +25,6 @@ import com.twitter.finagle.builder.ClientBuilder
 import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse, HttpRequest => NettyHttpRequest, HttpMethod => NettyHttpMethod, HttpResponseStatus}
 import java.nio.ByteBuffer
 import org.jboss.netty.buffer.{ChannelBuffer, ByteBufferBackedChannelBuffer}
-import scalaz.effect.IO
 import scalaz.Scalaz._
 import collection.JavaConverters._
 import FinagleHttpClient._
@@ -38,34 +37,24 @@ class FinagleHttpClient(tcpConnectionTimeout: Duration = DefaultTcpConnectTimeou
                         numConnsPerHost: Int = DefaultMaxConnsPerHost) extends HttpClient {
 
   override def get(url: URL, headers: Headers) = GetRequest(url, headers) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.GET, url, headers)
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.GET, url, headers)
   }
 
   override def post(url: URL, headers: Headers, body: RawBody) = PostRequest(url, headers, body) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.POST, url, headers, Some(body))
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.POST, url, headers, Some(body))
   }
 
 
   override def put(url: URL, headers: Headers, body: RawBody) = PutRequest(url, headers, body) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.PUT, url, headers, Some(body))
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.PUT, url, headers, Some(body))
   }
 
   override def delete(url: URL, headers: Headers) = DeleteRequest(url, headers) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.DELETE, url, headers)
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.DELETE, url, headers)
   }
 
   override def head(url: URL, headers: Headers) = HeadRequest(url, headers) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.HEAD, url, headers)
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.HEAD, url, headers)
   }
 }
 
