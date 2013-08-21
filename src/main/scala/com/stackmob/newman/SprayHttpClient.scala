@@ -32,7 +32,6 @@ import spray.http.HttpHeaders.RawHeader
 import java.net.URL
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
-import scalaz.effect.IO
 import scala.concurrent.Future
 import scalaz.Scalaz._
 import com.stackmob.newman.response.HttpResponse
@@ -59,14 +58,11 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
   private def perform(method: SprayHttpMethod,
                       url: URL,
                       headers: Headers,
-                      rawBody: RawBody = RawBody.empty): IO[Future[HttpResponse]] = {
-    IO {
-      val resp = (AkkaIO(Http) ? request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
-      resp.executeToNewmanPromise(defaultContentType)
-    } except {
-      case c: ClassCastException => throw InternalException("Unexpected return type", c.some)
-      case t: Throwable => throw t
-    }
+                      rawBody: RawBody = RawBody.empty): Future[HttpResponse] = {
+    (AkkaIO(Http) ? request(method, url, headers, rawBody)).mapTo[SprayHttpResponse].toNewman(defaultContentType).transform(identity[HttpResponse], {
+      case c: ClassCastException => InternalException("Unexpected return type", c.some)
+      case t: Throwable => t
+    })
   }
 
   private def request(method: SprayHttpMethod,
@@ -168,7 +164,7 @@ object SprayHttpClient {
   }
 
   private[SprayHttpClient] implicit class RichPipeline(pipeline: Future[SprayHttpResponse]) {
-    def executeToNewmanPromise(defaultContentType: SprayContentType): Future[HttpResponse] = {
+    def toNewman(defaultContentType: SprayContentType): Future[HttpResponse] = {
       pipeline.map { res =>
         res.toNewmanHttpResponse(defaultContentType) | (throw new InvalidSprayResponse(res.status.intValue))
       }

@@ -187,7 +187,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    *
    * @param value the extended {{{IO}}}
    */
-  implicit class RichIOFutureHttpResponse(value: Future[HttpResponse]) {
+  implicit class RichFutureHttpResponse(value: Future[HttpResponse]) {
 
     /**
      * see {{{AsyncResponseHandler#handleCodesSuchThat}}}
