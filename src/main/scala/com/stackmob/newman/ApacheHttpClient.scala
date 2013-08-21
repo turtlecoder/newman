@@ -18,7 +18,6 @@ package com.stackmob.newman
 
 import scalaz._
 import Scalaz._
-import scalaz.effect.IO
 import scala.concurrent.{Future, ExecutionContext}
 import org.apache.http.params.HttpConnectionParams
 import response.HttpResponseCode
@@ -40,8 +39,8 @@ import java.util.concurrent.atomic.AtomicInteger
 class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTimeout,
                        val connectionTimeout: Int = ApacheHttpClient.DefaultConnectionTimeout,
                        val maxConnectionsPerRoute: Int = ApacheHttpClient.DefaultMaxConnectionsPerRoute,
-                       val maxTotalConnections: Int = ApacheHttpClient.DefaultMaxTotalConnections,
-                       val requestContext: ExecutionContext = newmanRequestExecutionContext) extends HttpClient {
+                       val maxTotalConnections: Int = ApacheHttpClient.DefaultMaxTotalConnections)
+                      (implicit val requestContext: ExecutionContext = newmanRequestExecutionContext) extends HttpClient {
 
   private val connManager: ClientConnectionManager = {
     val cm = new PoolingClientConnectionManager()
@@ -58,16 +57,10 @@ class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTi
     client
   }
 
-  private def wrapIOPromise[T](t: => T): IO[Future[T]] = {
-    IO {
-      Future(t)(requestContext)
-    }
-  }
-
   protected def executeRequest(httpMessage: HttpRequestBase,
                                url: URL,
                                headers: Headers,
-                               body: Option[RawBody] = none): IO[Future[HttpResponse]] = wrapIOPromise {
+                               body: Option[RawBody] = none): Future[HttpResponse] = Future {
     httpMessage.setURI(url.toURI)
     headers.foreach { list: NonEmptyList[(String, String)] =>
       list.foreach {tup: (String, String) =>
