@@ -18,8 +18,6 @@ package com.stackmob.newman
 package response
 
 import scalaz._
-import scalaz.effect.IO
-import scalaz.EitherT._
 import Scalaz._
 import scalaz.NonEmptyList._
 import jsonscalaz._
@@ -97,21 +95,18 @@ case class HttpResponse(code: HttpResponseCode,
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode,
                               decoder: HttpResponse => ThrowableValidation[T]): ThrowableValidation[T] = {
-    (for {
-      resp <- eitherT[IO, Throwable, HttpResponse] {
-        \/.fromTryCatch(this).pure[IO]
-      }
-      _ <- eitherT[IO, Throwable, Unit] {
-        if(resp.code === expected) {
-          ().right.pure[IO]
+    for {
+      _ <- {
+        if(this.code === expected) {
+          ().success[Throwable]
         } else {
-          (UnexpectedResponseCode(expected, resp.code): Throwable).left.pure[IO]
+          (UnexpectedResponseCode(expected, this.code): Throwable).fail[T]
         }
       }
-      body <- eitherT[IO, Throwable, T] {
-        IO(decoder(resp).disjunction).except(_.left.pure[IO])
-      }
-    } yield body).run.map(_.validation).unsafePerformIO()
+      body <- decoder(this)
+    } yield {
+      body
+    }
   }
 
   def bodyAsIfResponseCode[T](expected: HttpResponseCode)
