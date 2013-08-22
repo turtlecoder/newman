@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.test.dsl
+package com.stackmob.newman.test
+package dsl
 
 import scalaz.Scalaz._
 import org.specs2.Specification
-import scalaz.effect.IO
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.{RawBody, Headers}
 import com.stackmob.newman.Constants._
 import com.stackmob.newman.dsl._
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.Duration
-import java.util.concurrent.TimeUnit
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class AsyncResponseHandlerDSLSpecs extends Specification { def is =
@@ -39,41 +37,34 @@ class AsyncResponseHandlerDSLSpecs extends Specification { def is =
     "return successful validation of nonthrowable error type if specified"                                              ! CustomErrors().returnsSuccessCorrectly ^
   end
 
-  private val dur = Duration(250, TimeUnit.MILLISECONDS)
   private trait Context
 
   private case class ThrowingIO() extends Context {
     def returnsFailure = {
       val ex = new Exception("test exception")
-      val respIO = IO {
-        Future.failed[HttpResponse](ex)
-      }.handleCode(HttpResponseCode.Ok) { _ =>
+      val resp = Future.failed[HttpResponse](ex).handleCode(HttpResponseCode.Ok) { _ =>
         ().success[Throwable]
       }
-      Await.result(respIO.unsafePerformIO(), dur).toEither must beLeft.like {
+      resp.toFutureValidation.block().toEither must beLeft.like {
         case e => e must beEqualTo(ex)
       }
     }
 
     def returnsEmptySuccess = {
-      val respIO = IO {
-        Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty))
-      }.handleCode(HttpResponseCode.Ok) { _ =>
+      val resp = Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)).handleCode(HttpResponseCode.Ok) { _ =>
         ().success[Throwable]
       }
-      Await.result(respIO.unsafePerformIO(), dur).toEither must beRight.like {
+      resp.toFutureValidation.block().toEither must beRight.like {
         case e => e must beEqualTo(())
       }
     }
 
     def returnsNonEmptySuccess = {
       val bodyString = "test body"
-      val respIO = IO {
-        Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset)))
-      }.handleCode(HttpResponseCode.Ok){ resp =>
+      val resp = Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode(HttpResponseCode.Ok){ resp =>
         resp.bodyString.success[Throwable]
       }
-      Await.result(respIO.unsafePerformIO(), dur).toEither must beRight.like {
+      resp.toFutureValidation.block().toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }
@@ -84,24 +75,20 @@ class AsyncResponseHandlerDSLSpecs extends Specification { def is =
       val exceptionMessage = "test exception"
       val ex = new Exception(exceptionMessage)
       val customError = new CustomErrorForSpecs(exceptionMessage)
-      val respIO = IO {
-        Future.failed(ex)
-      }.handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok) { _ =>
+      val resp = Future.failed[HttpResponse](ex).handleCode[CustomErrorForSpecs, Unit](HttpResponseCode.Ok) { _ =>
         ().success
       }
-      Await.result(respIO.unsafePerformIO(), dur).toEither must beLeft.like {
+      resp.toFutureValidation.block().toEither must beLeft.like {
         case e => e must beEqualTo(customError)
       }
     }
 
     def returnsSuccessCorrectly = {
       val bodyString = "test body"
-      val respIO = IO {
-        Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset)))
-      }.handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){ resp =>
+      val resp = Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset))).handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok){ resp =>
         resp.bodyString.success
       }
-      Await.result(respIO.unsafePerformIO(), dur).toEither must beRight.like {
+      resp.toFutureValidation.block().toEither must beRight.like {
         case e => e must beEqualTo(bodyString)
       }
     }
