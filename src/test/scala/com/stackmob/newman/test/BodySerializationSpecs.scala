@@ -32,6 +32,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
+import scala.concurrent.Future
 
 class BodySerializationSpecs extends Specification { def is =
   "BodySerializationSpecs".title                                                                                        ^
@@ -48,19 +49,18 @@ class BodySerializationSpecs extends Specification { def is =
     "deserialize with a specific JSONR"                                                                                 ! DeserializationTest().deserializesWithSpecificJSONR ^
     "deserialize with an overriding JSONR"                                                                              ! DeserializationTest().deserializesWithReplacedJSONR ^
                                                                                                                         end
-  private val dur = Duration(250, TimeUnit.MILLISECONDS)
   protected val url = new URL("http://stackmob.com")
   import BodySerializationSpecs._
 
   trait Context extends BaseContext {
     def ensureSucceedsWithReader[T : JSONR : Manifest](req: HttpRequest, expected: T) = {
-      req.executeUnsafe(dur).bodyAs[T].map { body: T =>
+      req.block().bodyAs[T].map { body: T =>
         (body must beEqualTo(expected)): SpecsResult
       } valueOr { logAndFail(_) }
     }
 
     def ensureSucceedsAsCaseClass[T <: AnyRef: Manifest](req: HttpRequest, expected: T) = {
-      req.executeUnsafe(dur).bodyAsCaseClass[T].map { body: T =>
+      req.block().bodyAsCaseClass[T].map { body: T =>
         (body must beEqualTo(expected)): SpecsResult
       } valueOr { logAndFail(_) }
     }
@@ -109,7 +109,7 @@ class BodySerializationSpecs extends Specification { def is =
 
     private def getResponse(bodyString: String): HttpRequest = {
       val bodyBytes = bodyString.getBytes(UTF8Charset)
-      implicit val client = new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes))
+      implicit val client = new DummyHttpClient(Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes)))
       GET(url)
     }
 

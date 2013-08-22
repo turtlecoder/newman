@@ -46,14 +46,12 @@ trait HttpRequest {
   def apply: Future[HttpResponse]
 
   /**
-   * submits the request and blocks until the given duration is up or the response comes back
+   * submits the request and blocks until the given duration is up or the response comes back.
    * @param d the maximum amount of time to wait for the response before failing
-   * @return a success if the response came back succeessfully in the time limit, a failure otherwise
+   * @return the response if it came back successfully. this method throws if any failure occurred
    */
-  def block(d: Duration = defaultDuration): Validation[Throwable, HttpResponse] = {
-    Validation.fromTryCatch {
-      Await.result(apply, d)
-    }
+  def block(d: Duration = defaultDuration): HttpResponse = {
+    Await.result(apply, d)
   }
 
   def toJValue(implicit client: HttpClient): JValue = {

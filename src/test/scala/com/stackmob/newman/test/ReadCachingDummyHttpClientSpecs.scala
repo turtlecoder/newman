@@ -71,7 +71,7 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
     mbResp <- genMbResp
     exists <- Gen.oneOf(true, false)
   } yield {
-    new DummyHttpResponseCacher(mbResp, (), exists)
+    new DummyHttpResponseCacher(mbResp, exists)
   }
 
   private def genDummyHttpClient: Gen[DummyHttpClient] = for {
@@ -85,11 +85,7 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
   }
 
   private def verifyReadsOnlyFromCache[T <: HttpRequestWithoutBody](fn: (ReadCachingHttpClient, URL, Headers) => T) = {
-    forAll(genURL,
-      genHeaders,
-      genDummyHttpClient,
-      genDummyHttpResponseCache(genAlwaysHttpResponse),
-      genPositiveMilliseconds) { (url, headers, dummyClient, dummyCache, milliseconds) =>
+    forAll(genURL, genHeaders, genDummyHttpClient, genDummyHttpResponseCache(genAlwaysHttpResponse), genPositiveMilliseconds) { (url, headers, dummyClient, dummyCache, milliseconds) =>
       val client = createClient(dummyClient, dummyCache, milliseconds)
 
       val req = fn(client, url, headers)
@@ -102,8 +98,7 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
       }
 
       //there should be 1 cache get, a hit, and there should be no client interaction at all since it hit the cache
-      val res = respMatches and verifyCacheInteraction(dummyCache, CacheInteraction(1, 0, 0)) and verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
-
+      respMatches and verifyCacheInteraction(dummyCache, CacheInteraction(1, 0, 0)) and verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
     }
   }
 
@@ -156,9 +151,9 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
     genPositiveMilliseconds) { (url, headers, body, dummyClient, dummyCache, milliseconds) =>
     val client = new ReadCachingHttpClient(dummyClient, dummyCache, milliseconds)
 
-    val postRes = client.post(url, headers, body).executeUnsafe(dur) must beEqualTo(dummyClient.responseToReturn())
-    val putRes = client.put(url, headers, body).executeUnsafe(dur) must beEqualTo(dummyClient.responseToReturn())
-    val deleteRes = client.delete(url, headers).executeUnsafe(dur) must beEqualTo(dummyClient.responseToReturn())
+    val postRes = client.post(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
+    val putRes = client.put(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
+    val deleteRes = client.delete(url, headers).block() must beEqualTo(dummyClient.responseToReturn.block())
 
     postRes and
     putRes and

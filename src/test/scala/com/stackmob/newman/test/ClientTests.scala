@@ -30,27 +30,23 @@ import java.util.concurrent.TimeUnit
 
 trait ClientTests { this: Specification with ResponseMatcher =>
   implicit private val charset = Constants.UTF8Charset
-  private val dur = Duration(250, TimeUnit.MILLISECONDS)
   class ClientTests(implicit client: HttpClient) {
     private lazy val DefaultExpectedBodyPieces = List("Host", "httpbin.org")
     private  def execute[T](t: Builder,
                             expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                             expectedHeaders: Headers = Headers("Content-Type" -> "application/json"),
                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
-      val r = t.executeUnsafe(dur)
-      r must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
+      t.block() must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
     }
 
     private def executeAsync(t: Builder,
                              expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                              expectedHeaders: Headers = None,
-                             mbExpectedBodyPieces: Option[List[String]] = {
-                               DefaultExpectedBodyPieces.some
-                             }) = {
-      val rFuture = t.executeAsyncUnsafe.map { r: HttpResponse =>
-        r must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
+                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
+      val responseFuture = t.apply.map { resp: HttpResponse =>
+        resp must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
       }
-      Await.result(rFuture, dur)
+      responseFuture.block()
     }
 
     private lazy val headerTup = "X-Stackmob-Test-Header" -> "X-StackMob-Test-Value"
