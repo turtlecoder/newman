@@ -103,7 +103,13 @@ case class HttpResponse(code: HttpResponseCode,
           (UnexpectedResponseCode(expected, this.code): Throwable).fail[T]
         }
       }
-      body <- decoder(this)
+      body <- {
+        try {
+          decoder(this)
+        } catch {
+          case t: Throwable => t.fail[T]
+        }
+      }
     } yield {
       body
     }
