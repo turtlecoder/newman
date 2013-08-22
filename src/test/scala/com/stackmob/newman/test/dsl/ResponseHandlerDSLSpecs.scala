@@ -38,29 +38,33 @@ class ResponseHandlerDSLSpecs extends Specification { def is =
   private trait Context
 
   private case class ThrowingIO() extends Context {
-    def returnsEmptySuccess: SpecsResult = {
+    def returnsEmptySuccess = {
       val resp = HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty).handleCode(HttpResponseCode.Ok) { _ =>
         ().success
       }
-      resp must beEqualTo(())
+      resp.toValidation.toEither must beRight
     }
 
-    def returnsNonEmptySuccess: SpecsResult = {
+    def returnsNonEmptySuccess = {
       val bodyString = "test body"
       val resp = HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset)).handleCode(HttpResponseCode.Ok){ resp =>
         resp.bodyString.success
       }
-      resp must beEqualTo(bodyString)
+      resp.toValidation.toEither must beRight.like {
+        case s => s must beEqualTo(bodyString)
+      }
     }
   }
 
   private case class CustomErrors() extends CustomErrorContext {
-    def returnsSuccessCorrectly: SpecsResult = {
+    def returnsSuccessCorrectly = {
       val bodyString = "test body"
       val resp = HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyString.getBytes(UTF8Charset)).handleCode[CustomErrorForSpecs, String](HttpResponseCode.Ok) { resp =>
         resp.bodyString.success
       }
-      resp must beEqualTo(bodyString)
+      resp.toValidation.toEither must beRight.like {
+        case s => s must beEqualTo(bodyString)
+      }
     }
   }
 
