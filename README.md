@@ -22,14 +22,14 @@ To add it to your project, use this for Maven:
 <dependency>
   <groupId>com.stackmob</groupId>
   <artifactId>newman_${scala.version}</artifactId>
-  <version>0.22.0</version>
+  <version>0.23.0</version>
 </dependency>
 ```
 
 or the equivalent for sbt:
 
 ```scala
-libraryDependencies += "com.stackmob" %% "newman" % "0.22.0"
+libraryDependencies += "com.stackmob" %% "newman" % "0.23.0"
 ```
 
 # Basic Usage
@@ -89,7 +89,7 @@ Using `ETagAwareHttpClient` is very similar to the basic usage above. Following 
 ```scala
 import com.stackmob.newman.{ETagAwareHttpClient, ApacheHttpClient}
 import com.stacmob.newman.caching.InMemoryHttpResponseCacher
-import com.stackmob.newman.DSL._
+import com.stackmob.newman.dsl._
 import java.net.URL
 	
 //change this implementation to your own if you want to use Memcached, Redis, etc
