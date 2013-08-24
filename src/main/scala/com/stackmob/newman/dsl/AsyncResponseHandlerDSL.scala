@@ -34,7 +34,6 @@ trait AsyncResponseHandlerDSL {
   case class AsyncResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])],
                                                     respFuture: Future[HttpResponse])
                                                    (implicit errorConv: Throwable => Failure) {
-
     /**
      * Adds a handler (a function that is called when the code matches the given function) and returns a new ResponseHandler
      * @param check response code this handler is for
@@ -117,23 +116,32 @@ trait AsyncResponseHandlerDSL {
     /**
      * Provide a default handler for all unhandled status codes. Must be the last handler in the chain
      */
-    def default(handler: HttpResponse => Validation[Failure, Success])
+    def default(noHandler: HttpResponse => Validation[Failure, Success])
                (implicit ctx: ExecutionContext): FutureValidation[Failure, Success] = {
-      try {
+      val futValidation = try {
         respFuture.map { response =>
-          handlers.reverse.find { functionTup =>
-            functionTup._1.apply(response.code)
-          }.map { functionTup =>
-            functionTup._2.apply(response)
-          } | {
-            handler(response)
+          val mbHandler = handlers.reverse.find { tup =>
+            val (isCode, _) = tup
+            isCode(response.code)
+          }
+          val mbRes = mbHandler.map { tup =>
+            val (_, fn) = tup
+            fn(response)
+          }
+          mbRes.getOrElse {
+            noHandler(response)
           }
         }.recover {
-          case t: Throwable => errorConv(t).fail[Success]
+          case t: Throwable => {
+            errorConv(t).fail[Success]
+          }
         }
       } catch {
-        case t: Throwable => Future.successful(errorConv(t).fail[Success])
+        case t: Throwable => {
+          Future.successful(errorConv(t).fail[Success])
+        }
       }
+      futValidation
     }
 
     def toFutureValidation(implicit ctx: ExecutionContext): FutureValidation[Failure, Success] = {
