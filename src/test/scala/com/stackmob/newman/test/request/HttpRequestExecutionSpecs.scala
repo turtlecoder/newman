@@ -17,21 +17,13 @@
 package com.stackmob.newman.test
 package request
 
-import scalaz._
-import scalaz.Validation._
-import Scalaz._
-import scalaz.NonEmptyList._
 import org.specs2.Specification
-import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
 import java.net.URL
 import com.stackmob.newman.request._
 import HttpRequestExecution._
 import com.stackmob.newman.response._
 import com.stackmob.newman._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import java.util.concurrent.TimeUnit
 import scala.concurrent.Future
 
 class HttpRequestExecutionSpecs extends Specification { def is =
@@ -41,8 +33,11 @@ class HttpRequestExecutionSpecs extends Specification { def is =
   ways like sequentially, chained (ie: generate the next request based on the previous response)
   """                                                                                                                   ^
   "HttpRequestExecution should"                                                                                         ^
-    "execute http requests in sequence correctly"                                                                       ! ExecuteSequence().executesCorrectly ^
+    "execute sequence requests correctly"                                                                               ! ExecuteSequence().executesCorrectly ^
+    "fail if the first sequenced request fails"                                                                         ! ExecuteSequence().firstTimeout ^
+    "fail if the last request fails"                                                                                    ! ExecuteSequence().lastTimeout ^
     "execute concurrent requests correctly"                                                                             ! ExecuteConcurrent().executesCorrectly ^
+    "fail only the request that fails"                                                                                  ! ExecuteConcurrent().oneFails ^
                                                                                                                         end
   trait Context extends BaseContext {
     protected lazy val requestURL = new URL("http://stackmob.com")
@@ -63,24 +58,38 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     protected lazy val exception = new Exception("test exception")
     protected lazy val throwingClient = new DummyHttpClient(throwingResponse)
     protected lazy val throwingRequest = throwingClient.get(requestURL, requestHeaders)
-    protected lazy val throwingResponse = Future.failed[HttpResponse] {
-      exception
+    protected lazy val throwingResponse = Future.failed[HttpResponse](exception)
+
+    protected implicit class RichReqRespFutIterable(iter: Iterable[ReqRespFut]) {
+      def toReqRespList: List[(HttpRequest, HttpResponse)] = {
+        iter.map { tup =>
+          tup._1 -> tup._2.block()
+        }.toList
+      }
     }
   }
 
   case class ExecuteSequence() extends Context {
-    def executesCorrectly: SpecsResult = {
+    def executesCorrectly = {
       val requestList = List(request1, request2)
       val expectedRequestResponseList = List(request1 -> response1, request2 -> response2)
       val res = sequencedRequests(requestList)
-      res must beEqualTo(expectedRequestResponseList)
+      res.toReqRespList must beEqualTo(expectedRequestResponseList.toReqRespList)
     }
 
-    def timeoutIfFirstFutureFails() = {
+    def firstTimeout = {
       val requestList = List(throwingRequest, request2)
       val res = sequencedRequests(requestList)
       val first = res.apply(0)._2.toEither() must beLeft
-      val second = res.apply(1)._2.toEither() must beRight
+      val second = res.apply(1)._2.toEither() must beLeft
+      first and second
+    }
+
+    def lastTimeout = {
+      val requestList = List(request1, throwingRequest)
+      val res = sequencedRequests(requestList)
+      val first = res.apply(0)._2.toEither() must beRight
+      val second = res.apply(1)._2.toEither() must beLeft
       first and second
     }
   }
@@ -89,14 +98,11 @@ class HttpRequestExecutionSpecs extends Specification { def is =
     def executesCorrectly = {
       val requestList = List(request1, request2)
       val expectedRequestResponseList = List(request1 -> response1, request2 -> response2)
-      val res = concurrentRequests(requestList).map { tup =>
-        val (req, respFut) = tup
-        req -> respFut.block()
-      }
-      res must beEqualTo(expectedRequestResponseList)
+      val res = concurrentRequests(requestList)
+      res.toReqRespList must beEqualTo(expectedRequestResponseList.toReqRespList)
     }
 
-    def allFailIfOneFails: SpecsResult = {
+    def oneFails = {
       val requestList = List(request1, throwingRequest)
       val res = concurrentRequests(requestList)
 
