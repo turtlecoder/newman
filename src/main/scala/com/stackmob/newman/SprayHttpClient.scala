@@ -62,7 +62,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
     val io = IO(Http)
     val sprayResp = io.ask(request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
     val newmanResp = sprayResp.toNewman(defaultContentType)
-    newmanResp.transform(identity[HttpResponse], {
+    val finalFuture = newmanResp.transform(identity[HttpResponse], {
       case c: ClassCastException => {
         InternalException("Unexpected return type", c.some)
       }
@@ -70,6 +70,11 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
         t
       }
     })
+    //kill the IO actor when the request completes
+    finalFuture.onComplete { _ =>
+      io ! PoisonPill
+    }
+    finalFuture
   }
 
   private def request(method: SprayHttpMethod,
@@ -129,7 +134,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
 
 object SprayHttpClient {
 
-  private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
+  private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem("spray-http-client")
 
   implicit class RichHeaders(headers: Headers) {
     def getContentType(defaultContentType: SprayContentType): SprayContentType = {
