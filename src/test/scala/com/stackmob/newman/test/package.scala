@@ -21,7 +21,7 @@ import scala.concurrent._
 import scalaz.Validation
 
 package object test {
-  private[test] implicit val duration = 2.seconds
+  private[test] implicit val duration = 5.seconds
 
   private[test] implicit class RichFuture[T](fut: Future[T]) {
     def toEither(dur: Duration = duration): Either[Throwable, T] = {
