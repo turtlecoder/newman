@@ -37,22 +37,11 @@ trait HttpRequest {
   def requestType: HttpRequestType
   def headers: Headers
 
-  private lazy val defaultDuration = 500.milliseconds
-
   /**
    * submit this request and return a {{{scala.concurrent.Future}}} that will contain the response
    * @return the Future that represents the running request
    */
   def apply: Future[HttpResponse]
-
-  /**
-   * submits the request and blocks until the given duration is up or the response comes back.
-   * @param d the maximum amount of time to wait for the response before failing
-   * @return the response if it came back successfully. this method throws if any failure occurred
-   */
-  def block(d: Duration = defaultDuration): HttpResponse = {
-    Await.result(apply, d)
-  }
 
   def toJValue(implicit client: HttpClient): JValue = {
     import net.liftweb.json.scalaz.JsonScalaz.toJSON

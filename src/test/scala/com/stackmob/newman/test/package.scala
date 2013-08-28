@@ -19,6 +19,8 @@ package com.stackmob.newman
 import scala.concurrent.duration._
 import scala.concurrent._
 import scalaz.Validation
+import com.stackmob.newman.request.HttpRequest
+import com.stackmob.newman.response.HttpResponse
 
 package object test {
   private[test] implicit val duration = 5.seconds
@@ -30,6 +32,12 @@ package object test {
 
     def block(dur: Duration = duration): T = {
       Await.result(fut, dur)
+    }
+  }
+
+  private[test] implicit class RichHttpRequest(req: HttpRequest) {
+    def block(duration: Duration = 500.milliseconds): HttpResponse = {
+      Await.result(req.apply, duration)
     }
   }
 

@@ -34,7 +34,7 @@ trait ClientTests { this: Specification with ResponseMatcher =>
                             expectedHeaders: Headers = Headers("Content-Type" -> "application/json"),
                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some,
                             duration: Duration = duration) = {
-      t.block(duration) must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
+      t.toRequest.block(duration) must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
     }
 
     private def executeAsync(t: Builder,

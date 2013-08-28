@@ -80,7 +80,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly = {
-      val respMatches = t.block() must beEqualTo(DummyHttpClient.CannedResponse)
+      val respMatches = t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)
       val oneReq = client.getRequests.size() must beEqualTo(1)
       respMatches and oneReq
     }
@@ -95,7 +95,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly = {
-      (t.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.postRequests.size() must beEqualTo(1))
     }
   }
@@ -109,7 +109,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrecty = {
-      (t.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.putRequests.size() must beEqualTo(1))
     }
   }
@@ -122,7 +122,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly = {
-      (t.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.deleteRequests.size must beEqualTo(1))
     }
   }
@@ -134,7 +134,7 @@ class DSLSpecs extends Specification { def is =
     }
 
     def executesCorrectly = {
-      (t.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
+      (t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.headRequests.size must beEqualTo(1))
     }
   }
