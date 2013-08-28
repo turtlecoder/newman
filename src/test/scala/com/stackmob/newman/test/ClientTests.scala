@@ -23,10 +23,6 @@ import com.stackmob.newman.dsl._
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import java.net.URL
 import scalaz.Scalaz._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import java.util.concurrent.TimeUnit
 
 trait ClientTests { this: Specification with ResponseMatcher =>
   implicit private val charset = Constants.UTF8Charset
@@ -43,6 +39,7 @@ trait ClientTests { this: Specification with ResponseMatcher =>
                              expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                              expectedHeaders: Headers = None,
                              mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
+      import com.stackmob.newman.concurrent.SequentialExecutionContext
       val responseFuture = t.apply.map { resp: HttpResponse =>
         resp must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
       }

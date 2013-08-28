@@ -18,6 +18,7 @@ package com.stackmob.newman.test
 
 import org.specs2.Specification
 import com.stackmob.newman.SprayHttpClient
+import akka.actor.ActorSystem
 
 class SprayHttpClientSpecs extends Specification with ClientTests with ResponseMatcher { def is =
   "SprayHttpClientSpecs".title                                                                                          ^ end ^
@@ -33,7 +34,7 @@ class SprayHttpClientSpecs extends Specification with ClientTests with ResponseM
   "head should work"                                                                                                    ! ClientTests(client).head ^ end ^
   "headAsync should work"                                                                                               ! ClientTests(client).headAsync ^ end ^
   end
-  private def client = new SprayHttpClient()
+  private def client = new SprayHttpClient(ActorSystem("SprayHttpClientSpecs"))
 
 
 }
