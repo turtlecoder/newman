@@ -62,14 +62,10 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
       .ask(request(method, url, headers, rawBody))
       .mapTo[SprayHttpResponse]
       .toNewman(defaultContentType)
-      .recover {
-        case c: ClassCastException => {
-          InternalException("Unexpected return type", c.some)
-        }
-        case t: Throwable => {
-          t
-        }
-      }
+      .transform(identity[HttpResponse], {
+        case c: ClassCastException => InternalException("Unexpected return type", c.some)
+        case t: Throwable => t
+      })
   }
 
   private def request(method: SprayHttpMethod,
