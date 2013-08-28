@@ -24,7 +24,6 @@ import com.stackmob.newman.{RawBody, Headers}
 import com.stackmob.newman.Constants._
 import com.stackmob.newman.dsl._
 import scala.concurrent._
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 
@@ -39,6 +38,8 @@ class AsyncResponseHandlerDSLSpecs extends Specification { def is =
     "return successful validation of nonthrowable error type if specified"                                              ! CustomErrors().returnsSuccessCorrectly ^ end ^
     "evaluate the first applicable handler in the list, not the last"                                                   ! Handlers().evalFirst ^ end ^
   end
+
+  import com.stackmob.newman.concurrent.SequentialExecutionContext
 
   private trait Context {
     //we need to wait longer than the default to account for scheduling the map function inside AsyncResponseHandlerDSL's default method
