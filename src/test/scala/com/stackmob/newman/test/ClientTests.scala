@@ -23,6 +23,7 @@ import com.stackmob.newman.dsl._
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import java.net.URL
 import scalaz.Scalaz._
+import scala.concurrent.duration.Duration
 
 trait ClientTests { this: Specification with ResponseMatcher =>
   implicit private val charset = Constants.UTF8Charset
@@ -31,19 +32,21 @@ trait ClientTests { this: Specification with ResponseMatcher =>
     private  def execute[T](t: Builder,
                             expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                             expectedHeaders: Headers = Headers("Content-Type" -> "application/json"),
-                            mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
-      t.block() must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
+                            mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some,
+                            duration: Duration = duration) = {
+      t.block(duration) must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
     }
 
     private def executeAsync(t: Builder,
                              expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                              expectedHeaders: Headers = None,
-                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
+                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some,
+                             duration: Duration = duration) = {
       import com.stackmob.newman.concurrent.SequentialExecutionContext
       val responseFuture = t.apply.map { resp: HttpResponse =>
         resp must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
       }
-      responseFuture.block()
+      responseFuture.block(duration)
     }
 
     private lazy val headerTup = "X-Stackmob-Test-Header" -> "X-StackMob-Test-Value"
