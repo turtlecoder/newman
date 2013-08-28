@@ -46,7 +46,7 @@ import com.stackmob.newman.Exceptions.InternalException
 
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
                       defaultContentType: SprayContentType = SprayContentTypes.`application/json`,
-                      timeout: Timeout = Timeout(1, TimeUnit.SECONDS)) extends HttpClient {
+                      timeout: Timeout = Timeout(5, TimeUnit.SECONDS)) extends HttpClient {
 
   import SprayHttpClient._
 
@@ -62,14 +62,14 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
       .ask(request(method, url, headers, rawBody))
       .mapTo[SprayHttpResponse]
       .toNewman(defaultContentType)
-      .transform(identity[HttpResponse], {
+      .recover {
         case c: ClassCastException => {
           InternalException("Unexpected return type", c.some)
         }
         case t: Throwable => {
           t
         }
-      })
+      }
   }
 
   private def request(method: SprayHttpMethod,
