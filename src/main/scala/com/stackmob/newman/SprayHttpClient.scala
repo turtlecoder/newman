@@ -29,6 +29,7 @@ import spray.http.{Uri,
   HttpEntity => SprayHttpEntity,
   EmptyEntity => SprayEmptyEntity}
 import spray.http.HttpHeaders.RawHeader
+import spray.http.parser.HttpParser
 import java.net.URL
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
@@ -42,7 +43,6 @@ import spray.can.Http
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 import com.stackmob.newman.Exceptions.InternalException
-import spray.http.parser.HttpParser
 
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
                       defaultContentType: SprayContentType = SprayContentTypes.`application/json`,
@@ -58,23 +58,18 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
                       headers: Headers,
                       rawBody: RawBody = RawBody.empty): Future[HttpResponse] = {
     import com.stackmob.newman.concurrent.SequentialExecutionContext
-
-    val io = IO(Http)
-    val sprayResp = io.ask(request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
-    val newmanResp = sprayResp.toNewman(defaultContentType)
-    val finalFuture = newmanResp.transform(identity[HttpResponse], {
-      case c: ClassCastException => {
-        InternalException("Unexpected return type", c.some)
-      }
-      case t: Throwable => {
-        t
-      }
-    })
-    //kill the IO actor when the request completes
-    finalFuture.onComplete { _ =>
-      io ! PoisonPill
-    }
-    finalFuture
+    IO(Http)
+      .ask(request(method, url, headers, rawBody))
+      .mapTo[SprayHttpResponse]
+      .toNewman(defaultContentType)
+      .transform(identity[HttpResponse], {
+        case c: ClassCastException => {
+          InternalException("Unexpected return type", c.some)
+        }
+        case t: Throwable => {
+          t
+        }
+      })
   }
 
   private def request(method: SprayHttpMethod,

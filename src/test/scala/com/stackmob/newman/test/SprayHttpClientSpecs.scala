@@ -19,8 +19,7 @@ package com.stackmob.newman.test
 import org.specs2.Specification
 import com.stackmob.newman.SprayHttpClient
 import akka.actor.ActorSystem
-import org.specs2.specification.Around
-import org.specs2.execute.AsResult
+import akka.util.Timeout
 
 class SprayHttpClientSpecs extends Specification with ClientTests with ResponseMatcher { def is =
   "SprayHttpClientSpecs".title                                                                                          ^ end ^
@@ -39,7 +38,7 @@ class SprayHttpClientSpecs extends Specification with ClientTests with ResponseM
 
   private def test[T](fn: ClientTests => T) = {
     val system = ActorSystem("SprayHttpClientSpecs")
-    val client = new SprayHttpClient(ActorSystem("SprayHttpClientSpecs"))
+    val client = new SprayHttpClient(system, timeout = Timeout(duration))
     val clientTests = ClientTests(client)
     val res = fn(clientTests)
     system.shutdown()
