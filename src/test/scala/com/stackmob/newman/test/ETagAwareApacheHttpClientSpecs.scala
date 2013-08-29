@@ -76,14 +76,21 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     def foldResponseCacherCalls(c: DummyHttpResponseCacher,
                                 getFn: List[HttpRequest] => MatchResult[_],
                                 setFn: List[(HttpRequest, HttpResponse)] => MatchResult[_]): MatchResult[_] = {
-      (c.existsCalls.size must beEqualTo(0)) and
-      (getFn(c.getCalls.asScala.toList)) and
-      (setFn(c.setCalls.asScala.toList))
+      val existsCallsRes = c.existsCalls.size must beEqualTo(0)
+
+      val setCalls = c.setCalls.asScala.toList.map { tup =>
+        tup._1 -> tup._2.block()
+      }
+      val setCallsRes = setFn(setCalls)
+
+      val getCallsRes = getFn(c.getCalls.asScala.toList)
+
+      existsCallsRes and setCallsRes and getCallsRes
     }
   }
 
   case class CachedResponseWithETag() extends Context {
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.block().some, true)
+    override protected val responseCacher = new DummyHttpResponseCacher(Some(responseWithETag), responseWithETag, true, Some(responseWithETag))
 
     override protected val rawClient = new DummyHttpClient
 
@@ -97,7 +104,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithETagReturnsNotModified() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithNotModified)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.block().some, true)
+    override protected val responseCacher = new DummyHttpResponseCacher(Some(responseWithETag), responseWithETag, true, Some(responseWithETag))
 
     def returnsCachedResponse = {
       val resp = client.get(url, Headers.empty).block()
@@ -107,7 +114,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithETagReturnsModified() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.block().some, true)
+    override protected val responseCacher = new DummyHttpResponseCacher(Some(responseWithETag), responseWithETag, true, Some(responseWithETag))
 
     def returnsNewResponse = {
       val resp = client.get(url, Headers.empty).block()
@@ -117,7 +124,10 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithoutETag() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithoutETag.block().some, true)
+    override protected val responseCacher = new DummyHttpResponseCacher(onGet = Some(responseWithoutETag),
+      onSet = responseWithoutETag,
+      onExists = true,
+      onRemove = Some(responseWithoutETag))
 
     def executesNormalRequest = {
       client.get(url, Headers.empty).block()
@@ -145,7 +155,10 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class NoCachedResponsePresent() extends Context {
     override protected val rawClient = new DummyHttpClient
-    override protected val responseCacher = new DummyHttpResponseCacher(Option.empty[HttpResponse], true)
+    override protected val responseCacher = new DummyHttpResponseCacher(Option.empty[Future[HttpResponse]],
+      responseWithETag,
+      false,
+      Option.empty[Future[HttpResponse]])
 
     def executesNormalRequest = {
       client.get(url, Headers.empty).block()
@@ -169,8 +182,9 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CacheGetFailed() extends Context {
     private val cacheException = new Exception("couldn't hit cache")
+    private val cacheExceptionFuture = Future.failed[HttpResponse](cacheException)
     override protected val rawClient = new DummyHttpClient
-    override protected val responseCacher = new DummyHttpResponseCacher((throw cacheException): Option[HttpResponse], (throw cacheException): Boolean)
+    override protected val responseCacher = new DummyHttpResponseCacher(Some(cacheExceptionFuture), cacheExceptionFuture, false, Some(cacheExceptionFuture))
 
     def executesNoRequest = {
       fromTryCatch(client.get(url, Headers.empty).block())
