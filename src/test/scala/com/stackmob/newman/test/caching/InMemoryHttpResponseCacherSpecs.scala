@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.test
+package com.stackmob.newman
+package test
 package caching
 
-import com.stackmob.newman._
 import com.stackmob.newman.caching._
 import com.stackmob.newman.test.scalacheck._
 import org.specs2.{ScalaCheck, Specification}
 import org.scalacheck._
 import Prop._
-import request._
-import com.stackmob.newman.response.HttpResponse
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
@@ -39,37 +37,32 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
   private val client = {
     new DummyHttpClient()
   }
-  private def cacher(ttl: Duration = duration) = {
-    new InMemoryHttpResponseCacher(maxCapacity = Int.MaxValue,
-      initialCapacity = 1,
-      timeToIdle = duration,
-      timeToLive = duration)
-  }
-
-  private def getResponse(request: HttpRequest): HttpResponse = {
-    request.apply.block()
-  }
 
   private def roundTripSucceeds = forAll(genHttpRequest(client)) { request =>
-    val cache = cacher()
+    val cache = new InMemoryHttpResponseCacher(maxCapacity = Int.MaxValue,
+      initialCapacity = 1,
+      timeToIdle = Duration(1, TimeUnit.SECONDS),
+      timeToLive = Duration(2, TimeUnit.SECONDS))
 
-    val response = getResponse(request)
+    val response = request.block()
     val getRes1 = cache.get(request) must beNone
     val existsRes1 = cache.exists(request) must beFalse
-    val setRes1 = cache.set(request, Future.successful(response)) must beEqualTo(())
+    val setRes1 = cache.set(request, Future.successful(response)).block() must beEqualTo(response)
     val identicalRequest = client.get(request.url, request.headers)
     val getRes2 = cache.get(identicalRequest) must beSome.like {
-      case s => s must beEqualTo(response)
+      case s => s.block() must beEqualTo(response)
     }
     val existsRes2 = cache.exists(request) must beTrue
     getRes1 and existsRes1 and setRes1 and getRes2 and existsRes2
   }
 
   private def ttlSucceeds = forAll(genHttpRequest(client)) { request =>
-    val cache = cacher(Duration(1, TimeUnit.MILLISECONDS))
+    val cache = new InMemoryHttpResponseCacher(initialCapacity = 1,
+      maxCapacity = Int.MaxValue,
+      timeToIdle = Duration(10, TimeUnit.MILLISECONDS),
+      timeToLive = Duration(20, TimeUnit.MILLISECONDS))
 
-    val response = getResponse(request)
-    cache.set(request, Future.successful(response))
+    cache.set(request, request.apply)
     Thread.sleep(100)
     val identicalRequest = client.get(request.url, request.headers)
     cache.get(identicalRequest) must beNone
