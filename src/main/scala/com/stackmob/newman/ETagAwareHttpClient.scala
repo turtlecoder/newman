@@ -64,6 +64,7 @@ class ETagAwareHttpClient(httpClient: HttpClient,
     override val headers = h
 
     override def apply: Future[HttpResponse] = {
+      //TODO: fix possible race here
       httpResponseCacher.get(this).map { respFut =>
         respFut.flatMap { resp =>
           resp.eTag.map { eTag: String =>
