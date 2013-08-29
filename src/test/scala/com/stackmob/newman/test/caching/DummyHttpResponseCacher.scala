@@ -21,27 +21,27 @@ import com.stackmob.newman.request.HttpRequest
 import java.util.concurrent.CopyOnWriteArrayList
 import com.stackmob.newman.caching._
 import scala.concurrent.Future
+import org.specs2.matcher.MatchResult
+import scala.collection.JavaConverters._
 
-class DummyHttpResponseCacher(val onGet: Option[Future[HttpResponse]],
-                              val onSet: Future[HttpResponse],
-                              val onExists: Boolean,
+class DummyHttpResponseCacher(val onApply: Future[HttpResponse],
+                              val onGet: Option[Future[HttpResponse]],
                               val onRemove: Option[Future[HttpResponse]]) extends HttpResponseCacher {
 
+  val applyCalls = new CopyOnWriteArrayList[HttpRequest]()
   val getCalls = new CopyOnWriteArrayList[HttpRequest]()
-  val setCalls = new CopyOnWriteArrayList[(HttpRequest, Future[HttpResponse])]()
   val removeCalls = new CopyOnWriteArrayList[HttpRequest]()
-  val existsCalls = new CopyOnWriteArrayList[HttpRequest]()
 
-  def totalNumCalls = getCalls.size() + setCalls.size() + existsCalls.size() + removeCalls.size()
+  def totalNumCalls = applyCalls.size() + getCalls.size() + removeCalls.size()
+
+  override def apply(req: HttpRequest): Future[HttpResponse] = {
+    applyCalls.add(req)
+    onApply
+  }
 
   override def get(req: HttpRequest): Option[Future[HttpResponse]] = {
     getCalls.add(req)
     onGet
-  }
-
-  override def set(req: HttpRequest, resp: Future[HttpResponse]) = {
-    setCalls.add(req -> resp)
-    onSet
   }
 
   override def remove(req: HttpRequest): Option[Future[HttpResponse]] = {
@@ -49,8 +49,15 @@ class DummyHttpResponseCacher(val onGet: Option[Future[HttpResponse]],
     onRemove
   }
 
-  override def exists(req: HttpRequest): Boolean = {
-    existsCalls.add(req)
-    onExists
+  def verifyApplyCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
+    fn(applyCalls.asScala.toList)
+  }
+
+  def verifyGetCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
+    fn(getCalls.asScala.toList)
+  }
+
+  def verifyRemoveCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
+    fn(removeCalls.asScala.toList)
   }
 }

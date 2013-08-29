@@ -21,35 +21,25 @@ import com.stackmob.newman.request.HttpRequest
 import scala.concurrent.Future
 
 trait HttpResponseCacher {
+
   /**
-   * possibly get a response for the given request
-   * @param req the request
-   * @return an IO representing the response, or none if none exists
+   * get the given request from the cache, or execute it
+   * @param req the request to get
+   * @return the response, wrapped in a future. the future will be completed when the request finishes
+   */
+  def apply(req: HttpRequest): Future[HttpResponse]
+
+  /**
+   * get the given request form the cache
+   * @param req the request to get
+   * @return Some if the request exists in the cache, None otherwise
    */
   def get(req: HttpRequest): Option[Future[HttpResponse]]
 
   /**
-   * set a response for the given request
-   * @param req the request
-   * @param resp the response for the given request
-   * @return the IO representing the set action
-   */
-  def set(req: HttpRequest, resp: Future[HttpResponse]): Future[HttpResponse]
-
-  /**
-   * remove a response for the given request, if it exists
-   * @param req the request for the response to remove
-   * @return Some if the the response existed, None otherwise
+   * remove the given request from the cache
+   * @param req the request to remove
+   * @return Some if the element existed, None otherwise
    */
   def remove(req: HttpRequest): Option[Future[HttpResponse]]
-
-  /**
-   * determine whether a response for the given request exists
-   * @param req the request
-   * @return the action to determine existence. will contain true if it does, false otherwise.
-   *         note that if the resultant IO is true, a subsequent get call may still not return a response
-   */
-  def exists(req: HttpRequest): Boolean = {
-    get(req).isDefined
-  }
 }

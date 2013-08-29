@@ -42,12 +42,12 @@ class InMemoryHttpResponseCacher(maxCapacity: Int,
     timeToLive = timeToLive,
     timeToIdle = timeToIdle)
 
-  override def get(req: HttpRequest): Option[Future[HttpResponse]] = {
-    cache.get(req)
+  override def apply(req: HttpRequest): Future[HttpResponse] = {
+    cache.apply(req)(req.apply)
   }
 
-  override def set(req: HttpRequest, resp: Future[HttpResponse]) = {
-    cache.apply(req)(resp)
+  override def get(req: HttpRequest): Option[Future[HttpResponse]] = {
+    cache.get(req)
   }
 
   override def remove(req: HttpRequest): Option[Future[HttpResponse]] = {

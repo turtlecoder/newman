@@ -159,17 +159,15 @@ package object scalacheck {
     Gen.value[Option[T]](Option.empty[T])
   }
 
-  private[test] def genDummyHttpResponseCache(genOnGet: Gen[Option[Future[HttpResponse]]],
-                                        genOnSet: Gen[Future[HttpResponse]],
-                                        genOnExists: Gen[Boolean],
-                                        genOnRemove: Gen[Option[Future[HttpResponse]]]): Gen[DummyHttpResponseCacher] = {
+  private[test] def genDummyHttpResponseCache(genOnApply: Gen[Future[HttpResponse]],
+                                              genOnGet: Gen[Option[Future[HttpResponse]]],
+                                              genOnRemove: Gen[Option[Future[HttpResponse]]]): Gen[DummyHttpResponseCacher] = {
     for {
+      onApply <- genOnApply
       onGet <- genOnGet
-      onSet <- genOnSet
-      onExists <- genOnExists
       onRemove <- genOnRemove
     } yield {
-      new DummyHttpResponseCacher(onGet = onGet, onSet = onSet, onExists = onExists, onRemove = onRemove)
+      new DummyHttpResponseCacher(onApply = onApply, onGet = onGet, onRemove = onRemove)
     }
   }
 

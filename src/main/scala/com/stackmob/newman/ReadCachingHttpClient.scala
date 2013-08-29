@@ -16,26 +16,19 @@
 
 package com.stackmob.newman
 
-import scalaz.Scalaz._
 import caching._
 import request._
-import response.HttpResponse
 import java.net.URL
-import scala.concurrent.{ExecutionContext, Future}
 
 class ReadCachingHttpClient(httpClient: HttpClient,
-                            httpResponseCacher: HttpResponseCacher)
-                           (implicit c: ExecutionContext) extends HttpClient {
-  import ReadCachingHttpClient._
+                            httpResponseCacher: HttpResponseCacher) extends HttpClient {
 
-  override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
-    override protected lazy val ctx = c
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers): Future[HttpResponse] = {
-      httpClient.get(u, h).apply
+  override def get(u: URL, h: Headers): GetRequest = new GetRequest {
+    override lazy val url = u
+    override lazy val headers = h
+    override def apply = {
+      httpResponseCacher.apply(this)
     }
-    override val url = u
-    override val headers = h
   }
 
   override def post(u: URL, h: Headers, b: RawBody): PostRequest = PostRequest(u, h, b) {
@@ -50,29 +43,11 @@ class ReadCachingHttpClient(httpClient: HttpClient,
     httpClient.delete(u, h).apply
   }
 
-  override def head(u: URL, h: Headers): HeadRequest = new HeadRequest with CachingMixin {
-    override protected lazy val ctx = c
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers): Future[HttpResponse] = {
-      httpClient.head(u, h).apply
-    }
-    override val url = u
-    override val headers = h
-  }
-}
-
-object ReadCachingHttpClient {
-  trait CachingMixin { this: HttpRequest =>
-    protected implicit def ctx: ExecutionContext
-    protected def cache: HttpResponseCacher
-    protected def doHttpRequest(headers: Headers): Future[HttpResponse]
-
-    override def apply: Future[HttpResponse] = {
-      cache.get(this) | {
-        val respFut = doHttpRequest(headers)
-        cache.set(this, respFut)
-        respFut
-      }
+  override def head(u: URL, h: Headers): HeadRequest = new HeadRequest {
+    override lazy val url = u
+    override lazy val headers = h
+    override def apply = {
+      httpResponseCacher.apply(this)
     }
   }
 }

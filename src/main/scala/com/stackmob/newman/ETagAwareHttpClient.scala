@@ -35,8 +35,9 @@ class ETagAwareHttpClient(httpClient: HttpClient,
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
     override lazy val ctx = c
     override protected val cache = httpResponseCacher
-    override protected def doGetRequest: Future[HttpResponse] = httpClient.get(u, h).apply
-    override protected def doHeadRequest(headers: Headers): Future[HttpResponse] = httpClient.head(u, headers).apply
+    override protected def doHeadRequest(headers: Headers): Future[HttpResponse] = {
+      httpClient.head(u, headers).apply
+    }
     override val url = u
     override val headers = h
   }
@@ -62,7 +63,6 @@ object ETagAwareHttpClient {
   trait CachingMixin extends HttpRequest { this: GetRequest =>
     protected implicit def ctx: ExecutionContext
     protected def cache: HttpResponseCacher
-    protected def doGetRequest: Future[HttpResponse]
     protected def doHeadRequest(headers: Headers): Future[HttpResponse]
 
     private def addIfNoneMatch(h: Headers, eTag: String): Headers = {
@@ -71,40 +71,44 @@ object ETagAwareHttpClient {
       } orElse { Headers(HttpHeaders.IF_NONE_MATCH -> eTag) }
     }
 
-    private def cachedAndETagPresent(cached: HttpResponse,
-                                     eTag: String): Future[HttpResponse] = {
+    /**
+     * check a cached response's eTag against the server using a head request
+     * @param cached the cached response
+     * @param eTag the cached response's eTag
+     * @return the resulting HttpResponse. if the eTag is up to date, this is the same as {{{cached}}}. otherwise, the result of running the request against the server
+     */
+    private def checkETag(cached: HttpResponse,
+                          eTag: String): Future[HttpResponse] = {
       val newHeaderList = addIfNoneMatch(this.headers, eTag)
       doHeadRequest(newHeaderList).flatMap { response: HttpResponse =>
-       if(response.notModified) {
-          //not modified returned - so return cached response
+        if(response.notModified) {
+          //the response was not modified, so return the cached response
           Future.successful(cached)
         } else {
-          val respFut = doGetRequest
-          cache.set(this, respFut)
-          respFut
+          //the response was modified, so remove it from the cache and rerun the request.
+          //don't care if the response existed or, if it did, when the response returned,
+          //just make sure that after this line executes it's gone
+          cache.remove(this)
+          cache.apply(this)
         }
       }
     }
 
-    private def cachedAndETagNotPresent: Future[HttpResponse] = notCached
-
-    private def notCached: Future[HttpResponse] = {
-      val respFut = doGetRequest
-      cache.set(this, respFut)
-      respFut
-    }
 
     override def apply: Future[HttpResponse] = {
-      cache.get(this).map { respFuture: Future[HttpResponse] =>
-        respFuture.flatMap { resp: HttpResponse =>
-          resp.eTag some { eTag: String =>
-            cachedAndETagPresent(resp, eTag)
-          } none {
-            cachedAndETagNotPresent
+      cache.get(this).map { respFut =>
+        respFut.flatMap { resp =>
+          resp.eTag.map { eTag: String =>
+            //the response was found in the cache and it has an eTag so check the it against the server
+            checkETag(resp, eTag)
+          } | {
+            //the response was found in the cache and it doesn't have an eTag, so just do the request as normal
+            cache.apply(this)
           }
         }
       } | {
-        notCached
+        //the response was not found in the cache, so just do the request as normal
+        cache.apply(this)
       }
     }
   }
