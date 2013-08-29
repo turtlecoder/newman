@@ -20,25 +20,33 @@ import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import java.util.concurrent.CopyOnWriteArrayList
 import com.stackmob.newman.caching._
+import scala.concurrent.Future
 
-class DummyHttpResponseCacher(onGet: => Option[HttpResponse],
-                              onExists: => Boolean) extends HttpResponseCacher {
-
-  def cannedGet = onGet
-  def cannedExists = onExists
+class DummyHttpResponseCacher(val onGet: Option[Future[HttpResponse]],
+                              val onSet: Future[HttpResponse],
+                              val onExists: Boolean,
+                              val onRemove: Option[Future[HttpResponse]]) extends HttpResponseCacher {
 
   val getCalls = new CopyOnWriteArrayList[HttpRequest]()
-  val setCalls = new CopyOnWriteArrayList[(HttpRequest, HttpResponse)]()
+  val setCalls = new CopyOnWriteArrayList[(HttpRequest, Future[HttpResponse])]()
+  val removeCalls = new CopyOnWriteArrayList[HttpRequest]()
   val existsCalls = new CopyOnWriteArrayList[HttpRequest]()
-  def totalNumCalls = getCalls.size() + setCalls.size() + existsCalls.size()
 
-  override def get(req: HttpRequest): Option[HttpResponse] = {
+  def totalNumCalls = getCalls.size() + setCalls.size() + existsCalls.size() + removeCalls.size()
+
+  override def get(req: HttpRequest): Option[Future[HttpResponse]] = {
     getCalls.add(req)
     onGet
   }
 
-  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds) {
+  override def set(req: HttpRequest, resp: Future[HttpResponse]) = {
     setCalls.add(req -> resp)
+    onSet
+  }
+
+  override def remove(req: HttpRequest): Option[Future[HttpResponse]] = {
+    removeCalls.add(req)
+    onRemove
   }
 
   override def exists(req: HttpRequest): Boolean = {

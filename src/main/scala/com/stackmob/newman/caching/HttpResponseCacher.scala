@@ -18,6 +18,7 @@ package com.stackmob.newman.caching
 
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
+import scala.concurrent.Future
 
 trait HttpResponseCacher {
   /**
@@ -25,16 +26,22 @@ trait HttpResponseCacher {
    * @param req the request
    * @return an IO representing the response, or none if none exists
    */
-  def get(req: HttpRequest): Option[HttpResponse]
+  def get(req: HttpRequest): Option[Future[HttpResponse]]
 
   /**
-   * set a response for the given request, for a TTL
+   * set a response for the given request
    * @param req the request
    * @param resp the response for the given request
-   * @param ttl the time to live for the given request/response pair
    * @return the IO representing the set action
    */
-  def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): Unit
+  def set(req: HttpRequest, resp: Future[HttpResponse]): Future[HttpResponse]
+
+  /**
+   * remove a response for the given request, if it exists
+   * @param req the request for the response to remove
+   * @return Some if the the response existed, None otherwise
+   */
+  def remove(req: HttpRequest): Option[Future[HttpResponse]]
 
   /**
    * determine whether a response for the given request exists
@@ -42,5 +49,7 @@ trait HttpResponseCacher {
    * @return the action to determine existence. will contain true if it does, false otherwise.
    *         note that if the resultant IO is true, a subsequent get call may still not return a response
    */
-  def exists(req: HttpRequest): Boolean
+  def exists(req: HttpRequest): Boolean = {
+    get(req).isDefined
+  }
 }

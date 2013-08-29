@@ -31,6 +31,7 @@ libraryDependencies ++= {
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
     "io.spray" % "spray-client" % "1.2-20130822",
+    "io.spray" % "spray-caching" % "1.2-20130822",
     "com.typesafe.akka" %% "akka-actor" % "2.2.0",
     "com.twitter" %% "finagle-http" % "6.5.0",
     "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion,

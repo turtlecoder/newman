@@ -19,7 +19,7 @@ package com.stackmob.newman.test
 import caching.DummyHttpResponseCacher
 import scalacheck._
 import org.specs2.{ScalaCheck, Specification}
-import com.stackmob.newman.caching.{Milliseconds, HttpResponseCacher}
+import com.stackmob.newman.caching._
 import com.stackmob.newman.response.HttpResponse
 import org.scalacheck._
 import Prop._
@@ -60,18 +60,18 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
     getReqs and postReqs and putReqs and deleteReqs and headReqs
   }
 
-  private val genNoHttpResponse: Gen[Option[HttpResponse]] = Gen.value(Option.empty[HttpResponse])
-  private val genAlwaysHttpResponse: Gen[Option[HttpResponse]] = for {
-    resp <- genHttpResponse
-  } yield {
-    Some(resp)
-  }
-
-  private def genDummyHttpResponseCache(genMbResp: Gen[Option[HttpResponse]]): Gen[DummyHttpResponseCacher] = for {
-    mbResp <- genMbResp
-    exists <- Gen.oneOf(true, false)
-  } yield {
-    new DummyHttpResponseCacher(mbResp, exists)
+  private def genDummyHttpResponseCache(genOnGet: Gen[Option[Future[HttpResponse]]],
+                                        genOnSet: Gen[Future[HttpResponse]],
+                                        genOnExists: Gen[Boolean],
+                                        genOnRemove: Gen[Option[Future[HttpResponse]]]): Gen[DummyHttpResponseCacher] = {
+    for {
+      onGet <- genOnGet
+      onSet <- genOnSet
+      onExists <- genOnExists
+      onRemove <- genOnRemove
+    } yield {
+      new DummyHttpResponseCacher(onGet = onGet, onSet = onSet, onExists = onExists, onRemove = onRemove)
+    }
   }
 
   private def genDummyHttpClient: Gen[DummyHttpClient] = for {
@@ -80,20 +80,24 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
     new DummyHttpClient(Future.successful(resp))
   }
 
-  private def createClient(underlying: HttpClient, cache: HttpResponseCacher, millis: Milliseconds) = {
-    new ReadCachingHttpClient(underlying, cache, millis)
-  }
-
   private def verifyReadsOnlyFromCache[T <: HttpRequestWithoutBody](fn: (ReadCachingHttpClient, URL, Headers) => T) = {
-    forAll(genURL, genHeaders, genDummyHttpClient, genDummyHttpResponseCache(genAlwaysHttpResponse), genPositiveMilliseconds) { (url, headers, dummyClient, dummyCache, milliseconds) =>
-      val client = createClient(dummyClient, dummyCache, milliseconds)
+    val genOnGet = genSomeOption(genSuccessFuture(genHttpResponse))
+    val genOnSet = genSuccessFuture(genHttpResponse)
+    val genOnExists = Gen.value(true)
+    val genOnRemove = genSomeOption(genSuccessFuture(genHttpResponse))
+    forAll(genURL,
+      genHeaders,
+      genDummyHttpClient,
+      genDummyHttpResponseCache(genOnGet, genOnSet, genOnExists, genOnRemove)) { (url, headers, dummyClient, dummyCache) =>
+
+      val client = new ReadCachingHttpClient(dummyClient, dummyCache)
 
       val req = fn(client, url, headers)
       val resp = req.apply.block()
       //the response should match what's in the cache, not what's in the underlying client
-      val respMatches = dummyCache.cannedGet must beSome.like {
+      val respMatches = dummyCache.onGet must beSome.like {
         case r => {
-          r must beEqualTo(resp)
+          r.block() must beEqualTo(resp)
         }
       }
 
@@ -104,14 +108,16 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
 
   private def verifyReadsThroughToCache[T <: HttpRequestWithoutBody](createRequest: (ReadCachingHttpClient, URL, Headers) => T,
                                                                      createClientInteraction: Int => ClientInteraction) = {
+    val genOnGet = genNoneOption[Future[HttpResponse]]
+    val genOnSet = genSuccessFuture(genHttpResponse)
+    val genOnExists = Gen.value(false)
+    val genOnRemove = genSomeOption(genSuccessFuture(genHttpResponse))
     forAll(genURL,
       genHeaders,
       genDummyHttpClient,
-      genDummyHttpResponseCache(genNoHttpResponse)) { (url, headers, dummyClient, dummyCache) =>
+      genDummyHttpResponseCache(genOnGet, genOnSet, genOnExists, genOnRemove)) { (url, headers, dummyClient, dummyCache) =>
 
-      val oneMinute = Milliseconds(6000)
-
-      val client = createClient(dummyClient, dummyCache, oneMinute)
+      val client = new ReadCachingHttpClient(dummyClient, dummyCache)
       val req = createRequest(client, url, headers)
       val resp = req.apply.block()
       val respVerified = resp must beEqualTo(dummyClient.responseToReturn.block())
@@ -143,22 +149,28 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
     ClientInteraction(0, 0, 0, 0, numHeads)
   })
 
-  private def postPutDeleteIgnoreCache = forAll(genURL,
-    genHeaders,
-    genRawBody,
-    genDummyHttpClient,
-    genDummyHttpResponseCache(genAlwaysHttpResponse),
-    genPositiveMilliseconds) { (url, headers, body, dummyClient, dummyCache, milliseconds) =>
-    val client = new ReadCachingHttpClient(dummyClient, dummyCache, milliseconds)
+  private def postPutDeleteIgnoreCache = {
+    val genOnGet = genSomeOption(genSuccessFuture(genHttpResponse))
+    val genOnSet = genSuccessFuture(genHttpResponse)
+    val genOnExists = Gen.value(true)
+    val genOnRemove = genSomeOption(genSuccessFuture(genHttpResponse))
 
-    val postRes = client.post(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
-    val putRes = client.put(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
-    val deleteRes = client.delete(url, headers).block() must beEqualTo(dummyClient.responseToReturn.block())
+    forAll(genURL,
+      genHeaders,
+      genRawBody,
+      genDummyHttpClient,
+      genDummyHttpResponseCache(genOnGet, genOnSet, genOnExists, genOnRemove)) { (url, headers, body, dummyClient, dummyCache) =>
+      val client = new ReadCachingHttpClient(dummyClient, dummyCache)
 
-    postRes and
-    putRes and
-    deleteRes and
-    verifyCacheInteraction(dummyCache, CacheInteraction(0, 0, 0)) and
-    verifyClientInteraction(dummyClient, ClientInteraction(0, 1, 1, 1, 0))
+      val postRes = client.post(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
+      val putRes = client.put(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
+      val deleteRes = client.delete(url, headers).block() must beEqualTo(dummyClient.responseToReturn.block())
+
+      postRes and
+      putRes and
+      deleteRes and
+      verifyCacheInteraction(dummyCache, CacheInteraction(0, 0, 0)) and
+      verifyClientInteraction(dummyClient, ClientInteraction(0, 1, 1, 1, 0))
+    }
   }
 }

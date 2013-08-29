@@ -22,17 +22,14 @@ import request._
 import response.HttpResponse
 import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 
 class ReadCachingHttpClient(httpClient: HttpClient,
-                            httpResponseCacher: HttpResponseCacher,
-                            t: Milliseconds)
+                            httpResponseCacher: HttpResponseCacher)
                            (implicit c: ExecutionContext) extends HttpClient {
   import ReadCachingHttpClient._
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
     override protected lazy val ctx = c
-    override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers): Future[HttpResponse] = {
       httpClient.get(u, h).apply
@@ -55,7 +52,6 @@ class ReadCachingHttpClient(httpClient: HttpClient,
 
   override def head(u: URL, h: Headers): HeadRequest = new HeadRequest with CachingMixin {
     override protected lazy val ctx = c
-    override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
     override protected def doHttpRequest(h: Headers): Future[HttpResponse] = {
       httpClient.head(u, h).apply
@@ -68,18 +64,14 @@ class ReadCachingHttpClient(httpClient: HttpClient,
 object ReadCachingHttpClient {
   trait CachingMixin { this: HttpRequest =>
     protected implicit def ctx: ExecutionContext
-    protected def ttl: Milliseconds
     protected def cache: HttpResponseCacher
     protected def doHttpRequest(headers: Headers): Future[HttpResponse]
 
     override def apply: Future[HttpResponse] = {
-      cache.get(this).map { resp =>
-        Future.successful(resp)
-      } | {
-        doHttpRequest(headers).map { resp =>
-          cache.set(this, resp, ttl)
-          resp
-        }
+      cache.get(this) | {
+        val respFut = doHttpRequest(headers)
+        cache.set(this, respFut)
+        respFut
       }
     }
   }

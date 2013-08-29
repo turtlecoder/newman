@@ -25,6 +25,10 @@ import org.scalacheck._
 import Prop._
 import request._
 import com.stackmob.newman.response.HttpResponse
+import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
+import com.stackmob.newman.concurrent.SequentialExecutionContext
 
 class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { def is =
   "InMemoryHttpResponseCacherSpecs".title                                                                               ^ end ^
@@ -32,19 +36,27 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
   "The cacher should correctly round trip an HttpRequest"                                                               ! roundTripSucceeds ^ end ^
   "The cacher should correctly expire items after their TTL"                                                            ! ttlSucceeds ^ end ^
                                                                                                                         end
-  private val client = new DummyHttpClient()
+  private val client = {
+    new DummyHttpClient()
+  }
+  private def cacher(ttl: Duration = duration) = {
+    new InMemoryHttpResponseCacher(maxCapacity = Int.MaxValue,
+      initialCapacity = 1,
+      timeToIdle = duration,
+      timeToLive = duration)
+  }
 
   private def getResponse(request: HttpRequest): HttpResponse = {
     request.apply.block()
   }
 
   private def roundTripSucceeds = forAll(genHttpRequest(client)) { request =>
-    val cache = new InMemoryHttpResponseCacher
+    val cache = cacher()
 
     val response = getResponse(request)
     val getRes1 = cache.get(request) must beNone
     val existsRes1 = cache.exists(request) must beFalse
-    val setRes1 = cache.set(request, response, Milliseconds(1000)) must beEqualTo(())
+    val setRes1 = cache.set(request, Future.successful(response)) must beEqualTo(())
     val identicalRequest = client.get(request.url, request.headers)
     val getRes2 = cache.get(identicalRequest) must beSome.like {
       case s => s must beEqualTo(response)
@@ -54,10 +66,10 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
   }
 
   private def ttlSucceeds = forAll(genHttpRequest(client)) { request =>
-    val cache = new InMemoryHttpResponseCacher
+    val cache = cacher(Duration(1, TimeUnit.MILLISECONDS))
 
     val response = getResponse(request)
-    cache.set(request, response, Milliseconds(0))
+    cache.set(request, Future.successful(response))
     Thread.sleep(100)
     val identicalRequest = client.get(request.url, request.headers)
     cache.get(identicalRequest) must beNone
