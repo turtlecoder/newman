@@ -81,8 +81,8 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
     def executesINMRequest = {
       client.get(url, Headers.empty).block()
-      val urlCorrect = rawClient.headRequests.get(0)._1 must beEqualTo(url)
-      val headersCorrect = rawClient.headRequests.get(0)._2 must haveTheSameHeadersAs(Headers(INM))
+      val urlCorrect = rawClient.getRequests.get(0)._1 must beEqualTo(url)
+      val headersCorrect = rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers(INM))
       urlCorrect and headersCorrect
     }
   }
@@ -110,13 +110,19 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   case class CachedResponseWithoutETag() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
     override protected val responseCacher = new DummyHttpResponseCacher(onApply = responseWithoutETag,
-      onGet = Some(responseWithoutETag),
+      onGet = Option.empty[Future[HttpResponse]],
       onRemove = Some(responseWithoutETag))
 
     def executesNormalRequest = {
-      client.get(url, Headers.empty).block()
-      (rawClient.getRequests.get(0)._1 must beEqualTo(url)) and
-      (rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers.empty))
+      val req = client.get(url, Headers.empty)
+      req.block()
+      val oneApply = responseCacher.applyCalls.size must beEqualTo(1)
+      val correctApply = responseCacher.applyCalls.get(0) must beEqualTo(req)
+      val oneGet = responseCacher.getCalls.size must beEqualTo(1)
+      val correctGet = responseCacher.getCalls.get(0) must beEqualTo(req)
+      val noRemoves = responseCacher.removeCalls.size must beEqualTo(0)
+
+      oneApply and correctApply and oneGet and correctGet and noRemoves
     }
 
     def cachesNewResponse = {
@@ -141,10 +147,14 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       Option.empty[Future[HttpResponse]])
 
     def executesNormalRequest = {
-      client.get(url, Headers.empty).block()
-      val getRequest = rawClient.getRequests.get(0)
-      (getRequest._1 must beEqualTo(url)) and
-      (getRequest._2 must haveTheSameHeadersAs(DummyHttpClient.CannedResponse.headers))
+      val req = client.get(url, Headers.empty)
+      req.block()
+      val hasGetCall = responseCacher.getCalls.size must beEqualTo(1)
+      val getCallCorrect = responseCacher.getCalls.get(0) must beEqualTo(req)
+      val hasApplyCall = responseCacher.applyCalls.size must beEqualTo(1)
+      val applyCallCorrect = responseCacher.applyCalls.get(0) must beEqualTo(req)
+
+      hasGetCall and getCallCorrect and hasApplyCall and applyCallCorrect
     }
 
     def cachesNewResponse = {
