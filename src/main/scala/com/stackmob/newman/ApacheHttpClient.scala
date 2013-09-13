@@ -110,8 +110,9 @@ object ApacheHttpClient {
   private[ApacheHttpClient] val DefaultConnectionTimeout = 5000
   private[ApacheHttpClient] val DefaultMaxConnectionsPerRoute = 20
   private[ApacheHttpClient] val DefaultMaxTotalConnections = 100
+  private[ApacheHttpClient] val NumThreads = 8
   private val threadNumber = new AtomicInteger(1)
-  lazy val newmanThreadPool = Executors.newCachedThreadPool(new ThreadFactory() {
+  lazy val newmanThreadPool = Executors.newFixedThreadPool(NumThreads, new ThreadFactory() {
     override def newThread(r: Runnable): Thread = {
       new Thread(r, "newman-" + threadNumber.getAndIncrement)
     }
