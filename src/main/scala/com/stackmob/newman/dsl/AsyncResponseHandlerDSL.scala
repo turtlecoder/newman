@@ -17,26 +17,23 @@
 package com.stackmob.newman.dsl
 
 import scalaz.Scalaz._
-import scalaz.concurrent.Promise
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import scalaz.Validation
-import scalaz.effect.IO
 import net.liftweb.json.scalaz.JsonScalaz._
 import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
 import com.stackmob.newman._
 import com.stackmob.newman.response.HttpResponse.JSONParsingError
+import scala.concurrent.{ExecutionContext, Future}
 
 trait AsyncResponseHandlerDSL {
-  type IOPromise[T] = IO[Promise[T]]
 
   /**
    * the same thing as {{{com.stackmob.newman.dsl.ResponseHandlerDSL}}}, except for asynchronous response handling
    */
   case class AsyncResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])],
-                                                    respIO: IOPromise[HttpResponse])
+                                                    respFuture: Future[HttpResponse])
                                                    (implicit errorConv: Throwable => Failure) {
-
     /**
      * Adds a handler (a function that is called when the code matches the given function) and returns a new ResponseHandler
      * @param check response code this handler is for
@@ -119,25 +116,35 @@ trait AsyncResponseHandlerDSL {
     /**
      * Provide a default handler for all unhandled status codes. Must be the last handler in the chain
      */
-    def default(handler: HttpResponse => Validation[Failure, Success]): IOPromiseValidation[Failure, Success] = {
-      respIO.map { responseProm: Promise[HttpResponse] =>
-        responseProm.map { response =>
-          handlers.reverse.find { functionTup =>
-            functionTup._1.apply(response.code)
-          }.map { functionTup =>
-            functionTup._2.apply(response)
-          } | {
-            handler(response)
+    def default(noHandler: HttpResponse => Validation[Failure, Success])
+               (implicit ctx: ExecutionContext): FutureValidation[Failure, Success] = {
+      val futValidation = try {
+        respFuture.map { response =>
+          val mbHandler = handlers.reverse.find { tup =>
+            val (isCode, _) = tup
+            isCode(response.code)
           }
-        }.except { t: Throwable =>
-          errorConv(t).fail[Success]
+          val mbRes = mbHandler.map { tup =>
+            val (_, fn) = tup
+            fn(response)
+          }
+          mbRes.getOrElse {
+            noHandler(response)
+          }
+        }.recover {
+          case t: Throwable => {
+            errorConv(t).fail[Success]
+          }
         }
-      }.except { t =>
-        errorConv(t).fail[Success].pure[Promise].pure[IO]
+      } catch {
+        case t: Throwable => {
+          Future.successful(errorConv(t).fail[Success])
+        }
       }
+      futValidation
     }
 
-    def toIO: IOPromiseValidation[Failure, Success] = {
+    def toFutureValidation(implicit ctx: ExecutionContext): FutureValidation[Failure, Success] = {
       default { resp =>
         errorConv.apply(UnhandledResponseCode(resp.code, resp.bodyString)).fail[Success]
       }

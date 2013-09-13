@@ -16,50 +16,33 @@
 
 package com.stackmob.newman.request
 
-import scalaz.concurrent.Promise
-import scalaz.effect.IO
-import scalaz._
-import Scalaz._
-import scalaz.NonEmptyList._
 import com.stackmob.newman.response.HttpResponse
+import scala.concurrent._
 
 object HttpRequestExecution {
-  type RequestResponsePair = (HttpRequest, HttpResponse)
-  type RequestResponsePairList = NonEmptyList[RequestResponsePair]
-  type RequestPromiseResponsePair = (HttpRequest, Promise[HttpResponse])
-  type RequestPromiseResponsePairList = NonEmptyList[RequestPromiseResponsePair]
+  type ReqRespFut = (HttpRequest, Future[HttpResponse])
 
   /**
-   * run a series of requests in sequence (ie: next one begins executing when the previous one completes)
+   * run a series of requests in sequence (ie: next one begins executing when the previous one completes).
    * @param requests the requests to execute, in order of execution
-   * @return an IO representing a list of each request and its response
+   * @return a list of requests and the futures representing their response.
+   *         each represented future after the first will begin executing when the previous future has completed
    */
-  def sequencedRequests(requests: NonEmptyList[HttpRequest]): IO[RequestResponsePairList] = {
-    val ioList: NonEmptyList[IO[RequestResponsePair]] = requests.map(req => req.pure[IO] tuple req.prepare)
-    ioList.sequence[IO, RequestResponsePair]
-  }
+  def sequencedRequests(requests: List[HttpRequest])
+                       (implicit ctx: ExecutionContext): List[ReqRespFut] = {
+    val empty = List[(HttpRequest, Future[HttpResponse])]()
+    val noLast = Option.empty[Future[HttpResponse]]
 
-  /**
-   * execute a first request, and then execute a series of requests thereafter depending on the previous's response
-   * @param firstReq the first request to execute
-   * @param remainingRequests the remaining requests to execute, dependant on the previous request's response
-   * @return an IO representing a list of each request and its response
-   */
-  def chainedRequests(firstReq: HttpRequest,
-               remainingRequests: NonEmptyList[HttpResponse => HttpRequest]): IO[RequestResponsePairList] = {
-    val firstReqIO = firstReq.pure[IO]
-    val firstRespIO = firstReq.prepare
-    type RunningList = NonEmptyList[IO[(HttpRequest, HttpResponse)]]
-    val runningList: RunningList = nels(firstReqIO tuple firstRespIO)
-    val (_, _, list) = remainingRequests.list.foldLeft((firstReqIO, firstRespIO, runningList)) {
-      (running: (IO[HttpRequest], IO[HttpResponse], RunningList), cur: HttpResponse => HttpRequest) =>
-        val (_, lastRespIO, runningList) = running
-        val newReqIO = lastRespIO.map(cur(_))
-        val newRespIO = newReqIO.flatMap(_.prepare)
-        val newRunningList = runningList :::> List(newReqIO tuple newRespIO)
-        (newReqIO, newRespIO, newRunningList)
+    val listAndLastFuture = requests.foldLeft(empty -> noLast) { (tup, req) =>
+      val (list, mbLastFuture) = tup
+      val thisFuture = mbLastFuture.map { lastFuture =>
+        lastFuture.flatMap { _ =>
+          req.apply
+        }
+      }.getOrElse(req.apply)
+      (list ++ List(req -> thisFuture)) -> Some(thisFuture)
     }
-    list.sequence[IO, RequestResponsePair]
+    listAndLastFuture._1
   }
 
   /**
@@ -69,9 +52,10 @@ object HttpRequestExecution {
    *                 (HttpRequest, HttpResponse) pairs will match the ordering of the HttpRequests passed in
    * @return an IO representing a list of each request, and a promise representing its response
    */
-  def concurrentRequests(requests: NonEmptyList[HttpRequest]): IO[RequestPromiseResponsePairList] = requests.map { req: HttpRequest =>
-    val reqIO: IO[HttpRequest] = req.pure[IO]
-    val respIO: IO[Promise[HttpResponse]] = req.prepareAsync
-    reqIO tuple respIO
-  }.sequence[IO, RequestPromiseResponsePair]
+  def concurrentRequests(requests: List[HttpRequest])
+                        (implicit ctx: ExecutionContext): Set[(HttpRequest, Future[HttpResponse])] = {
+    requests.map { req =>
+      req -> req.apply
+    }.toSet
+  }
 }

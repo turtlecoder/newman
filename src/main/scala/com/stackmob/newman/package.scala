@@ -17,18 +17,14 @@
 package com.stackmob
 
 import scalaz._
-import scalaz.effect.IO
-import scalaz.concurrent.Promise
 import scalaz.NonEmptyList._
-import scalaz.concurrent.{Promise => ScalazPromise}
-import scala.concurrent.{Promise => ScalaPromise, Future => ScalaFuture}
+import scala.concurrent._
 import Scalaz._
 import java.nio.charset.Charset
 import java.net.URL
 
 package object newman extends NewmanPrivate {
-  type IOValidation[Fail, Success] = IO[Validation[Fail, Success]]
-  type IOPromiseValidation[Fail, Success] = IO[Promise[Validation[Fail, Success]]]
+  type FutureValidation[Fail, Success] = Future[Validation[Fail, Success]]
 
   type Header = (String, String)
   type HeaderList = NonEmptyList[Header]
@@ -79,66 +75,6 @@ package object newman extends NewmanPrivate {
     def apply(s: String, charset: Charset = Constants.UTF8Charset): Array[Byte] = s.getBytes(charset)
     def apply(b: Array[Byte]): Array[Byte] = b
     lazy val empty = Array[Byte]()
-  }
-
-  /**
-   * a class extension for Scalaz's {{Promise}}
-   * @param prom the promise that will be extended
-   * @tparam T the type that the promise contains
-   */
-  implicit class RichPromise[T](prom: ScalazPromise[T]) {
-    /**
-     * convert the extended Promise to a {{scala.concurrent.Future[T]}}
-     * @return the Future. will be completed when the extended promise is completed.
-     */
-    def toScalaFuture: ScalaFuture[T] = {
-      val scalaProm = ScalaPromise[T]()
-      prom.to(
-        k = { result: T =>
-          scalaProm.success(result)
-        },
-        err = { throwable: Throwable =>
-          scalaProm.failure(throwable)
-        }
-      )
-      scalaProm.future
-    }
-
-    /**
-     * catch exceptions thrown inside the promise
-     * @param fn the function to convert the thrown exception into the expected return type
-     * @return a new promise, which will not throw
-     */
-    def except(fn: Throwable => T): ScalazPromise[T] = {
-      //emptyPromise uses the same strategy as the extended promise
-      val returnPromise = Promise.emptyPromise[T](prom.strategy)
-
-      def onSuccess(response: T) {
-        returnPromise.fulfill(response)
-      }
-      def onFailure(t: Throwable) {
-        returnPromise.fulfill(fn(t))
-      }
-      prom.to(k = onSuccess, err = onFailure)
-      returnPromise
-    }
-
-    /**
-     * ensure that a side effect occurs when the promise finishes, regardless of its state
-     * (thrown or successfully completed)
-     * @param action the action to take
-     * @return the same promise, which will now execute the side effect when it finishes
-     */
-    def ensure(action: => Unit): ScalazPromise[T] = {
-      prom.to(
-        k = { t: T =>
-          action
-        }, err = { t: Throwable =>
-          action
-        }
-      )
-      prom
-    }
   }
 
   implicit class RichURL(url: URL) {

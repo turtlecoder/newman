@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.test.concurrent
+package com.stackmob.newman.test
+package concurrent
 
 import org.specs2.Specification
-import com.twitter.util._
+import com.twitter.util.Future
 import com.stackmob.newman.concurrent.RichTwitterFuture
+import java.util.concurrent.TimeUnit
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class RichTwitterFutureSpecs extends Specification { def is =
   "RichTwitterFutureSpecs".title                                                                                        ^ end ^
   "RichTwitterFuture is a class extension for com.twitter.util.Future"                                                  ^ end ^
-  "toScalazPromise should work properly"                                                                                 ! toScalazPromise ^ end ^
+  "toScalazPromise should work properly"                                                                                ! toScalazPromise ^ end ^
   end
 
   private def toScalazPromise = {
@@ -32,7 +36,7 @@ class RichTwitterFutureSpecs extends Specification { def is =
       futureReturn
     }
 
-    val prom = fut.toScalazPromise
-    prom.get must beEqualTo(futureReturn)
+    val res = Await.result(fut.toScalaFuture, Duration(100, TimeUnit.MILLISECONDS))
+    res must beEqualTo(futureReturn)
   }
 }

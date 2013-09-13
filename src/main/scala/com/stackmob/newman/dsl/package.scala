@@ -18,13 +18,12 @@ package com.stackmob.newman
 
 import request.HttpRequest
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
-import scalaz.effect.IO
 import java.net.URL
 import scalaz.Validation
-import scalaz.concurrent.Promise
 import net.liftweb.json.scalaz.JsonScalaz._
 import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
+import scala.concurrent.{ExecutionContext, Future}
 import language.implicitConversions
 
 package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHandlerDSL with AsyncResponseHandlerDSL {
@@ -83,8 +82,8 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    * @tparam Success the success type of the handler
    * @return the resultant {{{IO[Validation[Failure, Success]]}}}
    */
-  implicit def responseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]): IOValidation[Failure, Success] = {
-    handler.toIO
+  implicit def responseHandlerToResponse[Failure, Success](handler: ResponseHandler[Failure, Success]): Validation[Failure, Success] = {
+    handler.toValidation
   }
 
   /**
@@ -95,8 +94,9 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    * @tparam Success the success type of the handler
    * @return the resultant {{{IO[Promise[Validation[Failure, Success]]]}}}
    */
-  implicit def asyncResponseHandlerToResponse[Failure, Success](handler: AsyncResponseHandler[Failure, Success]): IOPromiseValidation[Failure, Success] = {
-    handler.toIO
+  implicit def asyncResponseHandlerToResponse[Failure, Success](handler: AsyncResponseHandler[Failure, Success])
+                                                               (implicit ctx: ExecutionContext): FutureValidation[Failure, Success] = {
+    handler.toFutureValidation
   }
 
   /**
@@ -119,7 +119,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    *
    * @param value the extended {{{IO}}}
    */
-  implicit class RichIOHttpResponse(value: IO[HttpResponse]) {
+  implicit class RichIOHttpResponse(value: HttpResponse) {
 
     /**
      * see {{{ResponseHandler#handleCodesSuchThat}}}
@@ -187,7 +187,7 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
    *
    * @param value the extended {{{IO}}}
    */
-  implicit class RichIOPromiseHttpResponse(value: IO[Promise[HttpResponse]]) {
+  implicit class RichFutureHttpResponse(value: Future[HttpResponse]) {
 
     /**
      * see {{{AsyncResponseHandler#handleCodesSuchThat}}}

@@ -17,18 +17,14 @@
 package com.stackmob.newman.test
 package request
 
-import scalaz._
-import scalaz.Validation._
-import Scalaz._
-import scalaz.effect.IO
-import scalaz.NonEmptyList._
 import org.specs2.Specification
-import org.specs2.execute.{Result => SpecsResult, Failure => SpecsFailure}
 import java.net.URL
 import com.stackmob.newman.request._
 import HttpRequestExecution._
 import com.stackmob.newman.response._
 import com.stackmob.newman._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class HttpRequestExecutionSpecs extends Specification { def is =
   "HttpRequestExecutionSpecs".title                                                                                     ^
@@ -37,94 +33,86 @@ class HttpRequestExecutionSpecs extends Specification { def is =
   ways like sequentially, chained (ie: generate the next request based on the previous response)
   """                                                                                                                   ^
   "HttpRequestExecution should"                                                                                         ^
-    "execute http requests in sequence correctly"                                                                       ! ExecuteSequence().executesCorrectly ^
-    "fail if one request fails"                                                                                         ! ExecuteSequence().allFailIfOneFails ^
-    "execute chained http requests correctly"                                                                           ! ExecuteChained().executesCorrectly ^
-    "fail if one chain method fails"                                                                                    ! ExecuteChained().allFailIfOneChainMethodFails ^
-    "fail if one chained request fails"                                                                                 ! ExecuteChained().allFailIfOneRequestFails ^
+    "execute sequence requests correctly"                                                                               ! ExecuteSequence().executesCorrectly ^
+    "fail if the first sequenced request fails"                                                                         ! ExecuteSequence().firstTimeout ^
+    "fail if the last request fails"                                                                                    ! ExecuteSequence().lastTimeout ^
     "execute concurrent requests correctly"                                                                             ! ExecuteConcurrent().executesCorrectly ^
-    "fail if one concurrent request failed"                                                                             ! ExecuteConcurrent().allFailIfOneFails ^
+    "fail only the request that fails"                                                                                  ! ExecuteConcurrent().oneFails ^
                                                                                                                         end
-
   trait Context extends BaseContext {
     protected lazy val requestURL = new URL("http://stackmob.com")
     protected lazy val requestHeaders = Headers.empty
 
-    protected lazy val client1 = new DummyHttpClient(response1.pure[Function0])
+    protected lazy val client1 = new DummyHttpClient(response1)
     protected lazy val request1 = client1.get(requestURL, requestHeaders)
-    protected lazy val response1 = HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
+    protected lazy val response1 = Future.successful {
+      HttpResponse(HttpResponseCode.Ok, Headers.empty, RawBody.empty)
+    }
 
-    protected lazy val client2 = new DummyHttpClient(response2.pure[Function0])
+    protected lazy val client2 = new DummyHttpClient(response2)
     protected lazy val request2 = client2.get(requestURL, requestHeaders)
-    protected lazy val response2 = HttpResponse(HttpResponseCode.Unauthorized, Headers.empty, RawBody.empty)
+    protected lazy val response2 = Future.successful {
+      HttpResponse(HttpResponseCode.Unauthorized, Headers.empty, RawBody.empty)
+    }
 
     protected lazy val exception = new Exception("test exception")
-    protected lazy val throwingClient = new DummyHttpClient(() => throwingResponse)
+    protected lazy val throwingClient = new DummyHttpClient(throwingResponse)
     protected lazy val throwingRequest = throwingClient.get(requestURL, requestHeaders)
-    protected lazy val throwingResponse: HttpResponse = throw exception
+    protected lazy val throwingResponse = Future.failed[HttpResponse](exception)
 
-    protected def ensureThrows[T](io: IO[T], exception: Throwable): SpecsResult = fromTryCatch(io.unsafePerformIO()).map { _ =>
-      SpecsFailure("didn't throw a %s with message %s when it should have".format(exception.getClass.getCanonicalName,
-        exception.getMessage)): SpecsResult
-    } valueOr { _ must beEqualTo(exception) }
+    protected implicit class RichReqRespFutIterable(iter: Iterable[ReqRespFut]) {
+      def toReqRespList: List[(HttpRequest, HttpResponse)] = {
+        iter.map { tup =>
+          tup._1 -> tup._2.block()
+        }.toList
+      }
+    }
   }
 
   case class ExecuteSequence() extends Context {
-    def executesCorrectly: SpecsResult = {
-      val requestList = nels(request1, request2)
-      val expectedRequestResponseList = nels(request1 -> response1, request2 -> response2)
+    def executesCorrectly = {
+      val requestList = List(request1, request2)
+      val expectedRequestResponseList = List(request1 -> response1, request2 -> response2)
       val res = sequencedRequests(requestList)
-      res.unsafePerformIO().list must beEqualTo(expectedRequestResponseList.list)
+      res.toReqRespList must beEqualTo(expectedRequestResponseList.toReqRespList)
     }
 
-    def allFailIfOneFails: SpecsResult = {
-      val requestList = nels(request1, throwingRequest)
+    def firstTimeout = {
+      val requestList = List(throwingRequest, request2)
       val res = sequencedRequests(requestList)
-      ensureThrows(res, exception)
-    }
-  }
-
-  case class ExecuteChained() extends Context {
-    private lazy val client3 = new DummyHttpClient(response3.pure[Function0])
-    private lazy val request3 = client3.get(requestURL, requestHeaders)
-    private lazy val response3 = HttpResponse(HttpResponseCode.Created, Headers.empty, RawBody.empty)
-    private def chain1(prevResp: HttpResponse): HttpRequest = request2
-    private def chain2(prevResp: HttpResponse): HttpRequest = request3
-    private def chainThatReturnsThrowingRequest(prevResp: HttpResponse): HttpRequest = throwingRequest
-    private def throwingChain(prevResp: HttpResponse): HttpRequest = throw exception
-    def executesCorrectly: SpecsResult = {
-      val requestList = request1 :: request2 :: request3 :: Nil
-      val res = chainedRequests(request1, nels(chain1 _, chain2 _))
-      res.unsafePerformIO().list must beEqualTo(requestList.zip(List(response1, response2, response3)))
+      val first = res.apply(0)._2.toEither() must beLeft
+      val second = res.apply(1)._2.toEither() must beLeft
+      first and second
     }
 
-    def allFailIfOneRequestFails: SpecsResult = {
-      val res = chainedRequests(request1, nels(chain1 _, chainThatReturnsThrowingRequest _))
-      ensureThrows(res, exception)
-    }
-
-    def allFailIfOneChainMethodFails: SpecsResult = {
-      val res = chainedRequests(request1, nels(chain1 _, throwingChain _))
-      ensureThrows(res, exception)
+    def lastTimeout = {
+      val requestList = List(request1, throwingRequest)
+      val res = sequencedRequests(requestList)
+      val first = res.apply(0)._2.toEither() must beRight
+      val second = res.apply(1)._2.toEither() must beLeft
+      first and second
     }
   }
 
   case class ExecuteConcurrent() extends Context {
-    def executesCorrectly: SpecsResult = {
-      val requestList = nels(request1, request2)
-      val expectedRequestResponseList = nels(request1 -> response1, request2 -> response2)
-      val res = concurrentRequests(requestList).map { list: RequestPromiseResponsePairList =>
-        list.map(pair => pair._1 -> pair._2.get)
-      }
-      res.unsafePerformIO().list must beEqualTo(expectedRequestResponseList.list)
+    def executesCorrectly = {
+      val requestList = List(request1, request2)
+      val expectedRequestResponseList = List(request1 -> response1, request2 -> response2)
+      val res = concurrentRequests(requestList)
+      res.toReqRespList must beEqualTo(expectedRequestResponseList.toReqRespList)
     }
 
-    def allFailIfOneFails: SpecsResult = {
-      val requestList = nels(request1, throwingRequest)
-      val res = concurrentRequests(requestList).map { list: RequestPromiseResponsePairList =>
-        list.map(pair => pair._1 -> pair._2.get)
+    def oneFails = {
+      val requestList = List(request1, throwingRequest)
+      val res = concurrentRequests(requestList)
+
+      val oneThrows = res must haveOneElementLike {
+        case tup => tup._2.toEither() must beLeft
       }
-      ensureThrows(res, exception)
+      val oneSucceeds = res must haveOneElementLike {
+        case tup => tup._2.toEither() must beRight
+      }
+      oneThrows and oneSucceeds
     }
   }
 }

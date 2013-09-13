@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.test
+package com.stackmob.newman
+package test
 
 import com.stackmob.newman.{Headers, Constants, HttpClient}
 import org.specs2.Specification
@@ -22,28 +23,30 @@ import com.stackmob.newman.dsl._
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import java.net.URL
 import scalaz.Scalaz._
+import scala.concurrent.duration.Duration
 
 trait ClientTests { this: Specification with ResponseMatcher =>
   implicit private val charset = Constants.UTF8Charset
-
   class ClientTests(implicit client: HttpClient) {
     private lazy val DefaultExpectedBodyPieces = List("Host", "httpbin.org")
     private  def execute[T](t: Builder,
                             expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                             expectedHeaders: Headers = Headers("Content-Type" -> "application/json"),
-                            mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
-      val r = t.executeUnsafe
-      r must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
+                            mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some,
+                            duration: Duration = duration) = {
+      t.toRequest.block(duration) must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
     }
 
     private def executeAsync(t: Builder,
                              expectedCode: HttpResponseCode = HttpResponseCode.Ok,
                              expectedHeaders: Headers = None,
-                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some) = {
-      val rPromise = t.executeAsyncUnsafe
-      rPromise.map { r: HttpResponse =>
-        r must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
-      }.get
+                             mbExpectedBodyPieces: Option[List[String]] = DefaultExpectedBodyPieces.some,
+                             duration: Duration = duration) = {
+      import com.stackmob.newman.concurrent.SequentialExecutionContext
+      val responseFuture = t.apply.map { resp: HttpResponse =>
+        resp must beResponse(expectedCode, headers = expectedHeaders, mbBodyPieces = mbExpectedBodyPieces)
+      }
+      responseFuture.block(duration)
     }
 
     private lazy val headerTup = "X-Stackmob-Test-Header" -> "X-StackMob-Test-Value"

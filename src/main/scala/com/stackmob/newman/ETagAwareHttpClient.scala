@@ -20,104 +20,94 @@ import com.stackmob.newman.request._
 import com.stackmob.newman.caching._
 import scalaz._
 import Scalaz._
-import scalaz.effect.IO
 import scalaz.NonEmptyList._
-import scalaz.concurrent._
 import com.stackmob.newman.caching.HttpResponseCacher
 import response.HttpResponse
 import org.apache.http.HttpHeaders
 import java.net.URL
+import scala.concurrent.{ExecutionContext, Future}
 
 class ETagAwareHttpClient(httpClient: HttpClient,
                           httpResponseCacher: HttpResponseCacher,
-                          t: Milliseconds) extends HttpClient {
+                          t: Milliseconds)
+                         (implicit c: ExecutionContext) extends HttpClient {
   import ETagAwareHttpClient._
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
+    override lazy val ctx = c
     override protected lazy val ttl = t
     override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.get(u, h).prepare
+    override protected def doGetRequest: Future[HttpResponse] = httpClient.get(u, h).apply
+    override protected def doHeadRequest(headers: Headers): Future[HttpResponse] = httpClient.head(u, headers).apply
     override val url = u
     override val headers = h
   }
 
-  override def post(u: URL, h: Headers, b: RawBody): PostRequest = new PostRequest with CachingMixin {
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.post(u, h, b).prepare
-    override val url = u
-    override val headers = h
-    override val body = b
+  override def post(u: URL, h: Headers, b: RawBody): PostRequest = PostRequest(u, h, b) {
+    httpClient.post(u, h, b).apply
   }
 
-  override def put(u: URL, h: Headers, b: RawBody): PutRequest = new PutRequest with CachingMixin {
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.put(u, h, b).prepare
-    override val url = u
-    override val headers = h
-    override val body = b
+  override def put(u: URL, h: Headers, b: RawBody): PutRequest = PutRequest(u, h, b) {
+    httpClient.put(u, h, b).apply
   }
 
-  override def delete(u: URL, h: Headers): DeleteRequest = new DeleteRequest with CachingMixin {
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.delete(u, h).prepare
-    override val url = u
-    override val headers = h
+  override def delete(u: URL, h: Headers): DeleteRequest = DeleteRequest(u, h) {
+    httpClient.delete(u, h).apply
   }
 
-  override def head(u: URL, h: Headers): HeadRequest = new HeadRequest with CachingMixin {
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers) = httpClient.head(u, h).prepare
-    override val url = u
-    override val headers = h
+  override def head(u: URL, h: Headers): HeadRequest = HeadRequest(u, h) {
+    httpClient.head(u, h).apply
   }
 }
 
 object ETagAwareHttpClient {
-  trait CachingMixin extends HttpRequest { this: HttpRequest =>
+  trait CachingMixin extends HttpRequest { this: GetRequest =>
+    protected implicit def ctx: ExecutionContext
     //the TTL for cached responses until they're purged and we go back to the server with no modified header
     protected def ttl: Milliseconds
     protected def cache: HttpResponseCacher
-    protected def doHttpRequest(headers: Headers): IO[HttpResponse]
-    private lazy val cacheResult = cache.get(this)
+    protected def doGetRequest: Future[HttpResponse]
+    protected def doHeadRequest(headers: Headers): Future[HttpResponse]
 
     private def addIfNoneMatch(h: Headers, eTag: String): Headers = h.map { headerList: HeaderList =>
       nel(HttpHeaders.IF_NONE_MATCH -> eTag, headerList.list.filterNot(_._1 === HttpHeaders.IF_NONE_MATCH))
     } orElse { Headers(HttpHeaders.IF_NONE_MATCH -> eTag) }
 
-    private def cachedAndETagPresent(cached: HttpResponse, eTag: String, ttl: Milliseconds): IO[Promise[HttpResponse]] = {
+    private def cachedAndETagPresent(cached: HttpResponse,
+                                     eTag: String,
+                                     ttl: Milliseconds): Future[HttpResponse] = {
       val newHeaderList = addIfNoneMatch(this.headers, eTag)
-      doHttpRequest(newHeaderList).flatMap { response: HttpResponse =>
+      doHeadRequest(newHeaderList).flatMap { response: HttpResponse =>
         if(response.notModified) {
           //not modified returned - so return cached response
-          cached.pure[Promise].pure[IO]
+          Future.successful(cached)
         } else {
-          //not modified was not returned, so cache new response and return it
-          cache.set(this, response, ttl).map(_ => response.pure[Promise])
+          doGetRequest.map { response: HttpResponse =>
+            cache.set(this, response, ttl)
+            response
+          }
         }
       }
     }
 
-    private def cachedAndETagNotPresent: IO[Promise[HttpResponse]] = notCached(ttl)
+    private def cachedAndETagNotPresent: Future[HttpResponse] = notCached(ttl)
 
-    private def notCached(ttl: Milliseconds): IO[Promise[HttpResponse]] = {
-      doHttpRequest(headers).flatMap { response: HttpResponse =>
+    private def notCached(ttl: Milliseconds): Future[HttpResponse] = {
+      doGetRequest.map { response: HttpResponse =>
         //TODO: respect cache-control headers
-        cache.set(this, response, ttl) >| response.pure[Promise]
+        cache.set(this, response, ttl)
+        response
       }
     }
 
-    override def prepareAsync: IO[Promise[HttpResponse]] = cacheResult.flatMap { cachedResponseOpt: Option[HttpResponse] =>
-      cachedResponseOpt some { cachedResponse: HttpResponse =>
-        cachedResponse.eTag some { eTag: String =>
-          cachedAndETagPresent(cachedResponse, eTag, ttl)
+    override def apply: Future[HttpResponse] = {
+      cache.get(this).map { resp: HttpResponse =>
+        resp.eTag some { eTag: String =>
+          cachedAndETagPresent(resp, eTag, ttl)
         } none {
           cachedAndETagNotPresent
         }
-      } none {
+      } | {
         notCached(ttl)
       }
     }

@@ -19,7 +19,6 @@ package dsl
 
 import scalaz._
 import Scalaz._
-import scalaz.effect.IO
 import response.HttpResponseCode
 import response.HttpResponse
 import response.HttpResponse.JSONParsingError
@@ -84,7 +83,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
  */
 trait ResponseHandlerDSL {
   case class ResponseHandler[Failure, Success](handlers: List[(HttpResponseCode => Boolean, HttpResponse => Validation[Failure, Success])],
-                                               respIO: IO[HttpResponse])
+                                               resp: HttpResponse)
                                               (implicit errorConv: Throwable => Failure) {
 
     /**
@@ -163,21 +162,21 @@ trait ResponseHandlerDSL {
     /**
      * Provide a default handler for all unhandled status codes. Must be the last handler in the chain
      */
-    def default(handler: HttpResponse => Validation[Failure, Success]): IOValidation[Failure, Success] = {
-      respIO.map { response =>
+    def default(handler: HttpResponse => Validation[Failure, Success]): Validation[Failure, Success] = {
+      try {
         handlers.reverse.find { functionTup =>
-          functionTup._1(response.code)
+          functionTup._1(resp.code)
         }.map { functionTup =>
-          functionTup._2.apply(response)
+          functionTup._2.apply(resp)
         } | {
-          handler(response)
+          handler(resp)
         }
-      }.except { t =>
-        errorConv(t).fail[Success].pure[IO]
+      } catch {
+        case t: Throwable => errorConv(t).fail[Success]
       }
     }
 
-    def toIO: IOValidation[Failure, Success] = {
+    def toValidation: Validation[Failure, Success] = {
       default { resp =>
         errorConv(UnhandledResponseCode(resp.code, resp.bodyString)).fail[Success]
       }

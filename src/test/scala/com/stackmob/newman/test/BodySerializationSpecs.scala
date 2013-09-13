@@ -29,6 +29,10 @@ import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.Constants.UTF8Charset
 import org.specs2.matcher.Matcher
 import net.liftweb.json.scalaz.JsonScalaz._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
+import scala.concurrent.Future
 
 class BodySerializationSpecs extends Specification { def is =
   "BodySerializationSpecs".title                                                                                        ^
@@ -50,13 +54,13 @@ class BodySerializationSpecs extends Specification { def is =
 
   trait Context extends BaseContext {
     def ensureSucceedsWithReader[T : JSONR : Manifest](req: HttpRequest, expected: T) = {
-      req.executeUnsafe.bodyAs[T].map { body: T =>
+      req.block().bodyAs[T].map { body: T =>
         (body must beEqualTo(expected)): SpecsResult
       } valueOr { logAndFail(_) }
     }
 
     def ensureSucceedsAsCaseClass[T <: AnyRef: Manifest](req: HttpRequest, expected: T) = {
-      req.executeUnsafe.bodyAsCaseClass[T].map { body: T =>
+      req.block().bodyAsCaseClass[T].map { body: T =>
         (body must beEqualTo(expected)): SpecsResult
       } valueOr { logAndFail(_) }
     }
@@ -105,7 +109,7 @@ class BodySerializationSpecs extends Specification { def is =
 
     private def getResponse(bodyString: String): HttpRequest = {
       val bodyBytes = bodyString.getBytes(UTF8Charset)
-      implicit val client = new DummyHttpClient(() => HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes))
+      implicit val client = new DummyHttpClient(Future.successful(HttpResponse(HttpResponseCode.Ok, Headers.empty, bodyBytes)))
       GET(url)
     }
 

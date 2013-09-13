@@ -29,23 +29,20 @@ import spray.http.{Uri,
   HttpEntity => SprayHttpEntity,
   EmptyEntity => SprayEmptyEntity}
 import spray.http.HttpHeaders.RawHeader
+import spray.http.parser.HttpParser
 import java.net.URL
 import com.stackmob.newman.request._
 import com.stackmob.newman.response._
-import scalaz.effect.IO
-import scalaz.concurrent.Promise
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scalaz.Scalaz._
 import com.stackmob.newman.response.HttpResponse
 import scalaz.NonEmptyList
-import akka.io.{IO => AkkaIO}
+import akka.io.IO
 import akka.pattern.ask
 import spray.can.Http
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
-import com.stackmob.newman.concurrent.{RichScalaFuture, SequentialExecutionContext}
 import com.stackmob.newman.Exceptions.InternalException
-import spray.http.parser.HttpParser
 
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
                       defaultContentType: SprayContentType = SprayContentTypes.`application/json`,
@@ -53,21 +50,22 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
 
   import SprayHttpClient._
 
-
   private implicit val clientActorSystem: ActorSystem = actorSystem
   private implicit val clientTimeout: Timeout = timeout
 
   private def perform(method: SprayHttpMethod,
                       url: URL,
                       headers: Headers,
-                      rawBody: RawBody = RawBody.empty): IO[Promise[HttpResponse]] = {
-    IO {
-      val resp = (AkkaIO(Http) ? request(method, url, headers, rawBody)).mapTo[SprayHttpResponse]
-      resp.executeToNewmanPromise(defaultContentType)
-    } except {
-      case c: ClassCastException => throw InternalException("Unexpected return type", c.some)
-      case t: Throwable => throw t
-    }
+                      rawBody: RawBody = RawBody.empty): Future[HttpResponse] = {
+    import com.stackmob.newman.concurrent.SequentialExecutionContext
+    IO(Http)
+      .ask(request(method, url, headers, rawBody))
+      .mapTo[SprayHttpResponse]
+      .toNewman(defaultContentType)
+      .transform(identity[HttpResponse], {
+        case c: ClassCastException => InternalException("Unexpected return type", c.some)
+        case t: Throwable => t
+      })
   }
 
   private def request(method: SprayHttpMethod,
@@ -127,7 +125,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
 
 object SprayHttpClient {
 
-  private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem()
+  private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem("spray-http-client")
 
   implicit class RichHeaders(headers: Headers) {
     def getContentType(defaultContentType: SprayContentType): SprayContentType = {
@@ -169,10 +167,14 @@ object SprayHttpClient {
   }
 
   private[SprayHttpClient] implicit class RichPipeline(pipeline: Future[SprayHttpResponse]) {
-    def executeToNewmanPromise(defaultContentType: SprayContentType): Promise[HttpResponse] = {
-      pipeline.map { res =>
-        res.toNewmanHttpResponse(defaultContentType) | (throw new InvalidSprayResponse(res.status.intValue))
-      }.toScalazPromise
+    def toNewman(defaultContentType: SprayContentType)(implicit ctx: ExecutionContext): Future[HttpResponse] = {
+      pipeline.flatMap { res =>
+        res.toNewmanHttpResponse(defaultContentType).map { newmanResp =>
+          Future.successful(newmanResp)
+        } | {
+          Future.failed(new InvalidSprayResponse(res.status.intValue))
+        }
+      }
     }
   }
 

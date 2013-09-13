@@ -18,7 +18,6 @@ package com.stackmob.newman
 
 import java.net.URL
 import com.stackmob.newman.request._
-import scalaz.concurrent.Promise
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.twitter.util.Duration
 import com.twitter.finagle.http._
@@ -26,45 +25,36 @@ import com.twitter.finagle.builder.ClientBuilder
 import org.jboss.netty.handler.codec.http.{HttpResponse => NettyHttpResponse, HttpRequest => NettyHttpRequest, HttpMethod => NettyHttpMethod, HttpResponseStatus}
 import java.nio.ByteBuffer
 import org.jboss.netty.buffer.{ChannelBuffer, ByteBufferBackedChannelBuffer}
-import scalaz.effect.IO
 import scalaz.Scalaz._
 import collection.JavaConverters._
 import FinagleHttpClient._
 import com.stackmob.newman.concurrent.RichTwitterFuture
+import scala.concurrent.Future
+import com.stackmob.newman.concurrent.SequentialExecutionContext
 
 class FinagleHttpClient(tcpConnectionTimeout: Duration = DefaultTcpConnectTimeout,
                         requestTimeout: Duration = DefaultRequestTimeout,
                         numConnsPerHost: Int = DefaultMaxConnsPerHost) extends HttpClient {
 
   override def get(url: URL, headers: Headers) = GetRequest(url, headers) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.GET, url, headers)
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.GET, url, headers)
   }
 
   override def post(url: URL, headers: Headers, body: RawBody) = PostRequest(url, headers, body) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.POST, url, headers, Some(body))
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.POST, url, headers, Some(body))
   }
 
 
   override def put(url: URL, headers: Headers, body: RawBody) = PutRequest(url, headers, body) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.PUT, url, headers, Some(body))
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.PUT, url, headers, Some(body))
   }
 
   override def delete(url: URL, headers: Headers) = DeleteRequest(url, headers) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.DELETE, url, headers)
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.DELETE, url, headers)
   }
 
   override def head(url: URL, headers: Headers) = HeadRequest(url, headers) {
-    IO {
-      executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.HEAD, url, headers)
-    }
+    executeRequest(tcpConnectionTimeout, requestTimeout, numConnsPerHost, NettyHttpMethod.HEAD, url, headers)
   }
 }
 
@@ -76,7 +66,7 @@ object FinagleHttpClient {
                                                 method: NettyHttpMethod,
                                                 url: URL,
                                                 headers: Headers,
-                                                mbBody: Option[RawBody] = None): Promise[HttpResponse] = {
+                                                mbBody: Option[RawBody] = None): Future[HttpResponse] = {
     val (host, port) = url.hostAndPort
     val client = ClientBuilder()
       .codec(Http())
@@ -87,14 +77,17 @@ object FinagleHttpClient {
       .build()
     val req = createNettyHttpRequest(method, url, headers, mbBody)
 
-    client(req).toScalazPromise.map { res =>
+    val scalaFut = client(req).toScalaFuture.map { res =>
       res.toNewmanHttpResponse | {
         throw new InvalidNettyResponse(res.getStatus)
       }
-    }.ensure {
+    }(SequentialExecutionContext)
+
+    scalaFut.onComplete { _ =>
       client.close()
-      ()
-    }
+    }(SequentialExecutionContext)
+
+    scalaFut
   }
 
   def createNettyHttpRequest(method: NettyHttpMethod,

@@ -18,28 +18,47 @@ package com.stackmob.newman.test
 
 import caching.DummyHttpResponseCacher
 import scalacheck._
-
 import org.specs2.{ScalaCheck, Specification}
 import com.stackmob.newman.caching.{Milliseconds, HttpResponseCacher}
 import com.stackmob.newman.response.HttpResponse
 import org.scalacheck._
 import Prop._
 import java.net.URL
+import java.util.concurrent.TimeUnit
 import com.stackmob.newman._
 import com.stackmob.newman.request.HttpRequestWithoutBody
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
-class ReadCachingDummyHttpClientSpecs
-  extends Specification
-  with ScalaCheck
-  with ClientVerification
-  with CacheVerification { def is =
+class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { def is =
   "ReadCachingDummyHttpClientSpecs".title                                                                               ^ end ^
   "CachingDummyHttpClient is an HttpClient that caches responses for some defined TTL"                                  ^ end ^
   "get should read from the cache if there is an entry already"                                                         ! getReadsOnlyFromCache ^ end ^
   "get should read through to the cache"                                                                                ! getReadsThroughToCache ^ end ^
   "head should read from the cache if there is a cache entry already"                                                   ! headReadsOnlyFromCache ^ end ^
   "head should read through to the cache"                                                                               ! headReadsThroughToCache ^ end ^
-  "POST, PUT, DELETE should not touch the cache"                                                                        ! postPutDeleteIgnoreCache ^ end
+  "POST, PUT, DELETE should not touch the cache"                                                                        ! postPutDeleteIgnoreCache ^ end ^
+  end
+
+  private case class CacheInteraction(numGets: Int, numSets: Int, numExists: Int)
+  private def verifyCacheInteraction(cache: DummyHttpResponseCacher, interaction: CacheInteraction) = {
+    val getCalls = cache.getCalls.size must beEqualTo(interaction.numGets)
+    val setCalls = cache.setCalls.size must beEqualTo(interaction.numSets)
+    val existsCalls = cache.existsCalls.size must beEqualTo(interaction.numExists)
+    getCalls and setCalls and existsCalls
+  }
+
+  private case class ClientInteraction(numGets: Int, numPosts: Int, numPuts: Int, numDeletes: Int, numHeads: Int)
+  private def verifyClientInteraction(client: DummyHttpClient, interaction: ClientInteraction) = {
+    val getReqs = client.getRequests.size must beEqualTo(interaction.numGets)
+    val postReqs = client.postRequests.size must beEqualTo(interaction.numPosts)
+    val putReqs = client.putRequests.size must beEqualTo(interaction.numPuts)
+    val deleteReqs = client.deleteRequests.size must beEqualTo(interaction.numDeletes)
+    val headReqs = client.headRequests.size must beEqualTo(interaction.numHeads)
+
+    getReqs and postReqs and putReqs and deleteReqs and headReqs
+  }
 
   private val genNoHttpResponse: Gen[Option[HttpResponse]] = Gen.value(Option.empty[HttpResponse])
   private val genAlwaysHttpResponse: Gen[Option[HttpResponse]] = for {
@@ -52,13 +71,13 @@ class ReadCachingDummyHttpClientSpecs
     mbResp <- genMbResp
     exists <- Gen.oneOf(true, false)
   } yield {
-    new DummyHttpResponseCacher(mbResp, (), exists)
+    new DummyHttpResponseCacher(mbResp, exists)
   }
 
   private def genDummyHttpClient: Gen[DummyHttpClient] = for {
     resp <- genHttpResponse
   } yield {
-    new DummyHttpClient(() => resp)
+    new DummyHttpClient(Future.successful(resp))
   }
 
   private def createClient(underlying: HttpClient, cache: HttpResponseCacher, millis: Milliseconds) = {
@@ -66,15 +85,11 @@ class ReadCachingDummyHttpClientSpecs
   }
 
   private def verifyReadsOnlyFromCache[T <: HttpRequestWithoutBody](fn: (ReadCachingHttpClient, URL, Headers) => T) = {
-    forAll(genURL,
-      genHeaders,
-      genDummyHttpClient,
-      genDummyHttpResponseCache(genAlwaysHttpResponse),
-      genPositiveMilliseconds) { (url, headers, dummyClient, dummyCache, milliseconds) =>
+    forAll(genURL, genHeaders, genDummyHttpClient, genDummyHttpResponseCache(genAlwaysHttpResponse), genPositiveMilliseconds) { (url, headers, dummyClient, dummyCache, milliseconds) =>
       val client = createClient(dummyClient, dummyCache, milliseconds)
 
       val req = fn(client, url, headers)
-      val resp = req.executeUnsafe
+      val resp = req.apply.block()
       //the response should match what's in the cache, not what's in the underlying client
       val respMatches = dummyCache.cannedGet must beSome.like {
         case r => {
@@ -82,12 +97,8 @@ class ReadCachingDummyHttpClientSpecs
         }
       }
 
-      respMatches and
-      //there should be 1 cache get, a hit
-      verifyCacheInteraction(dummyCache, CacheInteraction(1, 0, 0))
-      //there should be no client interaction at all, since a cache hit occurred
-      verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
-
+      //there should be 1 cache get, a hit, and there should be no client interaction at all since it hit the cache
+      respMatches and verifyCacheInteraction(dummyCache, CacheInteraction(1, 0, 0)) and verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
     }
   }
 
@@ -102,17 +113,15 @@ class ReadCachingDummyHttpClientSpecs
 
       val client = createClient(dummyClient, dummyCache, oneMinute)
       val req = createRequest(client, url, headers)
-      val resp = req.executeUnsafe
-      val respVerified = resp must beEqualTo(dummyClient.responseToReturn())
+      val resp = req.apply.block()
+      val respVerified = resp must beEqualTo(dummyClient.responseToReturn.block())
       //there should be a single client call after the cache miss
       val respClientVerified = verifyClientInteraction(dummyClient, createClientInteraction(1))
       //there should be a get call, a miss, then a set call to perform the write back to the cache,
       //after we've talked to the client
       val respCacheVerified = verifyCacheInteraction(dummyCache, CacheInteraction(1, 1, 0))
 
-      respVerified and
-      respClientVerified and
-      respCacheVerified
+      respVerified and respClientVerified and respCacheVerified
     }
   }
 
@@ -142,9 +151,9 @@ class ReadCachingDummyHttpClientSpecs
     genPositiveMilliseconds) { (url, headers, body, dummyClient, dummyCache, milliseconds) =>
     val client = new ReadCachingHttpClient(dummyClient, dummyCache, milliseconds)
 
-    val postRes = client.post(url, headers, body).executeUnsafe must beEqualTo(dummyClient.responseToReturn())
-    val putRes = client.put(url, headers, body).executeUnsafe must beEqualTo(dummyClient.responseToReturn())
-    val deleteRes = client.delete(url, headers).executeUnsafe must beEqualTo(dummyClient.responseToReturn())
+    val postRes = client.post(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
+    val putRes = client.put(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
+    val deleteRes = client.delete(url, headers).block() must beEqualTo(dummyClient.responseToReturn.block())
 
     postRes and
     putRes and
@@ -152,27 +161,4 @@ class ReadCachingDummyHttpClientSpecs
     verifyCacheInteraction(dummyCache, CacheInteraction(0, 0, 0)) and
     verifyClientInteraction(dummyClient, ClientInteraction(0, 1, 1, 1, 0))
   }
-}
-
-trait CacheVerification { this: Specification =>
-  protected case class CacheInteraction(numGets: Int, numSets: Int, numExists: Int)
-  protected def verifyCacheInteraction(cache: DummyHttpResponseCacher, interaction: CacheInteraction) = {
-    val getCalls = cache.getCalls.size must beEqualTo(interaction.numGets)
-    val setCalls = cache.setCalls.size must beEqualTo(interaction.numSets)
-    val existsCalls = cache.existsCalls.size must beEqualTo(interaction.numExists)
-    getCalls and setCalls and existsCalls
-  }
-}
-
-trait ClientVerification { this: Specification =>
-  protected case class ClientInteraction(numGets: Int, numPosts: Int, numPuts: Int, numDeletes: Int, numHeads: Int)
-  protected def verifyClientInteraction(client: DummyHttpClient, interaction: ClientInteraction) = {
-    val getReqs = client.getRequests.size must beEqualTo(interaction.numGets)
-    val postReqs = client.postRequests.size must beEqualTo(interaction.numPosts)
-    val putReqs = client.putRequests.size must beEqualTo(interaction.numPuts)
-    val deleteReqs = client.deleteRequests.size must beEqualTo(interaction.numDeletes)
-    val headReqs = client.headRequests.size must beEqualTo(interaction.numHeads)
-    getReqs and postReqs and putReqs and deleteReqs and headReqs
-  }
-
 }

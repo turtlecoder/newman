@@ -18,22 +18,30 @@ package com.stackmob.newman.test
 
 import org.specs2.Specification
 import com.stackmob.newman.SprayHttpClient
+import akka.actor.ActorSystem
+import akka.util.Timeout
 
 class SprayHttpClientSpecs extends Specification with ClientTests with ResponseMatcher { def is =
   "SprayHttpClientSpecs".title                                                                                          ^ end ^
   "SprayHttpClient is a spray-based nonblocking HTTP client"                                                            ^ end ^
-  "get should work"                                                                                                     ! ClientTests(client).get ^
-  "getAsync should work"                                                                                                ! ClientTests(client).getAsync ^
-  "post should work"                                                                                                    ! ClientTests(client).post ^ end ^
-  "postAsync should work"                                                                                               ! ClientTests(client).postAsync ^ end ^
-  "put should work"                                                                                                     ! ClientTests(client).put ^ end ^
-  "putAsync should work"                                                                                                ! ClientTests(client).putAsync ^ end ^
-  "delete should work"                                                                                                  ! ClientTests(client).delete ^ end ^
-  "deleteAsync should work"                                                                                             ! ClientTests(client).deleteAsync ^ end ^
-  "head should work"                                                                                                    ! ClientTests(client).head ^ end ^
-  "headAsync should work"                                                                                               ! ClientTests(client).headAsync ^ end ^
+  "get should work"                                                                                                     ! test(_.get) ^
+  "getAsync should work"                                                                                                ! test(_.getAsync) ^
+  "post should work"                                                                                                    ! test(_.post) ^ end ^
+  "postAsync should work"                                                                                               ! test(_.postAsync) ^ end ^
+  "put should work"                                                                                                     ! test(_.put) ^ end ^
+  "putAsync should work"                                                                                                ! test(_.putAsync) ^ end ^
+  "delete should work"                                                                                                  ! test(_.delete) ^ end ^
+  "deleteAsync should work"                                                                                             ! test(_.deleteAsync) ^ end ^
+  "head should work"                                                                                                    ! test(_.head) ^ end ^
+  "headAsync should work"                                                                                               ! test(_.headAsync) ^ end ^
   end
-  private def client = new SprayHttpClient()
 
-
+  private def test[T](fn: ClientTests => T) = {
+    val system = ActorSystem("SprayHttpClientSpecs")
+    val client = new SprayHttpClient(system, timeout = Timeout(duration))
+    val clientTests = ClientTests(client)
+    val res = fn(clientTests)
+    system.shutdown()
+    res
+  }
 }

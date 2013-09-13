@@ -17,8 +17,7 @@
 package com.stackmob.newman
 
 import com.twitter.util.{Future => TwitterFuture}
-import scalaz.concurrent.{Strategy => ScalazStrategy, Promise => ScalazPromise}
-import scala.concurrent.{Future => ScalaFuture, ExecutionContext}
+import scala.concurrent.{Future => ScalaFuture, Promise, ExecutionContext}
 
 package object concurrent {
 
@@ -31,26 +30,14 @@ package object concurrent {
   }
 
   implicit class RichTwitterFuture[T](future: TwitterFuture[T]) {
-    def toScalazPromise: ScalazPromise[T] = {
-      val promise = ScalazPromise.emptyPromise[T](ScalazStrategy.Sequential)
+    def toScalaFuture: ScalaFuture[T] = {
+      val promise = Promise[T]()
       future.onSuccess { result =>
-        promise.fulfill(result)
+        promise.success(result)
       }.onFailure { throwable =>
-        promise.fulfill(throw throwable)
+        promise.failure(throwable)
       }
-      promise
-    }
-  }
-
-  implicit class RichScalaFuture[T](fut: ScalaFuture[T]) {
-    def toScalazPromise: ScalazPromise[T] = {
-      val promise = ScalazPromise.emptyPromise[T](ScalazStrategy.Sequential)
-      fut.map { result =>
-        promise.fulfill(result)
-      }.onFailure {
-        case t: Throwable => promise.fulfill(throw t)
-      }
-      promise
+      promise.future
     }
   }
 }

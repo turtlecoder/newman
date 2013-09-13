@@ -19,11 +19,9 @@ package com.stackmob.newman.test
 import com.stackmob.newman._
 import com.stackmob.newman.dsl._
 import org.specs2.Specification
-import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL
-import scalaz._
-import Scalaz._
 import scalaz.NonEmptyList._
+import org.specs2.matcher.MatchResult
 
 class DSLSpecs extends Specification { def is =
   "DSLSpecs".title                                                                                                      ^
@@ -67,7 +65,6 @@ class DSLSpecs extends Specification { def is =
     "correctly set a body when passed a string"                                                                         ! HeaderAndBodyTransformerTest().correctlySetsStringBody ^
     "correctly replace a body"                                                                                          ! HeaderAndBodyTransformerTest().correctlyReplacesBody ^
                                                                                                                         end
-
   trait Context extends BaseContext {
     implicit protected val client = new DummyHttpClient
     protected val u: URL = url(http, "stackmob.com").toURL
@@ -78,65 +75,66 @@ class DSLSpecs extends Specification { def is =
 
   case class GetTest() extends Context {
     private val t = GET(u)
-    def returnsProperFunction: SpecsResult = {
+    def returnsProperFunction = {
       (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
     }
 
-    def executesCorrectly: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
-      (client.getRequests.size() must beEqualTo(1))
+    def executesCorrectly = {
+      val respMatches = t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)
+      val oneReq = client.getRequests.size() must beEqualTo(1)
+      respMatches and oneReq
     }
   }
 
   case class PostTest() extends Context {
     val t = POST(u)
-    def returnsProperFunction: SpecsResult = {
+    def returnsProperFunction = {
       (t must beAnInstanceOf[HeaderAndBodyBuilder]) and
-      (ensureEmptyHeaders(t)) and
+      ensureEmptyHeaders(t) and
       (t.body.length must beEqualTo(0))
     }
 
-    def executesCorrectly: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+    def executesCorrectly = {
+      (t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.postRequests.size() must beEqualTo(1))
     }
   }
 
   case class PutTest() extends Context {
     private val t = PUT(u)
-    def returnsProperFunction: SpecsResult = {
+    def returnsProperFunction = {
       (t must beAnInstanceOf[HeaderAndBodyBuilder]) and
-      (ensureEmptyHeaders(PUT(u))) and
+      ensureEmptyHeaders(PUT(u)) and
       (t.body.length must beEqualTo(0))
     }
 
-    def executesCorrecty: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+    def executesCorrecty = {
+      (t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.putRequests.size() must beEqualTo(1))
     }
   }
 
   case class DeleteTest() extends Context {
     private val t = DELETE(u)
-    def returnsProperFunction: SpecsResult = {
+    def returnsProperFunction = {
 
       (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
     }
 
-    def executesCorrectly: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+    def executesCorrectly = {
+      (t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.deleteRequests.size must beEqualTo(1))
     }
   }
 
   case class HeadTest() extends Context {
     private val t = HEAD(u)
-    def returnsProperFunction: SpecsResult = {
+    def returnsProperFunction = {
       (t must beAnInstanceOf[HeaderBuilder]) and ensureEmptyHeaders(t)
     }
 
-    def executesCorrectly: SpecsResult = {
-      (t.executeUnsafe must beEqualTo(DummyHttpClient.CannedResponse)) and
+    def executesCorrectly = {
+      (t.toRequest.block() must beEqualTo(DummyHttpClient.CannedResponse)) and
       (client.headRequests.size must beEqualTo(1))
     }
   }
@@ -144,9 +142,15 @@ class DSLSpecs extends Specification { def is =
   trait HeaderTransformerTestBase extends Context {
     protected def transformer: Builder
 
-    protected def ensureEqualHeaders(t: Builder, expected: Headers): SpecsResult = (t.headers must haveTheSameHeadersAs(expected))
-    protected def ensureEqualHeaders(t: Builder, expected: HeaderList): SpecsResult = ensureEqualHeaders(t, Headers(expected))
-    protected def ensureEqualHeaders(t: Builder, expected: Header): SpecsResult = ensureEqualHeaders(t, Headers(expected))
+    protected def ensureEqualHeaders(t: Builder, expected: Headers): MatchResult[Headers] = {
+      t.headers must haveTheSameHeadersAs(expected)
+    }
+    protected def ensureEqualHeaders(t: Builder, expected: HeaderList): MatchResult[Headers] = {
+      ensureEqualHeaders(t, Headers(expected))
+    }
+    protected def ensureEqualHeaders(t: Builder, expected: Header): MatchResult[Headers] = {
+      ensureEqualHeaders(t, Headers(expected))
+    }
 
 
     protected val header1 = "testHeaderName" -> "testHeaderVal"
@@ -154,7 +158,7 @@ class DSLSpecs extends Specification { def is =
     protected val headers = nels(header1, header2)
     def correctlyAddsAHeader = ensureEqualHeaders(transformer.addHeaders(header1), header1)
     def correctlyAddsHeaders = ensureEqualHeaders(transformer.addHeaders(headers), headers)
-    def correctlyPrependsHeaders: SpecsResult = {
+    def correctlyPrependsHeaders = {
       ensureEqualHeaders(transformer.addHeaders(header1).addHeaders(header2), Headers(header2, header1)) and
       ensureEqualHeaders(transformer.addHeaders(headers).addHeaders(header2), nel(header2, headers.list))
     }
@@ -164,10 +168,10 @@ class DSLSpecs extends Specification { def is =
     def correctlySetsHeaders = {
       ensureEqualHeaders(transformer.setHeaders(headers), Headers(List(header1, header2)))
     }
-    def correctlyReplacesHeaders: SpecsResult = {
+    def correctlyReplacesHeaders = {
       ensureEqualHeaders(transformer.addHeaders(header1).setHeaders(header2), Headers(header2)) and
-        ensureEqualHeaders(transformer.addHeaders(headers).setHeaders(header1), nels(header1)) and
-        ensureEqualHeaders(transformer.addHeaders(header1).setHeaders(headers), Headers(header1, header2))
+      ensureEqualHeaders(transformer.addHeaders(headers).setHeaders(header1), nels(header1)) and
+      ensureEqualHeaders(transformer.addHeaders(header1).setHeaders(headers), Headers(header1, header2))
     }
   }
 
@@ -178,7 +182,7 @@ class DSLSpecs extends Specification { def is =
   case class HeaderAndBodyTransformerTest() extends HeaderTransformerTestBase {
     override protected val transformer = POST(u)
 
-    def correctlyPrependsBody: SpecsResult = {
+    def correctlyPrependsBody = {
       val b1 = "abc".getBytes
       val b2 = "def".getBytes
       val expected = b1 ++ b2
@@ -186,19 +190,19 @@ class DSLSpecs extends Specification { def is =
       resultantBody must beEqualTo(expected)
     }
 
-    def correctlySetsBody: SpecsResult = {
+    def correctlySetsBody = {
       val b1 = "set".getBytes
       val resultantBody: Array[Byte] = transformer.setBody(b1).body
       resultantBody must beEqualTo(b1)
     }
 
-    def correctlySetsStringBody: SpecsResult = {
+    def correctlySetsStringBody = {
       val b1 = "set"
       val resultantBody = transformer.setBody(b1).body
       resultantBody must beEqualTo(b1.getBytes(Constants.UTF8Charset))
     }
 
-    def correctlyReplacesBody: SpecsResult = {
+    def correctlyReplacesBody = {
       val b1 = "abc".getBytes
       val b2 = "def".getBytes
       val resultantBody: Array[Byte] = transformer.addBody(b1).setBody(b2).body

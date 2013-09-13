@@ -18,7 +18,6 @@ package com.stackmob.newman.caching
 
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
-import scalaz.effect.IO
 
 trait HttpResponseCacher {
   /**
@@ -26,7 +25,7 @@ trait HttpResponseCacher {
    * @param req the request
    * @return an IO representing the response, or none if none exists
    */
-  def get(req: HttpRequest): IO[Option[HttpResponse]]
+  def get(req: HttpRequest): Option[HttpResponse]
 
   /**
    * set a response for the given request, for a TTL
@@ -35,7 +34,7 @@ trait HttpResponseCacher {
    * @param ttl the time to live for the given request/response pair
    * @return the IO representing the set action
    */
-  def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): IO[Unit]
+  def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): Unit
 
   /**
    * determine whether a response for the given request exists
@@ -43,5 +42,5 @@ trait HttpResponseCacher {
    * @return the action to determine existence. will contain true if it does, false otherwise.
    *         note that if the resultant IO is true, a subsequent get call may still not return a response
    */
-  def exists(req: HttpRequest): IO[Boolean]
+  def exists(req: HttpRequest): Boolean
 }

@@ -24,6 +24,7 @@ import org.specs2.{ScalaCheck, Specification}
 import org.scalacheck._
 import Prop._
 import request._
+import com.stackmob.newman.response.HttpResponse
 
 class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { def is =
   "InMemoryHttpResponseCacherSpecs".title                                                                               ^ end ^
@@ -33,22 +34,22 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
                                                                                                                         end
   private val client = new DummyHttpClient()
 
-  private def getResponse(request: HttpRequest) = {
-    request.prepare.unsafePerformIO()
+  private def getResponse(request: HttpRequest): HttpResponse = {
+    request.apply.block()
   }
 
   private def roundTripSucceeds = forAll(genHttpRequest(client)) { request =>
     val cache = new InMemoryHttpResponseCacher
 
     val response = getResponse(request)
-    val getRes1 = cache.get(request).unsafePerformIO() must beNone
-    val existsRes1 = cache.exists(request).unsafePerformIO() must beFalse
-    val setRes1 = cache.set(request, response, Milliseconds(1000)).unsafePerformIO() must beEqualTo(())
+    val getRes1 = cache.get(request) must beNone
+    val existsRes1 = cache.exists(request) must beFalse
+    val setRes1 = cache.set(request, response, Milliseconds(1000)) must beEqualTo(())
     val identicalRequest = client.get(request.url, request.headers)
-    val getRes2 = cache.get(identicalRequest).unsafePerformIO() must beSome.like {
+    val getRes2 = cache.get(identicalRequest) must beSome.like {
       case s => s must beEqualTo(response)
     }
-    val existsRes2 = cache.exists(request).unsafePerformIO() must beTrue
+    val existsRes2 = cache.exists(request) must beTrue
     getRes1 and existsRes1 and setRes1 and getRes2 and existsRes2
   }
 
@@ -56,9 +57,9 @@ class InMemoryHttpResponseCacherSpecs extends Specification with ScalaCheck { de
     val cache = new InMemoryHttpResponseCacher
 
     val response = getResponse(request)
-    cache.set(request, response, Milliseconds(0)).unsafePerformIO()
+    cache.set(request, response, Milliseconds(0))
     Thread.sleep(100)
     val identicalRequest = client.get(request.url, request.headers)
-    cache.get(identicalRequest).unsafePerformIO() must beNone
+    cache.get(identicalRequest) must beNone
   }
 }
