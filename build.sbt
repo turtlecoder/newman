@@ -21,12 +21,12 @@ resolvers ++= List(
 )
 
 libraryDependencies ++= {
-  val httpCoreVersion = "4.2.1"
-  val httpClientVersion = "4.2.1"
+  val httpCoreVersion = "4.2.5"
+  val httpClientVersion = "4.2.5"
   val scalaCheckVersion = "1.10.1"
   val specs2Version = "1.14"
   val mockitoVersion = "1.9.0"
-  val liftJsonVersion = "2.5"
+  val liftJsonVersion = "2.5.1"
   Seq(
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
