@@ -37,13 +37,15 @@ libraryDependencies += "com.stackmob" %% "newman" % "1.0.0"
 ```scala
 import com.stackmob.newman._
 import com.stackmob.newman.dsl._
+import scala.concurrent._
+import scala.concurrent.duration._
 import java.net.URL
 
 implicit val httpClient = new ApacheHttpClient
 //execute a GET request
 val url = new URL("http://google.com")
-val response = GET(url).executeUnsafe
-println("Response returned from %s with code %d, body %s".format(url.toString,response.code,response.bodyString))
+val response = Await.result(GET(url).apply, 1.second) //this will throw if the response doesn't return within 1 second
+println(s"Response returned from ${url.toString} with code ${response.code}, body ${response.bodyString}")
 ```
 
 #The DSL
@@ -68,10 +70,14 @@ Each method listed above returns a Builder, which works in concert with the impl
 in the `DSL` package to let you build up a request and then execute it.
 
 # Executing Requests
-Once you have an instance of `com.stackmob.newman.HttpRequest`, you'll obviously want to execute it. There are 2 methods defined on all `HttpRequest`s that execute requests differently:
+The most important method on `com.stackmob.newman.HttpRequest` is `def apply: Future[HttpResponse]`. A few notes on this method:
 
-* `def prepare: IO[HttpResponse]` - returns a `scalaz.effects.IO` that represents the result of executing the request. Remember that this method does not actually execute the request, and no network traffic will happen if you call this method. In order to actually execute the request, call `unsafePerformIO()` on this method's result.
-* `def executeUnsafe: HttpResponse` - returns the result of `prepare.unsafePerformIO()`. Note that this method hits the network, and will not return until the remote server responds (ie: it's synchronous). Also, it may throw if there was a network error, etc (hence the suffix `Unsafe`)
+* It returns immediately after the request is *started*
+* It returns a [`scala.concurrent.Future`](http://www.scala-lang.org/api/current/index.html#scala.concurrent.Future) that will be complete immediately after the executing request is complete
+* If you want to schedule some action to happen after the response is available, use `onComplete` or a similar callback
+* The `Future` can also fail with an exception, which you can react to with `onFailure`
+* If you need to block your code from proceeding until the `HttpResponse` is available, use `Await.result`.
+* We recommend refactoring your blocking code to remove `Await.result` calls it possible, since latencies are unpredictable, subject to network conditions, etc...
 
 # Serializing
 Newman comes with built in support for serializing `HttpRequest`s and `HttpResponse`s to Json.
@@ -100,8 +106,8 @@ implicit val eTagClient = new ETagAwareHttpClient(rawHttpClient, cache)
 	
 val url = new URL("http://stackmob.com")
 //since the cacher is empty, this will issue a request to stackmob.com without an If-None-Match header
-val res1 = GET(url) executeUnsafe
+val res1 = GET(url).apply
 //assuming res1 contained an ETag and stackmob.com fully supports ETag headers,
 //stackmob.com will return a 304 response code in this request and res2 will come from the cache
-val res2 = GET(url) executeUnsafe
+val res2 = GET(url).apply
 ```
