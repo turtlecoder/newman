@@ -74,7 +74,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
                       rawBody: RawBody): SprayHttpRequest = {
     val headerList = headers.map { headerNel =>
       val lst = headerNel.list
-      lst.map { hdr =>
+      lst.filterNot(isSprayProtectedHeader(_)).map { hdr =>
         RawHeader(hdr._1, hdr._2)
       }
     } | Nil
@@ -90,6 +90,25 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
 
     SprayHttpRequest(method, Uri(url.toString), headerList, entity)
   }
+
+  /*
+  Spray designates a subset of its headers to be "protected" in creation, such that attempting to create one (even via
+  a RawHeader) will raise a warning at runtime. These headers should not be created directly, but rather should be
+  handled via the respective pathways that set them (e.g. setting the Content-Type of an HttpEntity, which sets the
+  Content-Type header) or ignored altogether.
+
+  See https://github.com/spray/spray/blob/master/spray-http/src/main/scala/spray/http/HttpHeader.scala for details.
+   */
+  private lazy val sprayProtectedHeaders = List(
+    SprayHttpHeaders.Connection,  // this is not explicitly defined as a protected header, but still raises warns
+    SprayHttpHeaders.`Content-Length`,
+    SprayHttpHeaders.`Content-Type`,
+    SprayHttpHeaders.Date,
+    SprayHttpHeaders.Server,
+    SprayHttpHeaders.`Transfer-Encoding`,
+    SprayHttpHeaders.`User-Agent`
+  ).map(_.lowercaseName)
+  private def isSprayProtectedHeader(h: Header): Boolean = sprayProtectedHeaders.contains(h._1.toLowerCase)
 
   override def get(url: URL, headers: Headers): GetRequest = {
     GetRequest(url, headers) {
