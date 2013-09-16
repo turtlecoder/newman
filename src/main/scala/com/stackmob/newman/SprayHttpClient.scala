@@ -92,10 +92,10 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
   }
 
   /*
-  Spray designates a subset of its headers to be "protected" in creation, such that attempting to create one (even via
-  a RawHeader) will raise a warning at runtime. These headers should not be created directly, but rather should be
-  handled via the respective pathways that set them (e.g. setting the Content-Type of an HttpEntity, which sets the
-  Content-Type header) or ignored altogether.
+  Spray designates a subset of its headers to be "protected" in creation, such that attempting to send a request with
+  one that is set manually will raise a warning at runtime. These headers should not be created directly, but rather
+  should be handled via the respective pathways that set them (e.g. setting the Content-Type of an HttpEntity, which
+  sets the Content-Type header) or ignored altogether.
 
   See https://github.com/spray/spray/blob/master/spray-http/src/main/scala/spray/http/HttpHeader.scala for details.
    */
