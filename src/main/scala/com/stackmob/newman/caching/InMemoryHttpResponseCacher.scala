@@ -35,8 +35,7 @@ import com.stackmob.newman.concurrent.FutureScheduler
 class InMemoryHttpResponseCacher(maxCapacity: Int,
                                  initialCapacity: Int,
                                  timeToLive: Duration,
-                                 timeToIdle: Duration,
-                                 override val scheduler: FutureScheduler[HttpRequest, HttpResponse] = new FutureScheduler[HttpRequest, HttpResponse]())
+                                 timeToIdle: Duration)
                                 (implicit ctx: ExecutionContext) extends HttpResponseCacher {
 
   private val cache = LruCache.apply[HttpResponse](maxCapacity = maxCapacity,

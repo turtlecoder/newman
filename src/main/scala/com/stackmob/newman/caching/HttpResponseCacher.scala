@@ -19,12 +19,7 @@ package com.stackmob.newman.caching
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scala.concurrent._
-import com.stackmob.newman.concurrent.FutureScheduler
-
 trait HttpResponseCacher {
-
-  protected lazy val scheduler = new FutureScheduler[HttpRequest, HttpResponse]()
-
   /**
    * get the given request from the cache, or execute it
    * @param req the request to get
@@ -45,18 +40,4 @@ trait HttpResponseCacher {
    * @return Some if the element existed, None otherwise
    */
   def remove(req: HttpRequest): Option[Future[HttpResponse]]
-
-
-
-  /**
-   * schedule a function to be executed atomically with respect to the given request.
-   * all other cache operations on the cache request will be blocked until the returned Future completes
-   * (successfully or not)
-   * @param req the request, which will be used to lock
-   * @param fut the future to execute atomically
-   * @return the result of fn
-   */
-  def atomic(req: HttpRequest)(fut: => Future[HttpResponse]): Future[HttpResponse] = {
-    scheduler.synchronize(req)(fut)
-  }
 }

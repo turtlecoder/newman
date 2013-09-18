@@ -25,9 +25,19 @@ import response.HttpResponse
 import org.apache.http.HttpHeaders
 import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
+import com.stackmob.newman.concurrent.FutureScheduler
+import ETagAwareHttpClient._
 
+/**
+ * an HttpClient that respects ETag headers and caches {{{HttpResponse}}}s appropriately
+ * @param httpClient the underlying HttpClient to do network requests when appropriate
+ * @param httpResponseCacher the cacher to cache {{{HttpResponse}}}s when appropriate
+ * @param scheduler the {{{FutureScheduler}}} to schedule futures to do ETag negotiation
+ * @param c the execution context to handle future scheduling
+ */
 class ETagAwareHttpClient(httpClient: HttpClient,
-                          httpResponseCacher: HttpResponseCacher)
+                          httpResponseCacher: HttpResponseCacher,
+                          scheduler: FutureScheduler[HttpRequest, HttpResponse] = DefaultFutureScheduler)
                          (implicit c: ExecutionContext) extends HttpClient {
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest {
@@ -64,7 +74,7 @@ class ETagAwareHttpClient(httpClient: HttpClient,
     override val headers = h
 
     override def apply: Future[HttpResponse] = {
-      httpResponseCacher.atomic(this) {
+      scheduler.synchronize(this) {
         httpResponseCacher.get(this).map { respFut =>
           respFut.flatMap { resp =>
             resp.eTag.map { eTag: String =>
@@ -98,4 +108,8 @@ class ETagAwareHttpClient(httpClient: HttpClient,
   override def head(u: URL, h: Headers): HeadRequest = HeadRequest(u, h) {
     httpClient.head(u, h).apply
   }
+}
+
+object ETagAwareHttpClient {
+  private[ETagAwareHttpClient] lazy val DefaultFutureScheduler = new FutureScheduler[HttpRequest, HttpResponse]()
 }

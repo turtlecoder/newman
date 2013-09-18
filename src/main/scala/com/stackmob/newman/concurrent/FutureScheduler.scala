@@ -35,20 +35,19 @@ class FutureScheduler[Key, Val](timer: Timer = DefaultTimer, pollingInterval: Fi
    * get a Future that will successfully complete when no other future is currently executing on {{{key}}}
    * @param key the key to wait for
    * @param fut the future to execute atomically. no other future for the key will be executing during its lifecycle
-   * @param ctx the ExecutionContext to use to schedule {{{fut}}} for execution
    * @return a future that completes successfully when no other
    */
-  def synchronize(key: Key)(fut: => Future[Val])(implicit ctx: ExecutionContext): Future[Val] = {
+  def synchronize(key: Key)(fut: => Future[Val])(implicit ctx: ExecutionContext = SequentialExecutionContext): Future[Val] = {
     val startPromise = Promise[Unit]()
     val curUUID = UUID.randomUUID()
 
     timer.schedule(pollingInterval)(pollerCallback(key, curUUID, startPromise))
     val res = startPromise.future.flatMap { _ =>
       fut
-    }
+    }(ctx)
     res.onComplete { _ =>
       executionTable.remove(curUUID)
-    }
+    }(ctx)
     res
   }
 
