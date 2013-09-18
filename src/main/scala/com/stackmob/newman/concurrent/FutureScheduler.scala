@@ -5,6 +5,7 @@ import scala.concurrent.duration._
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Timer, UUID}
 import scala.annotation.tailrec
+import FutureScheduler._
 
 /**
  * a utility to schedule the execution of a group of Futures, by key.
@@ -12,17 +13,13 @@ import scala.annotation.tailrec
  * @tparam Key the type of the key on which futures will schedule themselves
  * @tparam Val the type of the values that each future will hold
  */
-class FutureScheduler[Key, Val] {
+class FutureScheduler[Key, Val](timer: Timer = DefaultTimer, pollingInterval: FiniteDuration =  10.milliseconds) {
   /**
    * each executing future for a given Key gets a UUID assigned to it.
    * this table keeps track of the currently executing one
    */
   private val executionTable = new ConcurrentHashMap[Key, UUID]()
 
-  /**
-   * runs {{{TimerTasks}}} that check the execution table to see if a future can execution
-   */
-  private val poller = new Timer("http-response-cacher-atomic-checker", true)
 
   @tailrec
   private def pollerCallback(key: Key, uuid: UUID, promise: Promise[Unit]) {
@@ -45,7 +42,7 @@ class FutureScheduler[Key, Val] {
     val startPromise = Promise[Unit]()
     val curUUID = UUID.randomUUID()
 
-    poller.schedule(50.milliseconds)(pollerCallback(key, curUUID, startPromise))
+    timer.schedule(pollingInterval)(pollerCallback(key, curUUID, startPromise))
     val res = startPromise.future.flatMap { _ =>
       fut
     }
@@ -55,4 +52,11 @@ class FutureScheduler[Key, Val] {
     res
   }
 
+}
+
+object FutureScheduler {
+  /**
+   * runs {{{TimerTasks}}} that check the execution table to see if a future can execution
+   */
+  private[FutureScheduler] val DefaultTimer = new Timer("http-response-cacher-poller-timer", true)
 }

@@ -19,7 +19,7 @@ package com.stackmob.newman
 import com.twitter.util.{Future => TwitterFuture}
 import scala.concurrent.{Future => ScalaFuture, Promise, ExecutionContext}
 import java.util.{Timer, TimerTask}
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 package object concurrent {
 
@@ -44,7 +44,7 @@ package object concurrent {
   }
 
   implicit class RichJavaTimer(timer: Timer) {
-    def schedule(duration: Duration)(fn: => Unit) {
+    def schedule(duration: FiniteDuration)(fn: => Unit) {
       val timerTask = new TimerTask {
         def run() {
           fn
