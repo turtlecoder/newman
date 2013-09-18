@@ -19,14 +19,11 @@ package com.stackmob.newman.caching
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scala.concurrent._
-import java.util.concurrent.ConcurrentHashMap
-import java.util.UUID
-import com.twitter.util.JavaTimer
 import com.stackmob.newman.concurrent.FutureScheduler
 
 trait HttpResponseCacher {
 
-  private val scheduler = new FutureScheduler[HttpRequest, HttpResponse]
+  protected lazy val scheduler = new FutureScheduler[HttpRequest, HttpResponse]()
 
   /**
    * get the given request from the cache, or execute it
