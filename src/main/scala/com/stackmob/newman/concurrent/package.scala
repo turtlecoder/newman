@@ -42,15 +42,4 @@ package object concurrent {
       promise.future
     }
   }
-
-  implicit class RichJavaTimer(timer: Timer) {
-    def schedule(duration: FiniteDuration)(fn: => Unit) {
-      val timerTask = new TimerTask {
-        def run() {
-          fn
-        }
-      }
-      timer.schedule(timerTask, duration.toMillis)
-    }
-  }
 }

@@ -22,7 +22,6 @@ import com.stackmob.newman.request.HttpRequest
 import spray.caching._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
-import com.stackmob.newman.concurrent.FutureScheduler
 
 /**
  * an {{{HttpResponseCacher}}} that does caching in-memory, and evicts based on Least-Recently-Used
