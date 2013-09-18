@@ -149,7 +149,7 @@ object HttpResponse {
   case class UnexpectedResponseCode(expected: HttpResponseCode, actual: HttpResponseCode)
     extends Exception("expected response code %d, got %d".format(expected.code, actual.code))
 
-  case class JSONParsingError(errNel: NonEmptyList[Error]) extends Exception({
+  private def getString(errNel: NonEmptyList[Error]): String = {
     errNel.map { err: Error =>
       err.fold(
         u => "unexpected JSON %s. expected %s".format(u.was.toString, u.expected.getCanonicalName),
@@ -157,5 +157,7 @@ object HttpResponse {
         u => "uncategorized error %s while trying to decode JSON: %s".format(u.key, u.desc)
       )
     }.list.mkString("\n")
-  })
+  }
+
+  case class JSONParsingError(errNel: NonEmptyList[Error]) extends Exception(getString(errNel))
 }
