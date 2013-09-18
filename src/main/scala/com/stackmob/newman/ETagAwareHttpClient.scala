@@ -64,23 +64,23 @@ class ETagAwareHttpClient(httpClient: HttpClient,
     override val headers = h
 
     override def apply: Future[HttpResponse] = {
-      //TODO: fix possible race here
-      httpResponseCacher.get(this).map { respFut =>
-        respFut.flatMap { resp =>
-          resp.eTag.map { eTag: String =>
-          //the response was found in the cache and it has an eTag so check the it against the server
-            checkETag(resp, eTag)
-          } | {
-            //the response was found in the cache and it doesn't have an eTag, so just do the request as normal
-            httpResponseCacher.apply(this)
+      httpResponseCacher.atomic(this) {
+        httpResponseCacher.get(this).map { respFut =>
+          respFut.flatMap { resp =>
+            resp.eTag.map { eTag: String =>
+            //the response was found in the cache and it has an eTag so check the it against the server
+              checkETag(resp, eTag)
+            } | {
+              //the response was found in the cache and it doesn't have an eTag, so just do the request as normal
+              httpResponseCacher.apply(this)
+            }
           }
+        } | {
+          //the response was not found in the cache, so just do the request as normal
+          httpResponseCacher.apply(this)
         }
-      } | {
-        //the response was not found in the cache, so just do the request as normal
-        httpResponseCacher.apply(this)
       }
     }
-
   }
 
   override def post(u: URL, h: Headers, b: RawBody): PostRequest = PostRequest(u, h, b) {
