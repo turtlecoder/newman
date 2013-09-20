@@ -20,51 +20,69 @@ import com.stackmob.newman.request._
 import scalaz._
 import Scalaz._
 import com.stackmob.newman.caching.HttpResponseCacher
+import com.stackmob.newman.concurrent.RichTwitterFuture
 import response.HttpResponse
 import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
 import ETagAwareHttpClient._
 import scalaz.NonEmptyList._
 import org.apache.http.HttpHeaders
+import com.twitter.concurrent.AsyncMutex
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * an HttpClient that respects ETag headers and caches {{{HttpResponse}}}s appropriately
  * @param httpClient the underlying HttpClient to do network requests when appropriate
  * @param httpResponseCacher the cacher to cache {{{HttpResponse}}}s when appropriate
- * @param c the execution context to handle future scheduling
+ * @param ctx the execution context to handle future scheduling for acquiring and releasing cache line access
  */
 class ETagAwareHttpClient(httpClient: HttpClient,
                           httpResponseCacher: HttpResponseCacher)
-                         (implicit c: ExecutionContext) extends HttpClient {
+                         (implicit ctx: ExecutionContext) extends HttpClient {
+
+  /**
+   * a concurrent map of {{{com.twitter.concurrent.AsyncMutex}}}es that are used to synchronize access
+   * to each cache line, to avoid race conditions on each cache interaction in calls to get
+   */
+  private val cacheLineMutexes = new ConcurrentHashMap[GetRequest, AsyncMutex]()
 
   override def get(u: URL, h: Headers): GetRequest = new GetRequest {
 
     override val url = u
     override val headers = h
 
-    override def apply: Future[HttpResponse] = {
-      httpResponseCacher.remove(this).map { cachedRespFut =>
-        cachedRespFut.flatMap { cachedResp =>
-          cachedResp.eTag.map { eTag =>
-          //the response was cached and has an eTag so check it against the server
-            val newHeaderList = addIfNoneMatch(cachedResp.headers, eTag)
-            httpClient.get(u, newHeaderList).apply.flatMap { response: HttpResponse =>
-              if(response.notModified) {
-                //the response was not modified, so return the cached response
-                Future.successful(cachedResp)
-              } else {
-                //the response was modified, so run it against the server as normal
-                httpResponseCacher.apply(this)
-              }
+    private def applyImpl(respFuture: Future[HttpResponse]): Future[HttpResponse] = {
+      respFuture.flatMap { resp =>
+        resp.eTag.map { eTag =>
+        //the response was cached and has an eTag so check it against the server
+          val newHeaderList = addIfNoneMatch(resp.headers, eTag)
+          httpClient.get(u, newHeaderList).apply.flatMap { response: HttpResponse =>
+            if(response.notModified) {
+              //the response was not modified, so return the cached response
+              Future.successful(resp)
+            } else {
+              //the response was modified, so run it against the server as normal
+              httpResponseCacher.apply(this)
             }
-          } | {
-            //the response was cached and has no eTag, so execute the request as normal
-            httpResponseCacher.apply(this)
           }
+        } | {
+          //the response was cached and has no eTag, so execute the request as normal
+          httpResponseCacher.apply(this)
         }
-      } | {
-        //response was not cached, so execute the request and cache it
-        httpResponseCacher.apply(this)
+      }
+    }
+
+    override def apply: Future[HttpResponse] = {
+      val newMutex = new AsyncMutex()
+      val mutex = Option(cacheLineMutexes.putIfAbsent(this, newMutex)).getOrElse(newMutex)
+      mutex.acquire().toScalaFuture.flatMap { permit =>
+        val fut = httpResponseCacher.remove(this).map(applyImpl).getOrElse {
+          httpResponseCacher.apply(this)
+        }
+        fut.onComplete { _ =>
+          permit.release()
+        }
+        fut
       }
     }
   }
