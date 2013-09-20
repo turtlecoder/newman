@@ -61,8 +61,9 @@ class ETagAwareHttpClient(httpClient: HttpClient,
               //the response was not modified, so return the cached response
               Future.successful(resp)
             } else {
-              //the response was modified, so run it against the server as normal
-              httpResponseCacher.apply(this)
+              //the response was modified, so remove from the cache and run again against the server as normal
+              httpResponseCacher.remove(this) //this call immediately removes from the cache
+              httpResponseCacher.apply(this) //this call fills the cache as normal
             }
           }
         } | {
@@ -76,7 +77,7 @@ class ETagAwareHttpClient(httpClient: HttpClient,
       val newMutex = new AsyncMutex()
       val mutex = Option(cacheLineMutexes.putIfAbsent(this, newMutex)).getOrElse(newMutex)
       mutex.acquire().toScalaFuture.flatMap { permit =>
-        val fut = httpResponseCacher.remove(this).map(applyImpl).getOrElse {
+        val fut = httpResponseCacher.get(this).map(applyImpl).getOrElse {
           httpResponseCacher.apply(this)
         }
         fut.onComplete { _ =>

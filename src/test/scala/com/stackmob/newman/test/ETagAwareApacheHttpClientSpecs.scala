@@ -16,23 +16,16 @@
 
 package com.stackmob.newman.test
 
-import scalaz._
 import scalaz.Validation._
-import Scalaz._
 import org.specs2.Specification
 import org.apache.http.HttpHeaders
 import java.net.URL
 import com.stackmob.newman._
 import com.stackmob.newman.caching._
 import com.stackmob.newman.response._
-import com.stackmob.newman.request._
 import com.stackmob.newman.test.caching._
-import collection.JavaConverters._
-import org.specs2.matcher.MatchResult
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import java.util.concurrent.TimeUnit
+import com.stackmob.newman.concurrent.SequentialExecutionContext
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   "ETagAwareApacheHttpClientSpecs".title                                                                                ^ end ^
@@ -75,6 +68,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   }
 
   case class CachedResponseWithETag() extends Context {
+
     override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Some(responseWithETag), Some(responseWithETag))
 
     override protected val rawClient = new DummyHttpClient
@@ -83,26 +77,27 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       val req = client.get(url, Headers.empty)
       req.block()
       val urlCorrect = rawClient.getRequests.get(0)._1 must beEqualTo(url)
-      val headersCorrect = rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers(INM))
+      val headersCorrect = rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers(INM, eTag))
       val getRes = responseCacher.verifyGetCalls { list =>
         val size = list.length must beEqualTo(1)
-        val elt = list.get(0) must beSome.like {
+        val elt = list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
         size and elt
       }
+
       val applyRes = responseCacher.verifyApplyCalls { list =>
-        val first = list.get(0) must beSome.like {
+        val first = list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
-        val second = list.get(0) must beSome.like {
+        val second = list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
         first and second
       }
 
       val removeRes = responseCacher.verifyRemoveCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
@@ -140,12 +135,12 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       val req = client.get(url, Headers.empty)
       req.block()
       val applyCallRes = responseCacher.verifyApplyCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
       val getCallRes = responseCacher.verifyGetCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
@@ -162,12 +157,12 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       //wait for the request to finish. res isn't used
       val res = req.block()
       val getCallRes = responseCacher.verifyGetCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
       val applyCallRes = responseCacher.verifyApplyCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
@@ -190,12 +185,12 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       val req = client.get(url, Headers.empty)
       req.block()
       val getRes = responseCacher.verifyGetCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
       val applyRes = responseCacher.verifyApplyCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
@@ -210,12 +205,12 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       val req = client.get(url, Headers.empty)
       req.block()
       val getRes = responseCacher.verifyGetCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
       val applyRes = responseCacher.verifyApplyCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
@@ -238,7 +233,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       fromTryCatch(req.block())
 
       val getRes = responseCacher.verifyGetCalls { list =>
-        list.get(0) must beSome.like {
+        list.headOption must beSome.like {
           case r => r must beEqualTo(req)
         }
       }
