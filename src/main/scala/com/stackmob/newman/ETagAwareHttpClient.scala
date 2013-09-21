@@ -78,7 +78,7 @@ object ETagAwareHttpClient {
   }
 
   /**
-   * a {{{GetRequest}}} that honors ETags
+   * a {{{GetRequest}}} that honors ETags. this function must be called mutually exclusively
    * @param url the URL to get
    * @param headers the headers to send with the request
    * @param cache the cache to use for retrieving and setting responses
@@ -119,7 +119,8 @@ object ETagAwareHttpClient {
        * this method uses an AsyncMutex to protect all the cache accesses for this {{{GetRequest}}}.
        * the general algorithm is check the cache, check the etag of the cached result, rerun the request if necessary, and return.
        * if it's not in the cache, just run the request as normal. all of the preceding steps are done inside the critical section
-       * for this request
+       * for this request. the critical section is necessary because this method and applyImpl (above) chain together multiple
+       * cache operations
        */
       asyncMutexTable(this) {
         cache.get(this).map(applyImpl).getOrElse {
