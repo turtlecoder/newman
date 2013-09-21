@@ -25,7 +25,8 @@ import com.stackmob.newman.caching._
 import com.stackmob.newman.response._
 import com.stackmob.newman.test.caching._
 import scala.concurrent.Future
-import com.stackmob.newman.concurrent.SequentialExecutionContext
+import com.stackmob.newman.concurrent.{InMemoryAsyncMutex, ConcurrentHashMapAsyncMutexTable, SequentialExecutionContext}
+import com.stackmob.newman.request.HttpRequest
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   "ETagAwareApacheHttpClientSpecs".title                                                                                ^ end ^
@@ -61,7 +62,8 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       HttpResponse(HttpResponseCode.NotModified, Headers.empty, body)
     }
 
-    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher)
+    protected lazy val asyncMutexTable = ConcurrentHashMapAsyncMutexTable[HttpRequest](() => new InMemoryAsyncMutex)
+    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher, asyncMutexTable)
 
     protected def rawClient: DummyHttpClient
     protected def responseCacher: HttpResponseCacher
@@ -155,7 +157,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     def cachesNewResponse = {
       val req = client.get(url, Headers.empty)
       //wait for the request to finish. res isn't used
-      val res = req.block()
+      req.block()
       val getCallRes = responseCacher.verifyGetCalls { list =>
         list.headOption must beSome.like {
           case r => r must beEqualTo(req)
