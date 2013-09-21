@@ -28,7 +28,7 @@ trait HttpResponseCacher {
   def apply(req: HttpRequest): Future[HttpResponse]
 
   /**
-   * get the given request form the cache
+   * get the given request forom the cache
    * @param req the request to get
    * @return Some if the request exists in the cache, None otherwise
    */
