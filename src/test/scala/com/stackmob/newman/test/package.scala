@@ -19,6 +19,7 @@ package com.stackmob.newman
 import scala.concurrent.duration._
 import scala.concurrent._
 import scalaz.Validation
+import scalaz.Scalaz._
 import com.stackmob.newman.request.HttpRequest
 import com.stackmob.newman.response.HttpResponse
 
@@ -43,11 +44,7 @@ package object test {
 
   private[test] implicit class RichList[T](l: List[T]) {
     def get(i: Int): Option[T] = {
-      if(i >= 0 && i < l.length) {
-        Some(l.apply(i))
-      } else {
-        None
-      }
+      (i >= 0 && i < l.length).option(l.apply(i))
     }
   }
 
