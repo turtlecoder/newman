@@ -20,7 +20,6 @@ import com.stackmob.newman.request._
 import scalaz._
 import Scalaz._
 import com.stackmob.newman.caching.HttpResponseCacher
-import com.stackmob.newman.concurrent.AsyncMutexTable
 import response.HttpResponse
 import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,17 +31,13 @@ import org.apache.http.HttpHeaders
  * an HttpClient that respects ETag headers and caches {{{HttpResponse}}}s appropriately
  * @param httpClient the underlying HttpClient to do network requests when appropriate
  * @param httpResponseCacher the cacher to cache {{{HttpResponse}}}s when appropriate
- * @param asyncMutexTable the mechanism by which this class protects cache operations on each HttpRequest.
- *                        this parameter and httpResponseCacher should share the same scope to ensure
- *                        that cache accesses are correctly protected
  * @param ctx the execution context to handle future scheduling for acquiring and releasing cache line access
  */
 class ETagAwareHttpClient(httpClient: HttpClient,
-                          httpResponseCacher: HttpResponseCacher,
-                          asyncMutexTable: AsyncMutexTable[HttpRequest])
+                          httpResponseCacher: HttpResponseCacher)
                          (implicit ctx: ExecutionContext) extends HttpClient {
 
-  override def get(u: URL, h: Headers): GetRequest = new ETagGetRequest(u, h, httpResponseCacher, asyncMutexTable)({ (url: URL, headers: Headers) =>
+  override def get(u: URL, h: Headers): GetRequest = new ETagGetRequest(u, h, httpResponseCacher)({ (url: URL, headers: Headers) =>
     httpClient.get(url, headers).apply
   })(ctx)
 
@@ -82,13 +77,11 @@ object ETagAwareHttpClient {
    * @param url the URL to get
    * @param headers the headers to send with the request
    * @param cache the cache to use for retrieving and setting responses
-   * @param asyncMutexTable the table of mutexes used to protect the cache in a critical section during each apply call
    * @param rawGet a function to do a GET request directly against the server, with no cache interaction. used to execute If-None-Match requests
    */
   private[ETagAwareHttpClient] class ETagGetRequest(override val url: URL,
                                                     override val headers: Headers,
-                                                    cache: HttpResponseCacher,
-                                                    asyncMutexTable: AsyncMutexTable[HttpRequest])
+                                                    cache: HttpResponseCacher)
                                                    (rawGet: (URL, Headers) => Future[HttpResponse])
                                                    (implicit ctx: ExecutionContext) extends GetRequest {
 
@@ -122,7 +115,7 @@ object ETagAwareHttpClient {
        * for this request. the critical section is necessary because this method and applyImpl (above) chain together multiple
        * cache operations
        */
-      asyncMutexTable(this) {
+      cache.criticalSection(this) {
         cache.get(this).map(applyImpl).getOrElse {
           cache.apply(this)
         }
