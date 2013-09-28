@@ -14,26 +14,23 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.test
+package com.stackmob.newman
+package test
+package client
 
 import org.specs2.Specification
 import com.stackmob.newman.SprayHttpClient
 import akka.actor.ActorSystem
 import akka.util.Timeout
 
-class SprayHttpClientSpecs extends Specification with ClientTests with ResponseMatcher { def is =
+class SprayHttpClientSpecs extends Specification with ClientTests { def is =
   "SprayHttpClientSpecs".title                                                                                          ^ end ^
   "SprayHttpClient is a spray-based nonblocking HTTP client"                                                            ^ end ^
   "get should work"                                                                                                     ! test(_.get) ^
-  "getAsync should work"                                                                                                ! test(_.getAsync) ^
   "post should work"                                                                                                    ! test(_.post) ^ end ^
-  "postAsync should work"                                                                                               ! test(_.postAsync) ^ end ^
   "put should work"                                                                                                     ! test(_.put) ^ end ^
-  "putAsync should work"                                                                                                ! test(_.putAsync) ^ end ^
   "delete should work"                                                                                                  ! test(_.delete) ^ end ^
-  "deleteAsync should work"                                                                                             ! test(_.deleteAsync) ^ end ^
   "head should work"                                                                                                    ! test(_.head) ^ end ^
-  "headAsync should work"                                                                                               ! test(_.headAsync) ^ end ^
   end
 
   private def test[T](fn: ClientTests => T) = {

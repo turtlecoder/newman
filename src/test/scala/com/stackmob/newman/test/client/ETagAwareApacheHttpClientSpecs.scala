@@ -15,6 +15,7 @@
  */
 
 package com.stackmob.newman.test
+package client
 
 import scalaz._
 import scalaz.Validation._
@@ -31,8 +32,7 @@ import collection.JavaConverters._
 import org.specs2.matcher.MatchResult
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import java.util.concurrent.TimeUnit
+import com.stackmob.newman.test.{DummyHttpClient, BaseContext}
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   "ETagAwareApacheHttpClientSpecs".title                                                                                ^ end ^
@@ -76,9 +76,10 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     def foldResponseCacherCalls(c: DummyHttpResponseCacher,
                                 getFn: List[HttpRequest] => MatchResult[_],
                                 setFn: List[(HttpRequest, HttpResponse)] => MatchResult[_]): MatchResult[_] = {
-      (c.existsCalls.size must beEqualTo(0)) and
-      (getFn(c.getCalls.asScala.toList)) and
-      (setFn(c.setCalls.asScala.toList))
+      val existsRes = c.existsCalls.size must beEqualTo(0)
+      val getRes = getFn(c.getCalls.asScala.toList)
+      val setRes = setFn(c.setCalls.asScala.toList)
+      existsRes and getRes and setRes
     }
   }
 
@@ -127,8 +128,8 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
     def cachesNewResponse = {
       val req = client.get(url, Headers.empty)
-      //wait for the request to finish. res isn't used
-      val res = req.block()
+      //wait for the request to finish
+      req.block()
       foldResponseCacherCalls(responseCacher,
         { getCalls: List[HttpRequest] =>
           val firstCall = getCalls(0)
@@ -174,7 +175,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
     def executesNoRequest = {
       fromTryCatch(client.get(url, Headers.empty).block())
-      (rawClient.totalNumRequestsMade must beEqualTo(0))
+      rawClient.totalNumRequestsMade must beEqualTo(0)
     }
   }
 }
