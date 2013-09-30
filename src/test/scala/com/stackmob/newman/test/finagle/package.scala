@@ -3,7 +3,6 @@ package com.stackmob.newman.test
 import org.scalacheck.{Arbitrary, Gen}
 import org.jboss.netty.handler.codec.http._
 import org.jboss.netty.buffer._
-import java.nio.ByteBuffer
 import com.stackmob.newman.FinagleHttpClient.RichRawBody
 
 /**
@@ -16,15 +15,15 @@ import com.stackmob.newman.FinagleHttpClient.RichRawBody
  * Time: 3:19 PM
  */
 package object finagle {
-  val genHttpResponseStatus: Gen[HttpResponseStatus] = {
+  lazy val genHttpResponseStatus: Gen[HttpResponseStatus] = {
     Gen.value(HttpResponseStatus.OK)
   }
 
-  val genNonEmptyString: Gen[String] = Gen.alphaStr.suchThat { s =>
+  lazy val genNonEmptyString: Gen[String] = Gen.alphaStr.suchThat { s =>
     s.length > 0
   }
 
-  val genHeader: Gen[(String, String)] = {
+  lazy val genHeader: Gen[(String, String)] = {
     for {
       headerName <- genNonEmptyString
       headerVal <- genNonEmptyString
@@ -33,33 +32,26 @@ package object finagle {
     }
   }
 
-  val genHeaders: Gen[Map[String, String]] = {
-    Gen.listOf(genHeader).suchThat { l =>
-      l.length > 0
-    }.map { list =>
+  lazy val genHeaders: Gen[Map[String, String]] = {
+    Gen.listOf1(genHeader).map { list =>
       list.toMap
     }
   }
 
-  val genByte: Gen[Byte] = {
-    Arbitrary.arbitrary[Byte]
-  }
-
-  val genByteArray: Gen[Array[Byte]] = {
-    Gen.listOf(genByte).suchThat { list =>
-      list.length > 0
-    }.map { list =>
+  lazy val genByteArray: Gen[Array[Byte]] = {
+    val genByte = Arbitrary.arbitrary[Byte]
+    Gen.listOf1(genByte).map { list =>
       list.toArray
     }
   }
 
-  val genChannelBuffer: Gen[ChannelBuffer] = {
+  lazy val genChannelBuffer: Gen[ChannelBuffer] = {
     genByteArray.map { arr =>
       arr.toChannelBuf
     }
   }
 
-  val genNettyResponse: Gen[(HttpResponseStatus, Map[String, String], ChannelBuffer, HttpResponse)] = {
+  lazy val genNettyResponse: Gen[(HttpResponseStatus, Map[String, String], ChannelBuffer, HttpResponse)] = {
     for {
       status <- genHttpResponseStatus
       headers <- genHeaders
