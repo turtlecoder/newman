@@ -31,6 +31,8 @@ import FinagleHttpClient._
 import com.stackmob.newman.concurrent.RichTwitterFuture
 import scala.concurrent.Future
 import com.stackmob.newman.concurrent.SequentialExecutionContext
+import java.nio.charset.Charset
+import com.stackmob.newman.Constants.UTF8Charset
 
 class FinagleHttpClient(tcpConnectionTimeout: Duration = DefaultTcpConnectTimeout,
                         requestTimeout: Duration = DefaultRequestTimeout,
@@ -90,10 +92,10 @@ object FinagleHttpClient {
     scalaFut
   }
 
-  def createNettyHttpRequest(method: NettyHttpMethod,
-                             url: URL,
-                             headers: Headers,
-                             mbBody: Option[RawBody]): NettyHttpRequest = {
+  private[FinagleHttpClient] def createNettyHttpRequest(method: NettyHttpMethod,
+                                                        url: URL,
+                                                        headers: Headers,
+                                                        mbBody: Option[RawBody]): NettyHttpRequest = {
     val headersMap = headers.map { headerList =>
       headerList.list.toMap
     } | {
@@ -114,9 +116,26 @@ object FinagleHttpClient {
       val byteBuf = ByteBuffer.wrap(rawBody)
       new ByteBufferBackedChannelBuffer(byteBuf)
     }
+
+    def stringRepresentation(implicit charset: Charset = UTF8Charset): String = {
+      new String(rawBody, charset)
+    }
   }
 
   implicit class RichNettyHttpResponse(resp: NettyHttpResponse) {
+    def bodyBytes: Array[Byte] = {
+      val channelBuf = resp.getContent
+      val array = channelBuf.array
+
+      //the index of the first byte in the backing byte array of this ChannelBuffer.
+      //if there isn't a backing byte array, then this throws
+      val arrayOffset = channelBuf.arrayOffset
+      //the index of the first readable byte in this ChannelBuffer
+      val readerIndex = channelBuf.readerIndex()
+
+      //return a copy of the backing array, starting at the effective beginning of the HTTP response body
+      array.slice(arrayOffset + readerIndex, array.length)
+    }
     def toNewmanHttpResponse: Option[HttpResponse] = {
       for {
         code <- HttpResponseCode.fromInt(resp.getStatus.getCode)
@@ -127,7 +146,7 @@ object FinagleHttpClient {
           }
           Option(tupList.toList.toNel)
         }
-        body <- Option(resp.getContent.array)
+        body <- Some(bodyBytes)
       } yield {
         HttpResponse(code, headers, body)
       }

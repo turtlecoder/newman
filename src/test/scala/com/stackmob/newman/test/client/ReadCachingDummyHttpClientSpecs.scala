@@ -15,21 +15,20 @@
  */
 
 package com.stackmob.newman.test
+package client
 
-import caching.DummyHttpResponseCacher
-import scalacheck._
+import com.stackmob.newman.test.caching.DummyHttpResponseCacher
+import com.stackmob.newman.test.scalacheck._
 import org.specs2.{ScalaCheck, Specification}
 import com.stackmob.newman.caching.{Milliseconds, HttpResponseCacher}
 import com.stackmob.newman.response.HttpResponse
 import org.scalacheck._
 import Prop._
 import java.net.URL
-import java.util.concurrent.TimeUnit
 import com.stackmob.newman._
 import com.stackmob.newman.request.HttpRequestWithoutBody
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
 
 class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { def is =
   "ReadCachingDummyHttpClientSpecs".title                                                                               ^ end ^

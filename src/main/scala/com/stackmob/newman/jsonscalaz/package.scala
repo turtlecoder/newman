@@ -17,6 +17,7 @@
 package com.stackmob.newman
 
 import net.liftweb.json.scalaz.JsonScalaz._
+import net.liftweb.json.JValue
 
 package object jsonscalaz {
 
@@ -27,6 +28,14 @@ package object jsonscalaz {
       case u@UnexpectedJSONError(_, _) => unexpected(u)
       case n@NoSuchFieldError(_, _) => noSuchField(n)
       case u@UncategorizedError(_, _, _) => uncategorized(u)
+    }
+  }
+
+  def jsonR[T](fn: JValue => Result[T]): JSONR[T] = {
+    new JSONR[T] {
+      override def read(json: JValue): Result[T] = {
+        fn(json)
+      }
     }
   }
 
