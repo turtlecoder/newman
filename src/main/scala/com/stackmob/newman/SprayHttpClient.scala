@@ -72,10 +72,18 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
                       url: URL,
                       headers: Headers,
                       rawBody: RawBody): SprayHttpRequest = {
+    //using var here, so that we only iterate over the header list once
+    var contentType: Option[SprayContentType] = None
     val headerList = headers.map { headerNel =>
       val lst = headerNel.list
-      lst.map { hdr =>
-        RawHeader(hdr._1, hdr._2)
+      //filter out the Content-Type header, because spray sets it based on the entity
+      lst.flatMap { hdr =>
+        if (hdr._1 != SprayHttpHeaders.`Content-Type`.lowercaseName) {
+          List(RawHeader(hdr._1, hdr._2))
+        } else {
+          contentType = HttpParser.parse(HttpParser.ContentTypeHeaderValue, hdr._2).right.toOption
+          Nil
+        }
       }
     } | Nil
 
@@ -83,8 +91,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
       if (rawBody.length === 0) {
         SprayEmptyEntity
       } else {
-        val contentType = headers.getContentType(defaultContentType)
-        SprayHttpEntity(contentType, rawBody)
+        SprayHttpEntity(contentType | defaultContentType, rawBody)
       }
     }
 
@@ -126,15 +133,6 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
 object SprayHttpClient {
 
   private[SprayHttpClient] lazy val DefaultActorSystem = ActorSystem("spray-http-client")
-
-  implicit class RichHeaders(headers: Headers) {
-    def getContentType(defaultContentType: SprayContentType): SprayContentType = {
-      headers.flatMap { lst: HeaderList =>
-        val results = lst.list.map(x => HttpParser.parseHeader(RawHeader(x._1, x._2))).collect({ case Right(c) => c })
-        results.collect({ case c @ SprayHttpHeaders.`Content-Type`(_) => c }).map(_.contentType).headOption
-      } | defaultContentType
-    }
-  }
 
   private[SprayHttpClient] implicit class RichSprayHttpResponse(resp: SprayHttpResponse) {
     def toNewmanHttpResponse(defaultContentType: SprayContentType): Option[HttpResponse] = {
