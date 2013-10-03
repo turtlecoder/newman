@@ -15,6 +15,7 @@
  */
 
 package com.stackmob.newman.test
+package client
 
 import scalaz.Validation._
 import org.specs2.Specification
@@ -27,6 +28,8 @@ import com.stackmob.newman.test.caching._
 import scala.concurrent.Future
 import com.stackmob.newman.concurrent.{InMemoryAsyncMutex, ConcurrentHashMapAsyncMutexTable, SequentialExecutionContext}
 import com.stackmob.newman.request.HttpRequest
+import scala.concurrent.ExecutionContext.Implicits.global
+import com.stackmob.newman.test.{DummyHttpClient, BaseContext}
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   "ETagAwareApacheHttpClientSpecs".title                                                                                ^ end ^
@@ -67,6 +70,15 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
     protected def rawClient: DummyHttpClient
     protected def responseCacher: HttpResponseCacher
+
+    def foldResponseCacherCalls(c: DummyHttpResponseCacher,
+                                getFn: List[HttpRequest] => MatchResult[_],
+                                setFn: List[(HttpRequest, HttpResponse)] => MatchResult[_]): MatchResult[_] = {
+      val existsRes = c.existsCalls.size must beEqualTo(0)
+      val getRes = getFn(c.getCalls.asScala.toList)
+      val setRes = setFn(c.setCalls.asScala.toList)
+      existsRes and getRes and setRes
+    }
   }
 
   case class CachedResponseWithETag() extends Context {
@@ -156,7 +168,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
     def cachesNewResponse = {
       val req = client.get(url, Headers.empty)
-      //wait for the request to finish. res isn't used
+      //wait for the request to finish
       req.block()
       val getCallRes = responseCacher.verifyGetCalls { list =>
         list.headOption must beSome.like {
