@@ -28,7 +28,6 @@ import com.stackmob.newman.test.caching._
 import scala.concurrent.Future
 import com.stackmob.newman.concurrent.{InMemoryAsyncMutex, ConcurrentHashMapAsyncMutexTable, SequentialExecutionContext}
 import com.stackmob.newman.request.HttpRequest
-import scala.concurrent.ExecutionContext.Implicits.global
 import com.stackmob.newman.test.{DummyHttpClient, BaseContext}
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
@@ -66,19 +65,10 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     }
 
     protected lazy val asyncMutexTable = ConcurrentHashMapAsyncMutexTable[HttpRequest](() => new InMemoryAsyncMutex)
-    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher, asyncMutexTable)
+    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher)
 
     protected def rawClient: DummyHttpClient
     protected def responseCacher: HttpResponseCacher
-
-    def foldResponseCacherCalls(c: DummyHttpResponseCacher,
-                                getFn: List[HttpRequest] => MatchResult[_],
-                                setFn: List[(HttpRequest, HttpResponse)] => MatchResult[_]): MatchResult[_] = {
-      val existsRes = c.existsCalls.size must beEqualTo(0)
-      val getRes = getFn(c.getCalls.asScala.toList)
-      val setRes = setFn(c.setCalls.asScala.toList)
-      existsRes and getRes and setRes
-    }
   }
 
   case class CachedResponseWithETag() extends Context {
