@@ -19,6 +19,7 @@ package caching
 
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
+import com.stackmob.newman.concurrent.{InMemoryAsyncMutex, AsyncMutex}
 import spray.caching._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,12 +30,14 @@ import scala.concurrent.{ExecutionContext, Future}
  * @param initialCapacity the starting capacity of the cache. must be < {{{maxCapacity}}}
  * @param timeToLive the maximum time an element is allowed to live in the cache
  * @param timeToIdle the maximum time an element is allowed to live in the cache untouched
+ * @param foldingMutex the AsyncMutex used to asynchronously enclose the fold operation in a critical section
  * @param ctx the execution context used to set elements into the cache
  */
 class InMemoryHttpResponseCacher(maxCapacity: Int,
                                  initialCapacity: Int,
                                  timeToLive: Duration,
-                                 timeToIdle: Duration)
+                                 timeToIdle: Duration,
+                                 foldingMutex: AsyncMutex = new InMemoryAsyncMutex)
                                 (implicit ctx: ExecutionContext) extends HttpResponseCacher {
 
   private val cache = LruCache.apply[HttpResponse](maxCapacity = maxCapacity,
@@ -42,15 +45,21 @@ class InMemoryHttpResponseCacher(maxCapacity: Int,
     timeToLive = timeToLive,
     timeToIdle = timeToIdle)
 
+  override def fold(req: HttpRequest,
+                    cacheHit: Future[HttpResponse] => Future[HttpResponse],
+                    cacheMiss: => Future[HttpResponse]): Future[HttpResponse] = {
+    foldingMutex.apply {
+      cache.get(req.hash).map { respFuture =>
+        val fut = cacheHit(respFuture)
+        cache.remove(req.hash)
+        cache.apply(req.hash)(fut)
+      }.getOrElse {
+        cacheMiss
+      }
+    }
+  }
+
   override def apply(req: HttpRequest): Future[HttpResponse] = {
     cache.apply(req.hash)(req.apply)
-  }
-
-  override def get(req: HttpRequest): Option[Future[HttpResponse]] = {
-    cache.get(req.hash)
-  }
-
-  override def remove(req: HttpRequest): Option[Future[HttpResponse]] = {
-    cache.remove(req.hash)
   }
 }

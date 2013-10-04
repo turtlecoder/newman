@@ -24,40 +24,41 @@ import scala.concurrent.Future
 import org.specs2.matcher.MatchResult
 import scala.collection.JavaConverters._
 
+/**
+ * a HttpResponseCacher for testing
+ * @param onApply the result to return from the apply method
+ * @param foldBehavior whether to execute the cacheHit or cacheMiss parameters passed to the fold method.
+ *                     pass Left(responseFuture) to execute cacheHit(responseFuture),
+ *                     and pass Right(()) to execute cacheMiss
+ */
 class DummyHttpResponseCacher(val onApply: Future[HttpResponse],
-                              val onGet: Option[Future[HttpResponse]],
-                              val onRemove: Option[Future[HttpResponse]]) extends HttpResponseCacher {
+                              val foldBehavior: Either[Future[HttpResponse], Unit]) extends HttpResponseCacher {
 
+  val foldCalls = new CopyOnWriteArrayList[HttpRequest]()
   val applyCalls = new CopyOnWriteArrayList[HttpRequest]()
-  val getCalls = new CopyOnWriteArrayList[HttpRequest]()
-  val removeCalls = new CopyOnWriteArrayList[HttpRequest]()
 
-  def totalNumCalls = applyCalls.size() + getCalls.size() + removeCalls.size()
+  def totalNumCalls = applyCalls.size() + foldCalls.size()
+
+  override def fold(req: HttpRequest,
+                    cacheHit: Future[HttpResponse] => Future[HttpResponse],
+                    cacheMiss: => Future[HttpResponse]): Future[HttpResponse] = {
+    foldCalls.add(req)
+    foldBehavior match {
+      case Left(respFuture) => cacheHit(respFuture)
+      case Right(_) => cacheMiss
+    }
+  }
 
   override def apply(req: HttpRequest): Future[HttpResponse] = {
     applyCalls.add(req)
     onApply
   }
 
-  override def get(req: HttpRequest): Option[Future[HttpResponse]] = {
-    getCalls.add(req)
-    onGet
-  }
-
-  override def remove(req: HttpRequest): Option[Future[HttpResponse]] = {
-    removeCalls.add(req)
-    onRemove
-  }
-
   def verifyApplyCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
     fn(applyCalls.asScala.toList)
   }
 
-  def verifyGetCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
-    fn(getCalls.asScala.toList)
-  }
-
-  def verifyRemoveCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
-    fn(removeCalls.asScala.toList)
+  def verifyFoldCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
+    fn(foldCalls.asScala.toList)
   }
 }

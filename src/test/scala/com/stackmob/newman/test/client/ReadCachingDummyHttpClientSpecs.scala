@@ -38,12 +38,11 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
   "POST, PUT, DELETE should not touch the cache"                                                                        ! postPutDeleteIgnoreCache ^ end ^
   end
 
-  private case class CacheInteraction(numApplies: Int, numGets: Int, numRemoves: Int)
+  private case class CacheInteraction(numApplies: Int, numFolds: Int)
   private def verifyCacheInteraction(cache: DummyHttpResponseCacher, interaction: CacheInteraction) = {
     val applyCalls = cache.applyCalls.size must beEqualTo(interaction.numApplies)
-    val getCalls = cache.getCalls.size must beEqualTo(interaction.numGets)
-    val removeCalls = cache.removeCalls.size must beEqualTo(interaction.numRemoves)
-    applyCalls and getCalls and removeCalls
+    val foldCalls = cache.foldCalls.size must beEqualTo(interaction.numFolds)
+    applyCalls and foldCalls
   }
 
   private case class ClientInteraction(numGets: Int, numPosts: Int, numPuts: Int, numDeletes: Int, numHeads: Int)
@@ -59,12 +58,10 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
 
   private def verifyCallsApply[T <: HttpRequestWithoutBody](fn: (ReadCachingHttpClient, URL, Headers) => T) = {
     val genOnApply = genSuccessFuture(genHttpResponse)
-    val genOnGet = genSomeOption(genSuccessFuture(genHttpResponse))
-    val genOnRemove = genSomeOption(genSuccessFuture(genHttpResponse))
     forAll(genURL,
       genHeaders,
       genDummyHttpClient,
-      genDummyHttpResponseCache(genOnApply, genOnGet, genOnRemove)) { (url, headers, dummyClient, dummyCache) =>
+      genDummyHttpResponseCache(genOnApply, Gen.value(Right(())))) { (url, headers, dummyClient, dummyCache) =>
 
       val client = new ReadCachingHttpClient(dummyClient, dummyCache)
 
@@ -74,7 +71,7 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
       val respMatches = dummyCache.onApply.block() must beEqualTo(resp)
 
       //there should be 1 cache get, a hit, and there should be no client interaction at all since it hit the cache
-      respMatches and verifyCacheInteraction(dummyCache, CacheInteraction(1, 0, 0)) and verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
+      respMatches and verifyCacheInteraction(dummyCache, CacheInteraction(1, 0)) and verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
     }
   }
 
@@ -88,14 +85,12 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
 
   private def postPutDeleteIgnoreCache = {
     val genOnApply = genSuccessFuture(genHttpResponse)
-    val genOnGet = genSomeOption(genSuccessFuture(genHttpResponse))
-    val genOnRemove = genSomeOption(genSuccessFuture(genHttpResponse))
 
     forAll(genURL,
       genHeaders,
       genRawBody,
       genDummyHttpClient,
-      genDummyHttpResponseCache(genOnApply, genOnGet, genOnRemove)) { (url, headers, body, dummyClient, dummyCache) =>
+      genDummyHttpResponseCache(genOnApply, Gen.value(Right(())))) { (url, headers, body, dummyClient, dummyCache) =>
       val client = new ReadCachingHttpClient(dummyClient, dummyCache)
 
       val postRes = client.post(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())
@@ -105,7 +100,7 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
       postRes and
       putRes and
       deleteRes and
-      verifyCacheInteraction(dummyCache, CacheInteraction(0, 0, 0)) and
+      verifyCacheInteraction(dummyCache, CacheInteraction(0, 0)) and
       verifyClientInteraction(dummyClient, ClientInteraction(0, 1, 1, 1, 0))
     }
   }

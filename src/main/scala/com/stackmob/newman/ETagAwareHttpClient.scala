@@ -84,9 +84,15 @@ object ETagAwareHttpClient {
                                                     cache: HttpResponseCacher)
                                                    (rawGet: (URL, Headers) => Future[HttpResponse])
                                                    (implicit ctx: ExecutionContext) extends GetRequest {
-
-    private def applyImpl(respFuture: Future[HttpResponse]): Future[HttpResponse] = {
-      respFuture.flatMap { resp =>
+    /**
+     * check the eTag in a cached HttpResponse.
+     * If it exists, then execute a request against the server with an If-None-Match.
+     * If it doesn't exist, then execute a request against the server to fetch the body.
+     * @param cachedResponseFuture the cached response that we'll check
+     * @return a Future containing the most up to date HttpResponse, either from the server or the cache if it's fresh
+     */
+    private def cacheHit(cachedResponseFuture: Future[HttpResponse]): Future[HttpResponse] = {
+      cachedResponseFuture.flatMap { resp =>
         resp.eTag.map { eTag =>
         //the response was cached and has an eTag so check it against the server
           val newHeaderList = addIfNoneMatch(resp.headers, eTag)
@@ -95,14 +101,13 @@ object ETagAwareHttpClient {
               //the response was not modified, so return the cached response
               Future.successful(resp)
             } else {
-              //the response was modified, so remove from the cache and run again against the server as normal
-              cache.remove(this) //this call immediately removes from the cache
-              cache.apply(this) //this call fills the cache as normal
+              //the response may have been modified, so execute it directly against the server
+              rawGet(url, headers)
             }
           }
         } | {
-          //the response was cached and has no eTag, so execute the request as normal
-          cache.apply(this)
+          //the response was cached and is missing an eTag, so execute it directly against the server
+          rawGet(url, headers)
         }
       }
     }
@@ -115,11 +120,7 @@ object ETagAwareHttpClient {
        * for this request. the critical section is necessary because this method and applyImpl (above) chain together multiple
        * cache operations
        */
-      cache.criticalSection(this) {
-        cache.get(this).map(applyImpl).getOrElse {
-          cache.apply(this)
-        }
-      }
+      cache.fold(this, cacheHit = cacheHit, cacheMiss = rawGet(url, headers))
     }
   }
 

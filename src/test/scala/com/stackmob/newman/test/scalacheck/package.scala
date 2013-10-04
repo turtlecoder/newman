@@ -27,7 +27,6 @@ import HttpResponseCode._
 import org.apache.commons.codec.digest.DigestUtils
 import scala.concurrent.duration.Duration
 import scala.concurrent.Future
-import scalaz.Validation
 import com.stackmob.newman.test.caching.DummyHttpResponseCacher
 
 package object scalacheck {
@@ -160,14 +159,12 @@ package object scalacheck {
   }
 
   private[test] def genDummyHttpResponseCache(genOnApply: Gen[Future[HttpResponse]],
-                                              genOnGet: Gen[Option[Future[HttpResponse]]],
-                                              genOnRemove: Gen[Option[Future[HttpResponse]]]): Gen[DummyHttpResponseCacher] = {
+                                              genFoldBehavior: Gen[Either[Future[HttpResponse], Unit]]): Gen[DummyHttpResponseCacher] = {
     for {
       onApply <- genOnApply
-      onGet <- genOnGet
-      onRemove <- genOnRemove
+      foldBehavior <- genFoldBehavior
     } yield {
-      new DummyHttpResponseCacher(onApply = onApply, onGet = onGet, onRemove = onRemove)
+      new DummyHttpResponseCacher(onApply = onApply, foldBehavior = foldBehavior)
     }
   }
 

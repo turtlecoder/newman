@@ -26,8 +26,7 @@ import com.stackmob.newman.caching._
 import com.stackmob.newman.response._
 import com.stackmob.newman.test.caching._
 import scala.concurrent.Future
-import com.stackmob.newman.concurrent.{InMemoryAsyncMutex, ConcurrentHashMapAsyncMutexTable, SequentialExecutionContext}
-import com.stackmob.newman.request.HttpRequest
+import com.stackmob.newman.concurrent.SequentialExecutionContext
 import com.stackmob.newman.test.{DummyHttpClient, BaseContext}
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
@@ -64,7 +63,6 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       HttpResponse(HttpResponseCode.NotModified, Headers.empty, body)
     }
 
-    protected lazy val asyncMutexTable = ConcurrentHashMapAsyncMutexTable[HttpRequest](() => new InMemoryAsyncMutex)
     protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher)
 
     protected def rawClient: DummyHttpClient
@@ -73,7 +71,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithETag() extends Context {
 
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Some(responseWithETag), Some(responseWithETag))
+    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
 
     override protected val rawClient = new DummyHttpClient
 
@@ -82,36 +80,21 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       req.block()
       val urlCorrect = rawClient.getRequests.get(0)._1 must beEqualTo(url)
       val headersCorrect = rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers(INM, eTag))
-      val getRes = responseCacher.verifyGetCalls { list =>
-        val size = list.length must beEqualTo(1)
-        val elt = list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
-        size and elt
+      val foldRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
       }
 
       val applyRes = responseCacher.verifyApplyCalls { list =>
-        val first = list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
-        val second = list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
-        first and second
+        list must beEmpty
       }
 
-      val removeRes = responseCacher.verifyRemoveCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
-      }
-      urlCorrect and headersCorrect and getRes and applyRes and removeRes
+      urlCorrect and headersCorrect and foldRes and applyRes
     }
   }
 
   case class CachedResponseWithETagReturnsNotModified() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithNotModified)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Some(responseWithETag), Some(responseWithETag))
+    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
 
     def returnsCachedResponse = {
       val resp = client.get(url, Headers.empty).block()
@@ -121,7 +104,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithETagReturnsModified() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Some(responseWithETag), Some(responseWithETag))
+    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
 
     def returnsNewResponse = {
       val resp = client.get(url, Headers.empty).block()
@@ -131,98 +114,65 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithoutETag() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
-    override protected val responseCacher = new DummyHttpResponseCacher(onApply = responseWithoutETag,
-      onGet = Option.empty[Future[HttpResponse]],
-      onRemove = Some(responseWithoutETag))
+    override protected val responseCacher = new DummyHttpResponseCacher(onApply = responseWithoutETag, foldBehavior = Left(responseWithoutETag))
 
     def executesNormalRequest = {
       val req = client.get(url, Headers.empty)
       req.block()
       val applyCallRes = responseCacher.verifyApplyCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
+        list must beEmpty
       }
-      val getCallRes = responseCacher.verifyGetCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
+      val foldCallRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
       }
 
-      val removeCallRes = responseCacher.verifyRemoveCalls { list =>
-        list.length must beEqualTo(0)
-      }
-
-      applyCallRes and getCallRes and removeCallRes
+      applyCallRes and foldCallRes
     }
 
     def cachesNewResponse = {
       val req = client.get(url, Headers.empty)
       //wait for the request to finish
       req.block()
-      val getCallRes = responseCacher.verifyGetCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
-      }
+
       val applyCallRes = responseCacher.verifyApplyCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
+        list must beEmpty
       }
 
-      val removeCallRes = responseCacher.verifyRemoveCalls { list =>
-        list.length must beEqualTo(0)
+      val foldCallRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
       }
 
-      getCallRes and applyCallRes and removeCallRes
+      applyCallRes and foldCallRes
     }
   }
 
   case class NoCachedResponsePresent() extends Context {
     override protected val rawClient = new DummyHttpClient
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag,
-      Option.empty[Future[HttpResponse]],
-      Option.empty[Future[HttpResponse]])
+    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Right(()))
 
     def executesNormalRequest = {
       val req = client.get(url, Headers.empty)
       req.block()
-      val getRes = responseCacher.verifyGetCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
+      val foldRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
       }
       val applyRes = responseCacher.verifyApplyCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
+        list must beEmpty
       }
-      val removeRes = responseCacher.verifyRemoveCalls { list =>
-        list.length must beEqualTo(0)
-      }
-
-      getRes and applyRes and removeRes
+      foldRes and applyRes
     }
 
     def cachesNewResponse = {
       val req = client.get(url, Headers.empty)
       req.block()
-      val getRes = responseCacher.verifyGetCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
+      val foldRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
       }
       val applyRes = responseCacher.verifyApplyCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
-      }
-      val removeRes = responseCacher.verifyRemoveCalls { list =>
-        list.length must beEqualTo(0)
+        list must beEmpty
       }
 
-      getRes and applyRes and removeRes
+      foldRes and applyRes
     }
   }
 
@@ -230,26 +180,21 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     private val cacheException = new Exception("couldn't hit cache")
     private val cacheExceptionFuture = Future.failed[HttpResponse](cacheException)
     override protected val rawClient = new DummyHttpClient
-    override protected val responseCacher = new DummyHttpResponseCacher(cacheExceptionFuture, Some(cacheExceptionFuture), Some(cacheExceptionFuture))
+    override protected val responseCacher = new DummyHttpResponseCacher(cacheExceptionFuture, Left(cacheExceptionFuture))
 
     def executesNoRequest = {
       val req = client.get(url, Headers.empty)
       fromTryCatch(req.block())
 
-      val getRes = responseCacher.verifyGetCalls { list =>
-        list.headOption must beSome.like {
-          case r => r must beEqualTo(req)
-        }
+      val foldRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
       }
 
       val applyRes = responseCacher.verifyApplyCalls { list =>
         list.length must beEqualTo(0)
       }
 
-      val removeRes = responseCacher.verifyRemoveCalls { list =>
-        list.length must beEqualTo(0)
-      }
-      getRes and applyRes and removeRes
+      foldRes and applyRes
     }
   }
 }

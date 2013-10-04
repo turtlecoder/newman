@@ -19,34 +19,32 @@ package com.stackmob.newman.caching
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import scala.concurrent._
-import com.stackmob.newman.concurrent.{InMemoryAsyncMutex, ConcurrentHashMapAsyncMutexTable}
 
 trait HttpResponseCacher {
 
-  private lazy val cacheLineMutexes = new ConcurrentHashMapAsyncMutexTable[HttpRequest](() => new InMemoryAsyncMutex)
+  /**
+   * get the given request from the cache. execute cacheHit if it was found, or cacheMiss if not
+   * @param req the request to get
+   * @param cacheHit the function to execute if there was a cache hit.
+   *                 the cache will be replaced by the returned future.
+   * @param cacheMiss the function to execute if there was a cache miss.
+   *                  the cache will be replaced by the returned future.
+   * @return the response, wrapped in a future.
+   *         if there was a cache hit, the future will be completed when the future returned by cacheHit does.
+   *         if there was a cache miss, the future will be completed when the future returned by cacheMiss does.
+   */
+  def fold(req: HttpRequest,
+           cacheHit: Future[HttpResponse] => Future[HttpResponse],
+           cacheMiss: => Future[HttpResponse]): Future[HttpResponse]
 
   /**
-   * get the given request from the cache, or execute it
-   * @param req the request to get
-   * @return the response, wrapped in a future. the future will be completed when the request finishes
+   * get the response future from the cache, or execute the request,
+   * put its response future into the cache, and return it.
+   * @param req the request whose corresponding response to look for in the cache
+   * @return the response, wrapped in a future. the future will be completed when the request finishes,
+   *         regardless of whether it was cached
    */
   def apply(req: HttpRequest): Future[HttpResponse]
 
-  /**
-   * get the given request forom the cache
-   * @param req the request to get
-   * @return Some if the request exists in the cache, None otherwise
-   */
-  def get(req: HttpRequest): Option[Future[HttpResponse]]
 
-  /**
-   * remove the given request from the cache
-   * @param req the request to remove
-   * @return Some if the element existed, None otherwise
-   */
-  def remove(req: HttpRequest): Option[Future[HttpResponse]]
-
-  def criticalSection[T](req: HttpRequest)(fut: => Future[T]): Future[T] = {
-    cacheLineMutexes.apply(req)(fut)
-  }
 }
