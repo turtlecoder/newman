@@ -25,11 +25,14 @@ import java.net.URL
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import HttpResponseCode._
 import org.apache.commons.codec.digest.DigestUtils
+import scala.concurrent.duration.Duration
+import scala.concurrent.Future
+import com.stackmob.newman.test.caching.DummyHttpResponseCacher
 
 package object scalacheck {
-  lazy val genNonEmptyString: Gen[String] = Gen.listOf1(Gen.alphaChar).map(_.mkString)
+  private[test] lazy val genNonEmptyString: Gen[String] = Gen.listOf1(Gen.alphaChar).map(_.mkString)
 
-  private lazy val timeUnits = Seq[TimeUnit](TimeUnit.DAYS,
+  private[test] lazy val timeUnits = Seq[TimeUnit](TimeUnit.DAYS,
     TimeUnit.HOURS,
     TimeUnit.MICROSECONDS,
     TimeUnit.MILLISECONDS,
@@ -37,15 +40,17 @@ package object scalacheck {
     TimeUnit.NANOSECONDS,
     TimeUnit.SECONDS)
 
-  lazy val genTimeUnit: Gen[TimeUnit] = Gen.oneOf(timeUnits)
+  private[test] lazy val genTimeUnit: Gen[TimeUnit] = Gen.oneOf(timeUnits)
 
-  lazy val genPositiveMilliseconds: Gen[Milliseconds] = for {
-    magnitude <- Gen.posNum[Long]
-  } yield {
-    Milliseconds(magnitude)
+  private[test] lazy val genPositiveDuration: Gen[Duration] = {
+    for {
+      magnitude <- Gen.posNum[Long]
+    } yield {
+      Duration(magnitude, TimeUnit.MILLISECONDS)
+    }
   }
 
-  private lazy val httpResponseCodes = Seq[HttpResponseCode](Accepted,
+  private[test] lazy val httpResponseCodes = Seq[HttpResponseCode](Accepted,
     BadGateway,
     MethodNotAllowed,
     BadRequest,
@@ -87,55 +92,86 @@ package object scalacheck {
     HttpVersionNotSupported
   )
 
-  lazy val genHttpResponseCode: Gen[HttpResponseCode] = Gen.oneOf(httpResponseCodes)
+  private[test] lazy val genHttpResponseCode: Gen[HttpResponseCode] = Gen.oneOf(httpResponseCodes)
 
-  lazy val genHashCode: Gen[HashCode] = genNonEmptyString.map(DigestUtils.md5Hex(_))
+  private[test] lazy val genHashCode: Gen[HashCode] = genNonEmptyString.map(DigestUtils.md5Hex)
 
-  lazy val genRawBody: Gen[RawBody] = for {
+  private[test] lazy val genRawBody: Gen[RawBody] = for {
     str <- genNonEmptyString
   } yield {
     str.getBytes("UTF-8")
   }
 
-  lazy val genCachedResponseDelay = for {
-    ttl <- genPositiveMilliseconds
-    hashCode <- genHashCode
-  } yield {
-    CachedResponseDelay(ttl, hashCode)
-  }
-
-  lazy val genHeader: Gen[Header] = for {
+  private[test] lazy val genHeader: Gen[Header] = for {
     key <- genNonEmptyString
     value <- genNonEmptyString
   } yield {
     key -> value
   }
 
-  lazy val genHeaders: Gen[Headers] = for {
+  private[test] lazy val genHeaders: Gen[Headers] = for {
     headers <- Gen.listOf(genHeader)
   } yield {
     Headers(headers)
   }
 
-  lazy val genURL: Gen[URL] = for {
+  private[test] lazy val genURL: Gen[URL] = for {
     urlString <- genNonEmptyString
   } yield {
     new URL("http://%s.com".format(urlString))
   }
 
-  def genHttpRequest(client: HttpClient): Gen[HttpRequest] = for {
+  private[test] def genHttpRequest(client: HttpClient): Gen[HttpRequest] = for {
     url <- genURL
     headers <- genHeaders
   } yield {
     client.get(url, headers)
   }
 
-  lazy val genHttpResponse: Gen[HttpResponse] = for {
+  private[test] lazy val genHttpResponse: Gen[HttpResponse] = for {
     code <- genHttpResponseCode
     headers <- genHeaders
     body <- genRawBody
   } yield {
     new HttpResponse(code, headers, body)
+  }
+
+  private[test] def genSuccessFuture[T](gen: Gen[T]): Gen[Future[T]] = {
+    gen.map { t =>
+      Future.successful(t)
+    }
+  }
+
+  private[test] def genFailFuture[T](gen: Gen[Throwable]): Gen[Future[T]] = {
+    gen.map { t =>
+      Future.failed[T](t)
+    }
+  }
+
+  private[test] def genSomeOption[T](gen: Gen[T]): Gen[Option[T]] = {
+    gen.map { t =>
+      Some(t)
+    }
+  }
+
+  private[test] def genNoneOption[T]: Gen[Option[T]] = {
+    Gen.value[Option[T]](Option.empty[T])
+  }
+
+  private[test] def genDummyHttpResponseCache(genOnApply: Gen[Future[HttpResponse]],
+                                              genFoldBehavior: Gen[Either[Future[HttpResponse], Unit]]): Gen[DummyHttpResponseCacher] = {
+    for {
+      onApply <- genOnApply
+      foldBehavior <- genFoldBehavior
+    } yield {
+      new DummyHttpResponseCacher(onApply = onApply, foldBehavior = foldBehavior)
+    }
+  }
+
+  private[test] def genDummyHttpClient: Gen[DummyHttpClient] = for {
+    resp <- genHttpResponse
+  } yield {
+    new DummyHttpClient(Future.successful(resp))
   }
 
 }

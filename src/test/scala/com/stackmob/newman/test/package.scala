@@ -41,4 +41,14 @@ package object test {
     }
   }
 
+  private[test] implicit class RichList[T](l: List[T]) {
+    def get(i: Int): Option[T] = {
+      if(i >= 0 && i < l.length) {
+        Some(l.apply(i))
+      } else {
+        None
+      }
+    }
+  }
+
 }

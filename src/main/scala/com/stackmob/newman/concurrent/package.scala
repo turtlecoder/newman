@@ -18,6 +18,8 @@ package com.stackmob.newman
 
 import com.twitter.util.{Future => TwitterFuture}
 import scala.concurrent.{Future => ScalaFuture, Promise, ExecutionContext}
+import java.util.{Timer, TimerTask}
+import scala.concurrent.duration._
 
 package object concurrent {
 

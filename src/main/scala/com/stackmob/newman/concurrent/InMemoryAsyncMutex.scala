@@ -14,27 +14,23 @@
  * limitations under the License.
  */
 
-package com.stackmob.newman.caching
+package com.stackmob.newman.concurrent
+
+import scala.concurrent.Future
+import com.twitter.concurrent.{AsyncMutex => TwAsyncMutex}
 
 /**
- * a simple container for a milliseconds value
+ * an AsyncMutex backed by a {{{com.twitter.concurrent.AsyncMutex}}}
  */
-sealed trait Milliseconds {
-  def magnitude: Long
-}
-object Milliseconds {
-  /**
-   * create a new Milliseconds containing the current epoch time
-   * @return the new Milliseconds
-   */
-  def current: Milliseconds = apply(System.currentTimeMillis())
-
-  /**
-   * create a new Milliseconds
-   * @param l the number of milliseconds
-   * @return a Milliseconds object
-   */
-  def apply(l: Long): Milliseconds = new Milliseconds {
-    override lazy val magnitude: Long = l
+class InMemoryAsyncMutex extends AsyncMutex {
+  override def apply[T](fut: => Future[T]): Future[T] = {
+    val twMutex = new TwAsyncMutex
+    twMutex.acquire().toScalaFuture.flatMap { twPermit =>
+      val f = fut
+      f.onComplete { _ =>
+        twPermit.release()
+      }
+      f
+    }
   }
 }

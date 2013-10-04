@@ -69,11 +69,7 @@ trait HttpRequest {
     val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | RawBody.empty
     val bodyString = new String(bodyBytes, Constants.UTF8Charset)
     //requestType-url-headers-body
-    val str =
-      requestType.stringVal +
-      url.toString +
-      headersString +
-      bodyString
+    val str = s"${requestType.stringVal}${url.toString}$headersString$bodyString"
     Hex.encodeHexString(md5.digest(str.getBytes(Constants.UTF8Charset)))
   }
 

@@ -17,31 +17,29 @@
 package com.stackmob.newman
 
 import com.stackmob.newman.request._
-import com.stackmob.newman.caching._
 import scalaz._
 import Scalaz._
-import scalaz.NonEmptyList._
 import com.stackmob.newman.caching.HttpResponseCacher
 import response.HttpResponse
-import org.apache.http.HttpHeaders
 import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
+import ETagAwareHttpClient._
+import scalaz.NonEmptyList._
+import org.apache.http.HttpHeaders
 
+/**
+ * an HttpClient that respects ETag headers and caches {{{HttpResponse}}}s appropriately
+ * @param httpClient the underlying HttpClient to do network requests when appropriate
+ * @param httpResponseCacher the cacher to cache {{{HttpResponse}}}s when appropriate
+ * @param ctx the execution context to handle future scheduling for acquiring and releasing cache line access
+ */
 class ETagAwareHttpClient(httpClient: HttpClient,
-                          httpResponseCacher: HttpResponseCacher,
-                          t: Milliseconds)
-                         (implicit c: ExecutionContext) extends HttpClient {
-  import ETagAwareHttpClient._
+                          httpResponseCacher: HttpResponseCacher)
+                         (implicit ctx: ExecutionContext) extends HttpClient {
 
-  override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
-    override lazy val ctx = c
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doGetRequest: Future[HttpResponse] = httpClient.get(u, h).apply
-    override protected def doHeadRequest(headers: Headers): Future[HttpResponse] = httpClient.head(u, headers).apply
-    override val url = u
-    override val headers = h
-  }
+  override def get(u: URL, h: Headers): GetRequest = new ETagGetRequest(u, h, httpResponseCacher)({ (url: URL, headers: Headers) =>
+    httpClient.get(url, headers).apply
+  })(ctx)
 
   override def post(u: URL, h: Headers, b: RawBody): PostRequest = PostRequest(u, h, b) {
     httpClient.post(u, h, b).apply
@@ -61,55 +59,69 @@ class ETagAwareHttpClient(httpClient: HttpClient,
 }
 
 object ETagAwareHttpClient {
-  trait CachingMixin extends HttpRequest { this: GetRequest =>
-    protected implicit def ctx: ExecutionContext
-    //the TTL for cached responses until they're purged and we go back to the server with no modified header
-    protected def ttl: Milliseconds
-    protected def cache: HttpResponseCacher
-    protected def doGetRequest: Future[HttpResponse]
-    protected def doHeadRequest(headers: Headers): Future[HttpResponse]
-
-    private def addIfNoneMatch(h: Headers, eTag: String): Headers = h.map { headerList: HeaderList =>
+  /**
+   * add an If-None-Match header to the given headers, using the given eTag
+   * @param eTag the eTag to set in the new If-None-Match headers
+   * @return the new headers
+   */
+  private[ETagAwareHttpClient] def addIfNoneMatch(existingHeaders: Headers, eTag: String): Headers = {
+    existingHeaders.map { headerList: HeaderList =>
       nel(HttpHeaders.IF_NONE_MATCH -> eTag, headerList.list.filterNot(_._1 === HttpHeaders.IF_NONE_MATCH))
-    } orElse { Headers(HttpHeaders.IF_NONE_MATCH -> eTag) }
-
-    private def cachedAndETagPresent(cached: HttpResponse,
-                                     eTag: String,
-                                     ttl: Milliseconds): Future[HttpResponse] = {
-      val newHeaderList = addIfNoneMatch(this.headers, eTag)
-      doHeadRequest(newHeaderList).flatMap { response: HttpResponse =>
-        if(response.notModified) {
-          //not modified returned - so return cached response
-          Future.successful(cached)
-        } else {
-          doGetRequest.map { response: HttpResponse =>
-            cache.set(this, response, ttl)
-            response
-          }
-        }
-      }
+    }.orElse {
+      Headers(HttpHeaders.IF_NONE_MATCH -> eTag)
     }
+  }
 
-    private def cachedAndETagNotPresent: Future[HttpResponse] = notCached(ttl)
-
-    private def notCached(ttl: Milliseconds): Future[HttpResponse] = {
-      doGetRequest.map { response: HttpResponse =>
-        //TODO: respect cache-control headers
-        cache.set(this, response, ttl)
-        response
+  /**
+   * a {{{GetRequest}}} that honors ETags. this function must be called mutually exclusively
+   * @param url the URL to get
+   * @param headers the headers to send with the request
+   * @param cache the cache to use for retrieving and setting responses
+   * @param rawGet a function to do a GET request directly against the server, with no cache interaction. used to execute If-None-Match requests
+   */
+  private[ETagAwareHttpClient] class ETagGetRequest(override val url: URL,
+                                                    override val headers: Headers,
+                                                    cache: HttpResponseCacher)
+                                                   (rawGet: (URL, Headers) => Future[HttpResponse])
+                                                   (implicit ctx: ExecutionContext) extends GetRequest {
+    /**
+     * check the eTag in a cached HttpResponse.
+     * If it exists, then execute a request against the server with an If-None-Match.
+     * If it doesn't exist, then execute a request against the server to fetch the body.
+     * @param cachedResponseFuture the cached response that we'll check
+     * @return a Future containing the most up to date HttpResponse, either from the server or the cache if it's fresh
+     */
+    private def cacheHit(cachedResponseFuture: Future[HttpResponse]): Future[HttpResponse] = {
+      cachedResponseFuture.flatMap { resp =>
+        resp.eTag.map { eTag =>
+        //the response was cached and has an eTag so check it against the server
+          val newHeaderList = addIfNoneMatch(resp.headers, eTag)
+          rawGet(url, newHeaderList).flatMap { response: HttpResponse =>
+            if(response.notModified) {
+              //the response was not modified, so return the cached response
+              Future.successful(resp)
+            } else {
+              //the response may have been modified, so execute it directly against the server
+              rawGet(url, headers)
+            }
+          }
+        } | {
+          //the response was cached and is missing an eTag, so execute it directly against the server
+          rawGet(url, headers)
+        }
       }
     }
 
     override def apply: Future[HttpResponse] = {
-      cache.get(this).map { resp: HttpResponse =>
-        resp.eTag some { eTag: String =>
-          cachedAndETagPresent(resp, eTag, ttl)
-        } none {
-          cachedAndETagNotPresent
-        }
-      } | {
-        notCached(ttl)
-      }
+      /**
+       * this method uses an AsyncMutex to protect all the cache accesses for this {{{GetRequest}}}.
+       * the general algorithm is check the cache, check the etag of the cached result, rerun the request if necessary, and return.
+       * if it's not in the cache, just run the request as normal. all of the preceding steps are done inside the critical section
+       * for this request. the critical section is necessary because this method and applyImpl (above) chain together multiple
+       * cache operations
+       */
+      cache.fold(this, cacheHit = cacheHit, cacheMiss = rawGet(url, headers))
     }
   }
+
 }

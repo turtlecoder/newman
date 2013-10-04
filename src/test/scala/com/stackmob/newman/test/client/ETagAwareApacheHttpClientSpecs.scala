@@ -17,21 +17,16 @@
 package com.stackmob.newman.test
 package client
 
-import scalaz._
 import scalaz.Validation._
-import Scalaz._
 import org.specs2.Specification
 import org.apache.http.HttpHeaders
 import java.net.URL
 import com.stackmob.newman._
 import com.stackmob.newman.caching._
 import com.stackmob.newman.response._
-import com.stackmob.newman.request._
 import com.stackmob.newman.test.caching._
-import collection.JavaConverters._
-import org.specs2.matcher.MatchResult
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.stackmob.newman.concurrent.SequentialExecutionContext
 import com.stackmob.newman.test.{DummyHttpClient, BaseContext}
 
 class ETagAwareApacheHttpClientSpecs extends Specification { def is =
@@ -40,7 +35,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
   ETagAwareApacheHttpClient does the equivalent of ApacheHttpClient, except it interacts with an HttpResponseCacher
   in order to execute If-None-Match requests using an ETag (if one was present in a previously cached HTTPResponse)
   """                                                                                                                   ^ end ^
-  "CachingMixin should"                                                                                                 ^
+  "The Client Should"                                                                                                   ^
     "execute an If-None-Match request if a cached response was present with an ETag"                                    ! CachedResponseWithETag().executesINMRequest ^
     "return the cached response if an INM request was executed and Not Modified was returned"                           ! CachedResponseWithETagReturnsNotModified().returnsCachedResponse ^
     "return the new response if an INM request was executed and something other than Not Modified was returned"         ! CachedResponseWithETagReturnsModified().returnsNewResponse ^
@@ -68,37 +63,38 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
       HttpResponse(HttpResponseCode.NotModified, Headers.empty, body)
     }
 
-    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher, Milliseconds.current)
+    protected lazy val client = new ETagAwareHttpClient(rawClient, responseCacher)
 
     protected def rawClient: DummyHttpClient
     protected def responseCacher: HttpResponseCacher
-
-    def foldResponseCacherCalls(c: DummyHttpResponseCacher,
-                                getFn: List[HttpRequest] => MatchResult[_],
-                                setFn: List[(HttpRequest, HttpResponse)] => MatchResult[_]): MatchResult[_] = {
-      val existsRes = c.existsCalls.size must beEqualTo(0)
-      val getRes = getFn(c.getCalls.asScala.toList)
-      val setRes = setFn(c.setCalls.asScala.toList)
-      existsRes and getRes and setRes
-    }
   }
 
   case class CachedResponseWithETag() extends Context {
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.block().some, true)
+
+    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
 
     override protected val rawClient = new DummyHttpClient
 
     def executesINMRequest = {
-      client.get(url, Headers.empty).block()
-      val urlCorrect = rawClient.headRequests.get(0)._1 must beEqualTo(url)
-      val headersCorrect = rawClient.headRequests.get(0)._2 must haveTheSameHeadersAs(Headers(INM))
-      urlCorrect and headersCorrect
+      val req = client.get(url, Headers.empty)
+      req.block()
+      val urlCorrect = rawClient.getRequests.get(0)._1 must beEqualTo(url)
+      val headersCorrect = rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers(INM, eTag))
+      val foldRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
+      }
+
+      val applyRes = responseCacher.verifyApplyCalls { list =>
+        list must beEmpty
+      }
+
+      urlCorrect and headersCorrect and foldRes and applyRes
     }
   }
 
   case class CachedResponseWithETagReturnsNotModified() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithNotModified)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.block().some, true)
+    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
 
     def returnsCachedResponse = {
       val resp = client.get(url, Headers.empty).block()
@@ -108,7 +104,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithETagReturnsModified() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag.block().some, true)
+    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
 
     def returnsNewResponse = {
       val resp = client.get(url, Headers.empty).block()
@@ -118,64 +114,87 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithoutETag() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithoutETag.block().some, true)
+    override protected val responseCacher = new DummyHttpResponseCacher(onApply = responseWithoutETag, foldBehavior = Left(responseWithoutETag))
 
     def executesNormalRequest = {
-      client.get(url, Headers.empty).block()
-      (rawClient.getRequests.get(0)._1 must beEqualTo(url)) and
-      (rawClient.getRequests.get(0)._2 must haveTheSameHeadersAs(Headers.empty))
+      val req = client.get(url, Headers.empty)
+      req.block()
+      val applyCallRes = responseCacher.verifyApplyCalls { list =>
+        list must beEmpty
+      }
+      val foldCallRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
+      }
+
+      applyCallRes and foldCallRes
     }
 
     def cachesNewResponse = {
       val req = client.get(url, Headers.empty)
       //wait for the request to finish
       req.block()
-      foldResponseCacherCalls(responseCacher,
-        { getCalls: List[HttpRequest] =>
-          val firstCall = getCalls(0)
-          (getCalls.length must beEqualTo(1)) and
-          (firstCall must beEqualTo(req))
-        }, { setCalls: List[(HttpRequest, HttpResponse)] =>
-          val firstCall = setCalls(0)
-          (setCalls.length must beEqualTo(1)) and
-          (firstCall must beEqualTo(req -> responseWithETag.block()))
-        }
-      )
+
+      val applyCallRes = responseCacher.verifyApplyCalls { list =>
+        list must beEmpty
+      }
+
+      val foldCallRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
+      }
+
+      applyCallRes and foldCallRes
     }
   }
 
   case class NoCachedResponsePresent() extends Context {
     override protected val rawClient = new DummyHttpClient
-    override protected val responseCacher = new DummyHttpResponseCacher(Option.empty[HttpResponse], true)
+    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Right(()))
 
     def executesNormalRequest = {
-      client.get(url, Headers.empty).block()
-      val getRequest = rawClient.getRequests.get(0)
-      (getRequest._1 must beEqualTo(url)) and
-      (getRequest._2 must haveTheSameHeadersAs(DummyHttpClient.CannedResponse.headers))
+      val req = client.get(url, Headers.empty)
+      req.block()
+      val foldRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
+      }
+      val applyRes = responseCacher.verifyApplyCalls { list =>
+        list must beEmpty
+      }
+      foldRes and applyRes
     }
 
     def cachesNewResponse = {
       val req = client.get(url, Headers.empty)
       req.block()
-      foldResponseCacherCalls(responseCacher, { getCalls: List[HttpRequest] =>
-        (getCalls.length must beEqualTo(1)) and
-        (getCalls(0) must beEqualTo(req))
-      }, { setCalls: List[(HttpRequest, HttpResponse)] =>
-        (setCalls.length must beEqualTo(1)) and
-        (setCalls(0) must beEqualTo(req -> DummyHttpClient.CannedResponse))
-      })
+      val foldRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
+      }
+      val applyRes = responseCacher.verifyApplyCalls { list =>
+        list must beEmpty
+      }
+
+      foldRes and applyRes
     }
   }
 
   case class CacheGetFailed() extends Context {
     private val cacheException = new Exception("couldn't hit cache")
+    private val cacheExceptionFuture = Future.failed[HttpResponse](cacheException)
     override protected val rawClient = new DummyHttpClient
-    override protected val responseCacher = new DummyHttpResponseCacher((throw cacheException): Option[HttpResponse], (throw cacheException): Boolean)
+    override protected val responseCacher = new DummyHttpResponseCacher(cacheExceptionFuture, Left(cacheExceptionFuture))
 
     def executesNoRequest = {
-      fromTryCatch(client.get(url, Headers.empty).block())
-      rawClient.totalNumRequestsMade must beEqualTo(0)
+      val req = client.get(url, Headers.empty)
+      fromTryCatch(req.block())
+
+      val foldRes = responseCacher.verifyFoldCalls { list =>
+        list must haveTheSameElementsAs(req :: Nil)
+      }
+
+      val applyRes = responseCacher.verifyApplyCalls { list =>
+        list.length must beEqualTo(0)
+      }
+
+      foldRes and applyRes
     }
   }
 }

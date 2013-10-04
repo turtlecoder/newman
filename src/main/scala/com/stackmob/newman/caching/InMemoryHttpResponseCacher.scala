@@ -17,64 +17,49 @@
 package com.stackmob.newman
 package caching
 
-import java.util.concurrent._
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
-import scalaz.Validation._
+import com.stackmob.newman.concurrent.{InMemoryAsyncMutex, AsyncMutex}
+import spray.caching._
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
 
-sealed case class CachedResponseDelay(ttl: Milliseconds, hash: HashCode) extends Delayed {
-  private val insertTime = System.currentTimeMillis()
-  def getDelay(unit: TimeUnit): Long = {
-    unit.convert((insertTime - System.currentTimeMillis() + ttl.magnitude), TimeUnit.MILLISECONDS)
-  }
+/**
+ * an {{{HttpResponseCacher}}} that does caching in-memory, and evicts based on Least-Recently-Used
+ * @param maxCapacity the maximum capacity of the cache
+ * @param initialCapacity the starting capacity of the cache. must be < {{{maxCapacity}}}
+ * @param timeToLive the maximum time an element is allowed to live in the cache
+ * @param timeToIdle the maximum time an element is allowed to live in the cache untouched
+ * @param foldingMutex the AsyncMutex used to asynchronously enclose the fold operation in a critical section
+ * @param ctx the execution context used to set elements into the cache
+ */
+class InMemoryHttpResponseCacher(maxCapacity: Int,
+                                 initialCapacity: Int,
+                                 timeToLive: Duration,
+                                 timeToIdle: Duration,
+                                 foldingMutex: AsyncMutex = new InMemoryAsyncMutex)
+                                (implicit ctx: ExecutionContext) extends HttpResponseCacher {
 
-  def compareTo(other: Delayed): Int = {
-    val otherDelay: Long = other.getDelay(TimeUnit.MILLISECONDS)
-    val thisDelay: Long = this.getDelay(TimeUnit.MILLISECONDS)
-    thisDelay.compareTo(otherDelay)
-  }
-}
+  private val cache = LruCache.apply[HttpResponse](maxCapacity = maxCapacity,
+    initialCapacity = initialCapacity,
+    timeToLive = timeToLive,
+    timeToIdle = timeToIdle)
 
-case class DaemonThreadFactory() extends ThreadFactory {
-  def newThread(r: Runnable): Thread = {
-    val thread = new Thread(r)
-    thread.setDaemon(true)
-    thread
-  }
-}
-
-class InMemoryHttpResponseCacher extends HttpResponseCacher {
-  Executors.newSingleThreadExecutor(DaemonThreadFactory()).submit(delayQueueRunnable)
-
-  private lazy val cache = new ConcurrentHashMap[HashCode, HttpResponse]()
-  private lazy val delayQueue = new DelayQueue[CachedResponseDelay]()
-
-  private lazy val delayQueueRunnable = new Runnable {
-    def run() {
-      while(true) {
-        fromTryCatch {
-          val hash = delayQueue.take().hash
-          cache.remove(hash)
-        }
+  override def fold(req: HttpRequest,
+                    cacheHit: Future[HttpResponse] => Future[HttpResponse],
+                    cacheMiss: => Future[HttpResponse]): Future[HttpResponse] = {
+    foldingMutex.apply {
+      cache.get(req.hash).map { respFuture =>
+        val fut = cacheHit(respFuture)
+        cache.remove(req.hash)
+        cache.apply(req.hash)(fut)
+      }.getOrElse {
+        cacheMiss
       }
     }
   }
 
-  override def get(req: HttpRequest): Option[HttpResponse] = {
-    Option(cache.get(req.hash))
-  }
-
-  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds) {
-    if(ttl.magnitude <= 0) {
-      ()
-    } else {
-      delayQueue.add(CachedResponseDelay(ttl, req.hash))
-      cache.put(req.hash, resp)
-      ()
-    }
-  }
-
-  override def exists(req: HttpRequest): Boolean = {
-    cache.containsKey(req.hash)
+  override def apply(req: HttpRequest): Future[HttpResponse] = {
+    cache.apply(req.hash)(req.apply)
   }
 }

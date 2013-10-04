@@ -18,29 +18,33 @@ package com.stackmob.newman.caching
 
 import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
+import scala.concurrent._
 
 trait HttpResponseCacher {
-  /**
-   * possibly get a response for the given request
-   * @param req the request
-   * @return an IO representing the response, or none if none exists
-   */
-  def get(req: HttpRequest): Option[HttpResponse]
 
   /**
-   * set a response for the given request, for a TTL
-   * @param req the request
-   * @param resp the response for the given request
-   * @param ttl the time to live for the given request/response pair
-   * @return the IO representing the set action
+   * get the given request from the cache. execute cacheHit if it was found, or cacheMiss if not
+   * @param req the request to get
+   * @param cacheHit the function to execute if there was a cache hit.
+   *                 the cache will be replaced by the returned future.
+   * @param cacheMiss the function to execute if there was a cache miss.
+   *                  the cache will be replaced by the returned future.
+   * @return the response, wrapped in a future.
+   *         if there was a cache hit, the future will be completed when the future returned by cacheHit does.
+   *         if there was a cache miss, the future will be completed when the future returned by cacheMiss does.
    */
-  def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds): Unit
+  def fold(req: HttpRequest,
+           cacheHit: Future[HttpResponse] => Future[HttpResponse],
+           cacheMiss: => Future[HttpResponse]): Future[HttpResponse]
 
   /**
-   * determine whether a response for the given request exists
-   * @param req the request
-   * @return the action to determine existence. will contain true if it does, false otherwise.
-   *         note that if the resultant IO is true, a subsequent get call may still not return a response
+   * get the response future from the cache, or execute the request,
+   * put its response future into the cache, and return it.
+   * @param req the request whose corresponding response to look for in the cache
+   * @return the response, wrapped in a future. the future will be completed when the request finishes,
+   *         regardless of whether it was cached
    */
-  def exists(req: HttpRequest): Boolean
+  def apply(req: HttpRequest): Future[HttpResponse]
+
+
 }

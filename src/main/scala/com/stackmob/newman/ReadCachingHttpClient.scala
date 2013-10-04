@@ -16,30 +16,15 @@
 
 package com.stackmob.newman
 
-import scalaz.Scalaz._
 import caching._
 import request._
-import response.HttpResponse
 import java.net.URL
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 
 class ReadCachingHttpClient(httpClient: HttpClient,
-                            httpResponseCacher: HttpResponseCacher,
-                            t: Milliseconds)
-                           (implicit c: ExecutionContext) extends HttpClient {
-  import ReadCachingHttpClient._
+                            httpResponseCacher: HttpResponseCacher) extends HttpClient {
 
-  override def get(u: URL, h: Headers): GetRequest = new GetRequest with CachingMixin {
-    override protected lazy val ctx = c
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers): Future[HttpResponse] = {
-      httpClient.get(u, h).apply
-    }
-    override val url = u
-    override val headers = h
-  }
+  import ReadCachingHttpClient._
+  override def get(u: URL, h: Headers): GetRequest = new ReadCachingGetRequest(u, h, httpResponseCacher)
 
   override def post(u: URL, h: Headers, b: RawBody): PostRequest = PostRequest(u, h, b) {
     httpClient.post(u, h, b).apply
@@ -53,34 +38,23 @@ class ReadCachingHttpClient(httpClient: HttpClient,
     httpClient.delete(u, h).apply
   }
 
-  override def head(u: URL, h: Headers): HeadRequest = new HeadRequest with CachingMixin {
-    override protected lazy val ctx = c
-    override protected lazy val ttl = t
-    override protected val cache = httpResponseCacher
-    override protected def doHttpRequest(h: Headers): Future[HttpResponse] = {
-      httpClient.head(u, h).apply
-    }
-    override val url = u
-    override val headers = h
-  }
+  override def head(u: URL, h: Headers): HeadRequest = new ReadCachingHeadRequest(u, h, httpResponseCacher)
 }
 
 object ReadCachingHttpClient {
-  trait CachingMixin { this: HttpRequest =>
-    protected implicit def ctx: ExecutionContext
-    protected def ttl: Milliseconds
-    protected def cache: HttpResponseCacher
-    protected def doHttpRequest(headers: Headers): Future[HttpResponse]
+  private[ReadCachingHttpClient] class ReadCachingGetRequest(override val url: URL,
+                                                             override val headers: Headers,
+                                                             cacher: HttpResponseCacher) extends GetRequest {
+    override def apply = {
+      cacher.apply(this)
+    }
+  }
 
-    override def apply: Future[HttpResponse] = {
-      cache.get(this).map { resp =>
-        Future.successful(resp)
-      } | {
-        doHttpRequest(headers).map { resp =>
-          cache.set(this, resp, ttl)
-          resp
-        }
-      }
+  private[ReadCachingHttpClient] class ReadCachingHeadRequest(override val url: URL,
+                                                              override val headers: Headers,
+                                                              cacher: HttpResponseCacher) extends HeadRequest {
+    override def apply = {
+      cacher.apply(this)
     }
   }
 }

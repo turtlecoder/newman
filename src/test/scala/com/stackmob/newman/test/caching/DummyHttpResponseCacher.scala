@@ -20,29 +20,45 @@ import com.stackmob.newman.response.HttpResponse
 import com.stackmob.newman.request.HttpRequest
 import java.util.concurrent.CopyOnWriteArrayList
 import com.stackmob.newman.caching._
+import scala.concurrent.Future
+import org.specs2.matcher.MatchResult
+import scala.collection.JavaConverters._
 
-class DummyHttpResponseCacher(onGet: => Option[HttpResponse],
-                              onExists: => Boolean) extends HttpResponseCacher {
+/**
+ * a HttpResponseCacher for testing
+ * @param onApply the result to return from the apply method
+ * @param foldBehavior whether to execute the cacheHit or cacheMiss parameters passed to the fold method.
+ *                     pass Left(responseFuture) to execute cacheHit(responseFuture),
+ *                     and pass Right(()) to execute cacheMiss
+ */
+class DummyHttpResponseCacher(val onApply: Future[HttpResponse],
+                              val foldBehavior: Either[Future[HttpResponse], Unit]) extends HttpResponseCacher {
 
-  def cannedGet = onGet
-  def cannedExists = onExists
+  val foldCalls = new CopyOnWriteArrayList[HttpRequest]()
+  val applyCalls = new CopyOnWriteArrayList[HttpRequest]()
 
-  val getCalls = new CopyOnWriteArrayList[HttpRequest]()
-  val setCalls = new CopyOnWriteArrayList[(HttpRequest, HttpResponse)]()
-  val existsCalls = new CopyOnWriteArrayList[HttpRequest]()
-  def totalNumCalls = getCalls.size() + setCalls.size() + existsCalls.size()
+  def totalNumCalls = applyCalls.size() + foldCalls.size()
 
-  override def get(req: HttpRequest): Option[HttpResponse] = {
-    getCalls.add(req)
-    onGet
+  override def fold(req: HttpRequest,
+                    cacheHit: Future[HttpResponse] => Future[HttpResponse],
+                    cacheMiss: => Future[HttpResponse]): Future[HttpResponse] = {
+    foldCalls.add(req)
+    foldBehavior match {
+      case Left(respFuture) => cacheHit(respFuture)
+      case Right(_) => cacheMiss
+    }
   }
 
-  override def set(req: HttpRequest, resp: HttpResponse, ttl: Milliseconds) {
-    setCalls.add(req -> resp)
+  override def apply(req: HttpRequest): Future[HttpResponse] = {
+    applyCalls.add(req)
+    onApply
   }
 
-  override def exists(req: HttpRequest): Boolean = {
-    existsCalls.add(req)
-    onExists
+  def verifyApplyCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
+    fn(applyCalls.asScala.toList)
+  }
+
+  def verifyFoldCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {
+    fn(foldCalls.asScala.toList)
   }
 }
