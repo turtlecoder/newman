@@ -66,6 +66,15 @@ package object dsl extends URLBuilderDSL with RequestBuilderDSL with ResponseHan
   }
 
   /**
+   * converts a {{{List[String]}}} to a {{{Path}}}
+   * @param l the list of path elements
+   * @return the converted {{{Path}}}
+   */
+  implicit def listToPath(l: List[String]): Path = {
+    new Path(l)
+  }
+
+  /**
    * converts a {{{Builder}}} to the {{{HttpRequest}}} it represents
    * @param t the {{{Builder}}} to convert
    * @return the resultant {{{HttpRequest}}}
