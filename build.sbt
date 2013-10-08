@@ -29,7 +29,7 @@ libraryDependencies ++= {
   val liftJsonVersion = "2.5.1"
   Seq(
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
-    "org.apache.httpcomponents" % "httpclient" % httpClientVersion,
+    "org.apache.httpcomponents" % "httpclient" % httpClientVersion exclude("org.apache.httpcomponents", "httpcore"),
     "io.spray" % "spray-client" % "1.2-20130822",
     "io.spray" % "spray-caching" % "1.2-20130822",
     "com.typesafe.akka" %% "akka-actor" % "2.2.0",
