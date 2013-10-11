@@ -136,6 +136,12 @@ package object scalacheck {
     new HttpResponse(code, headers, body)
   }
 
+  private[test] def genEitherSuccessFuture[T](gen: Gen[T]): Gen[Either[Future[T], Unit]] = {
+    gen.map { t =>
+      Left(Future.successful(t))
+    }
+  }
+
   private[test] def genSuccessFuture[T](gen: Gen[T]): Gen[Future[T]] = {
     gen.map { t =>
       Future.successful(t)
@@ -158,13 +164,12 @@ package object scalacheck {
     Gen.value[Option[T]](Option.empty[T])
   }
 
-  private[test] def genDummyHttpResponseCache(genOnApply: Gen[Future[HttpResponse]],
-                                              genFoldBehavior: Gen[Either[Future[HttpResponse], Unit]]): Gen[DummyHttpResponseCacher] = {
+  private[test] def genDummyHttpResponseCache(genApplyBehavior: Gen[Either[Future[HttpResponse], Unit]], genFoldBehavior: Gen[Either[Future[HttpResponse], Unit]]): Gen[DummyHttpResponseCacher] = {
     for {
-      onApply <- genOnApply
+      applyBehavior <- genApplyBehavior
       foldBehavior <- genFoldBehavior
     } yield {
-      new DummyHttpResponseCacher(onApply = onApply, foldBehavior = foldBehavior)
+      new DummyHttpResponseCacher(applyBehavior = applyBehavior, foldBehavior = foldBehavior)
     }
   }
 

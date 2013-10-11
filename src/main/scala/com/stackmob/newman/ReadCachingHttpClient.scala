@@ -19,12 +19,14 @@ package com.stackmob.newman
 import caching._
 import request._
 import java.net.URL
+import response.HttpResponse
+import scala.concurrent.Future
 
 class ReadCachingHttpClient(httpClient: HttpClient,
                             httpResponseCacher: HttpResponseCacher) extends HttpClient {
 
   import ReadCachingHttpClient._
-  override def get(u: URL, h: Headers): GetRequest = new ReadCachingGetRequest(u, h, httpResponseCacher)
+  override def get(u: URL, h: Headers): GetRequest = new ReadCachingGetRequest(u, h, httpResponseCacher)(httpClient.get(u, h).apply)
 
   override def post(u: URL, h: Headers, b: RawBody): PostRequest = PostRequest(u, h, b) {
     httpClient.post(u, h, b).apply
@@ -38,23 +40,23 @@ class ReadCachingHttpClient(httpClient: HttpClient,
     httpClient.delete(u, h).apply
   }
 
-  override def head(u: URL, h: Headers): HeadRequest = new ReadCachingHeadRequest(u, h, httpResponseCacher)
+  override def head(u: URL, h: Headers): HeadRequest = new ReadCachingHeadRequest(u, h, httpResponseCacher)(httpClient.head(u, h).apply)
 }
 
 object ReadCachingHttpClient {
   private[ReadCachingHttpClient] class ReadCachingGetRequest(override val url: URL,
                                                              override val headers: Headers,
-                                                             cacher: HttpResponseCacher) extends GetRequest {
+                                                             cacher: HttpResponseCacher)(async: => Future[HttpResponse]) extends GetRequest {
     override def apply = {
-      cacher.apply(this)
+      cacher.apply(this)(async)
     }
   }
 
   private[ReadCachingHttpClient] class ReadCachingHeadRequest(override val url: URL,
                                                               override val headers: Headers,
-                                                              cacher: HttpResponseCacher) extends HeadRequest {
+                                                              cacher: HttpResponseCacher)(async: => Future[HttpResponse]) extends HeadRequest {
     override def apply = {
-      cacher.apply(this)
+      cacher.apply(this)(async)
     }
   }
 }
