@@ -26,12 +26,14 @@ import scala.collection.JavaConverters._
 
 /**
  * a HttpResponseCacher for testing
- * @param onApply the result to return from the apply method
+ * @param applyBehavior the result to return from the apply method.
+ *                      pass Left(responseFuture) to trigger cacheHit behavior
+ *                      and pass Right(()) to trigger cacheMiss behavior
  * @param foldBehavior whether to execute the cacheHit or cacheMiss parameters passed to the fold method.
  *                     pass Left(responseFuture) to execute cacheHit(responseFuture),
  *                     and pass Right(()) to execute cacheMiss
  */
-class DummyHttpResponseCacher(val onApply: Future[HttpResponse],
+class DummyHttpResponseCacher(val applyBehavior: Either[Future[HttpResponse], Unit],
                               val foldBehavior: Either[Future[HttpResponse], Unit]) extends HttpResponseCacher {
 
   val foldCalls = new CopyOnWriteArrayList[HttpRequest]()
@@ -49,9 +51,12 @@ class DummyHttpResponseCacher(val onApply: Future[HttpResponse],
     }
   }
 
-  override def apply(req: HttpRequest): Future[HttpResponse] = {
+  override def apply(req: HttpRequest)(async: => Future[HttpResponse]): Future[HttpResponse] = {
     applyCalls.add(req)
-    onApply
+    applyBehavior match {
+      case Left(respFuture) => respFuture // emulate cache hit
+      case Right(_) => async // emulate cache miss => default to async/client behavior
+    }
   }
 
   def verifyApplyCalls(fn: List[HttpRequest] => MatchResult[_]): MatchResult[_] = {

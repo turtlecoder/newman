@@ -27,14 +27,14 @@ import Prop._
 import java.net.URL
 import com.stackmob.newman._
 import com.stackmob.newman.request.HttpRequestWithoutBody
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { def is =
   "ReadCachingDummyHttpClientSpecs".title                                                                               ^ end ^
   "CachingDummyHttpClient is an HttpClient that caches responses for some defined TTL"                                  ^ end ^
-  "get should call apply regardless if there was a cache hit or not"                                                    ! getCallsApply ^ end ^
-  "head should call apply regardless if there was a cache hit or not"                                                   ! headCallsApply ^ end ^
+  "GET cache hit should not call Client"                                                                                ! getCallsApplyCacheHit ^ end ^
+  "HEAD cache hit should not call Client"                                                                               ! headCallsApplyCacheHit ^ end ^
+  "GET cache miss should call Client"                                                                                   ! getCallsApplyCacheMiss ^ end ^
+  "HEAD cache miss should call Client"                                                                                  ! headCallsApplyCacheMiss ^ end ^
   "POST, PUT, DELETE should not touch the cache"                                                                        ! postPutDeleteIgnoreCache ^ end ^
   end
 
@@ -56,8 +56,8 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
     getReqs and postReqs and putReqs and deleteReqs and headReqs
   }
 
-  private def verifyCallsApply[T <: HttpRequestWithoutBody](fn: (ReadCachingHttpClient, URL, Headers) => T) = {
-    val genOnApply = genSuccessFuture(genHttpResponse)
+  private def verifyCallsApplyCacheHit[T <: HttpRequestWithoutBody](fn: (ReadCachingHttpClient, URL, Headers) => T) = {
+    val genOnApply = genEitherSuccessFuture(genHttpResponse)
     forAll(genURL,
       genHeaders,
       genDummyHttpClient,
@@ -65,32 +65,60 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
 
       val client = new ReadCachingHttpClient(dummyClient, dummyCache)
 
-      val req = fn(client, url, headers)
-      val resp = req.apply.block()
-      //the response should match what's in the cache, not what's in the underlying client
-      val respMatches = dummyCache.onApply.block() must beEqualTo(resp)
+      // ensure repeated calls return the same response
+      val resp1 = fn(client, url, headers).apply.block()
+      val resp2 = fn(client, url, headers).apply.block()
+      val resp3 = fn(client, url, headers).apply.block()
+      val respMatch1 = resp1 must beEqualTo(resp2)
+      val respMatch2 = resp2 must beEqualTo(resp3)
 
-      //there should be 1 cache get, a hit, and there should be no client interaction at all since it hit the cache
-      respMatches and verifyCacheInteraction(dummyCache, CacheInteraction(1, 0)) and verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
+      // ensure that cache is hit for every call and client is never accessed
+      respMatch1 and respMatch2 and verifyCacheInteraction(dummyCache, CacheInteraction(3, 0)) and verifyClientInteraction(dummyClient, ClientInteraction(0, 0, 0, 0, 0))
     }
   }
 
-  private def getCallsApply = verifyCallsApply { (client, url, headers) =>
+  private def verifyCallsApplyCacheMiss[T <: HttpRequestWithoutBody](expectedClientInteraction: ClientInteraction)(fn: (ReadCachingHttpClient, URL, Headers) => T) = {
+    forAll(genURL,
+      genHeaders,
+      genDummyHttpClient,
+      genDummyHttpResponseCache(Gen.value(Right(())), Gen.value(Right(())))) { (url, headers, dummyClient, dummyCache) =>
+
+      val client = new ReadCachingHttpClient(dummyClient, dummyCache)
+
+      // ensure repeated calls return the same response
+      val resp1 = fn(client, url, headers).apply.block()
+      val resp2 = fn(client, url, headers).apply.block()
+      val resp3 = fn(client, url, headers).apply.block()
+      val respMatch1 = resp1 must beEqualTo(resp2)
+      val respMatch2 = resp2 must beEqualTo(resp3)
+
+      // ensure that cache is missed for every call and client is always accessed
+      respMatch1 and respMatch2 and verifyCacheInteraction(dummyCache, CacheInteraction(3, 0)) and verifyClientInteraction(dummyClient, expectedClientInteraction)
+    }
+  }
+
+  private def getCallsApplyCacheHit = verifyCallsApplyCacheHit { (client, url, headers) =>
     client.get(url, headers)
   }
 
-  private def headCallsApply = verifyCallsApply { (client, url, headers) =>
+  private def headCallsApplyCacheHit = verifyCallsApplyCacheHit { (client, url, headers) =>
+    client.head(url, headers)
+  }
+
+  private def getCallsApplyCacheMiss = verifyCallsApplyCacheMiss(ClientInteraction(3, 0, 0, 0, 0)) { (client, url, headers) =>
+    client.get(url, headers)
+  }
+
+  private def headCallsApplyCacheMiss = verifyCallsApplyCacheMiss(ClientInteraction(0, 0, 0, 0, 3)) { (client, url, headers) =>
     client.head(url, headers)
   }
 
   private def postPutDeleteIgnoreCache = {
-    val genOnApply = genSuccessFuture(genHttpResponse)
-
     forAll(genURL,
       genHeaders,
       genRawBody,
       genDummyHttpClient,
-      genDummyHttpResponseCache(genOnApply, Gen.value(Right(())))) { (url, headers, body, dummyClient, dummyCache) =>
+      genDummyHttpResponseCache(Gen.value(Right(())), Gen.value(Right(())))) { (url, headers, body, dummyClient, dummyCache) =>
       val client = new ReadCachingHttpClient(dummyClient, dummyCache)
 
       val postRes = client.post(url, headers, body).block() must beEqualTo(dummyClient.responseToReturn.block())

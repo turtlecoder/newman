@@ -71,7 +71,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithETag() extends Context {
 
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
+    override protected val responseCacher = new DummyHttpResponseCacher(Left(responseWithETag), Left(responseWithETag))
 
     override protected val rawClient = new DummyHttpClient
 
@@ -94,7 +94,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithETagReturnsNotModified() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithNotModified)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
+    override protected val responseCacher = new DummyHttpResponseCacher(Left(responseWithETag), Left(responseWithETag))
 
     def returnsCachedResponse = {
       val resp = client.get(url, Headers.empty).block()
@@ -104,7 +104,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithETagReturnsModified() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Left(responseWithETag))
+    override protected val responseCacher = new DummyHttpResponseCacher(Left(responseWithETag), Left(responseWithETag))
 
     def returnsNewResponse = {
       val resp = client.get(url, Headers.empty).block()
@@ -114,7 +114,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class CachedResponseWithoutETag() extends Context {
     override protected val rawClient = new DummyHttpClient(responseWithETag)
-    override protected val responseCacher = new DummyHttpResponseCacher(onApply = responseWithoutETag, foldBehavior = Left(responseWithoutETag))
+    override protected val responseCacher = new DummyHttpResponseCacher(applyBehavior = Left(responseWithoutETag), foldBehavior = Left(responseWithoutETag))
 
     def executesNormalRequest = {
       val req = client.get(url, Headers.empty)
@@ -148,7 +148,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
 
   case class NoCachedResponsePresent() extends Context {
     override protected val rawClient = new DummyHttpClient
-    override protected val responseCacher = new DummyHttpResponseCacher(responseWithETag, Right(()))
+    override protected val responseCacher = new DummyHttpResponseCacher(Left(responseWithETag), Right(()))
 
     def executesNormalRequest = {
       val req = client.get(url, Headers.empty)
@@ -180,7 +180,7 @@ class ETagAwareApacheHttpClientSpecs extends Specification { def is =
     private val cacheException = new Exception("couldn't hit cache")
     private val cacheExceptionFuture = Future.failed[HttpResponse](cacheException)
     override protected val rawClient = new DummyHttpClient
-    override protected val responseCacher = new DummyHttpResponseCacher(cacheExceptionFuture, Left(cacheExceptionFuture))
+    override protected val responseCacher = new DummyHttpResponseCacher(Left(cacheExceptionFuture), Left(cacheExceptionFuture))
 
     def executesNoRequest = {
       val req = client.get(url, Headers.empty)

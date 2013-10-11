@@ -59,7 +59,7 @@ class InMemoryHttpResponseCacher(maxCapacity: Int,
     }
   }
 
-  override def apply(req: HttpRequest): Future[HttpResponse] = {
-    cache.apply(req.hash)(req.apply)
+  override def apply(req: HttpRequest)(async: => Future[HttpResponse]): Future[HttpResponse] = {
+    cache.apply(req.hash)(async)
   }
 }

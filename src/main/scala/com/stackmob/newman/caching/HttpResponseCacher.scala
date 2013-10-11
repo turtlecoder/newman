@@ -44,7 +44,7 @@ trait HttpResponseCacher {
    * @return the response, wrapped in a future. the future will be completed when the request finishes,
    *         regardless of whether it was cached
    */
-  def apply(req: HttpRequest): Future[HttpResponse]
+  def apply(req: HttpRequest)(async: => Future[HttpResponse]): Future[HttpResponse]
 
 
 }
