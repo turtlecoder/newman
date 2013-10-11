@@ -41,6 +41,7 @@ trait HttpResponseCacher {
    * get the response future from the cache, or execute the request,
    * put its response future into the cache, and return it.
    * @param req the request whose corresponding response to look for in the cache
+   * @param async fallback behavior that is triggered during a cache miss.  result is cached.
    * @return the response, wrapped in a future. the future will be completed when the request finishes,
    *         regardless of whether it was cached
    */
