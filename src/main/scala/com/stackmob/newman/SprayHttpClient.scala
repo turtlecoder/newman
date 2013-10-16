@@ -46,7 +46,8 @@ import com.stackmob.newman.Exceptions.InternalException
 
 class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSystem,
                       defaultContentType: SprayContentType = SprayContentTypes.`application/json`,
-                      timeout: Timeout = Timeout(5, TimeUnit.SECONDS)) extends HttpClient {
+                      timeout: Timeout = Timeout(5, TimeUnit.SECONDS),
+                      uriParsingMode: Uri.ParsingMode = Uri.ParsingMode.Relaxed) extends HttpClient {
 
   import SprayHttpClient._
 
@@ -95,7 +96,7 @@ class SprayHttpClient(actorSystem: ActorSystem = SprayHttpClient.DefaultActorSys
       }
     }
 
-    SprayHttpRequest(method, Uri(url.toString), headerList, entity)
+    SprayHttpRequest(method, Uri(url.toString, uriParsingMode), headerList, entity)
   }
 
   override def get(url: URL, headers: Headers): GetRequest = {
