@@ -36,25 +36,28 @@ import java.util.concurrent.{ThreadFactory, Executors}
 import ApacheHttpClient._
 import java.util.concurrent.atomic.AtomicInteger
 
-class ApacheHttpClient(val socketTimeout: Int = ApacheHttpClient.DefaultSocketTimeout,
-                       val connectionTimeout: Int = ApacheHttpClient.DefaultConnectionTimeout,
-                       val maxConnectionsPerRoute: Int = ApacheHttpClient.DefaultMaxConnectionsPerRoute,
-                       val maxTotalConnections: Int = ApacheHttpClient.DefaultMaxTotalConnections)
+class ApacheHttpClient(val httpClient: org.apache.http.client.HttpClient)
                       (implicit val requestContext: ExecutionContext = newmanRequestExecutionContext) extends HttpClient {
 
-  private val connManager: ClientConnectionManager = {
-    val cm = new PoolingClientConnectionManager()
-    cm.setDefaultMaxPerRoute(maxConnectionsPerRoute)
-    cm.setMaxTotal(maxTotalConnections)
-    cm
-  }
+  def this(socketTimeout: Int = ApacheHttpClient.DefaultSocketTimeout,
+           connectionTimeout: Int = ApacheHttpClient.DefaultConnectionTimeout,
+           maxConnectionsPerRoute: Int = ApacheHttpClient.DefaultMaxConnectionsPerRoute,
+           maxTotalConnections: Int = ApacheHttpClient.DefaultMaxTotalConnections)
+          (implicit requestContext: ExecutionContext = newmanRequestExecutionContext) = {
+    this({
+      val connManager: ClientConnectionManager = {
+        val cm = new PoolingClientConnectionManager()
+        cm.setDefaultMaxPerRoute(maxConnectionsPerRoute)
+        cm.setMaxTotal(maxTotalConnections)
+        cm
+      }
 
-  private val httpClient: AbstractHttpClient = {
-    val client = new DefaultHttpClient(connManager)
-    val httpParams = client.getParams
-    HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
-    HttpConnectionParams.setSoTimeout(httpParams, socketTimeout)
-    client
+      val client = new DefaultHttpClient(connManager)
+      val httpParams = client.getParams
+      HttpConnectionParams.setConnectionTimeout(httpParams, connectionTimeout)
+      HttpConnectionParams.setSoTimeout(httpParams, socketTimeout)
+      client
+    })(requestContext)
   }
 
   protected def executeRequest(httpMessage: HttpRequestBase,
