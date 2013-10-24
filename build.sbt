@@ -18,8 +18,7 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-feature")
 scalacOptions in Test ++= Seq("-Yrangepos")
 
 resolvers ++= List(
-  "spray repo" at "http://repo.spray.io",
-  "spray nightly" at "http://nightlies.spray.io"
+  "spray repo" at "http://repo.spray.io"
 )
 
 libraryDependencies ++= {
