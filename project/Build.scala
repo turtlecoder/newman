@@ -16,14 +16,23 @@
 
 import io.Source
 import java.io.PrintWriter
+import sbt._
+import Keys._
 import sbtrelease._
 import ReleasePlugin._
 import ReleaseKeys._
-import sbt._
+import Utilities._
+import com.typesafe.sbt.SbtPgp.PgpKeys._
 
 object NewmanReleaseSteps {
 
   val readme = "README.md"
+
+  lazy val publishSignedAction: ReleaseStep = { st: State =>
+    val extracted = st.extract
+    val ref = extracted.get(thisProjectRef)
+    extracted.runAggregated(publishSigned in Global in ref, st)
+  }
 
   lazy val setReadmeReleaseVersion: ReleaseStep = { st: State =>
     val releaseVersions = getReleasedVersion(st)
