@@ -66,7 +66,7 @@ releaseProcess := Seq[ReleaseStep](
   commitReleaseVersion,
   setReadmeReleaseVersion,
   tagRelease,
-  publishArtifacts,
+  publishArtifacts.copy(action = publishSignedAction),
   setNextVersion,
   commitNextVersion,
   pushChanges
