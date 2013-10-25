@@ -23,11 +23,10 @@ import spray.http.{Uri,
   HttpResponse => SprayHttpResponse,
   HttpMethod => SprayHttpMethod,
   HttpMethods => SprayHttpMethods,
-  HttpData => SprayHttpData,
   ContentTypes => SprayContentTypes,
   ContentType => SprayContentType,
   HttpEntity => SprayHttpEntity}
-import spray.http.HttpEntity.{Empty => SprayEmptyEntity}
+import spray.http.HttpEntity.{Empty => SprayEmptyEntity, NonEmpty => SprayNonEmptyEntity}
 import spray.http.HttpHeaders.RawHeader
 import spray.http.parser.HttpParser
 import java.net.URL
@@ -146,9 +145,13 @@ object SprayHttpClient {
           }.toNel
         }
         entity <- Option(resp.entity)
-        body <- Option(entity.data.toByteArray)
+        body <- Option(entity.data)
       } yield {
-        val contentType = resp.headers.find(_.lowercaseName === "content-type").map(h => h.name -> h.value) | ("Content-Type" -> defaultContentType.value)
+        val contentType = entity.some.collect {
+          case SprayNonEmptyEntity(cType, _) => "Content-Type" -> cType.value
+        } | {
+          "Content-Type" -> defaultContentType.value
+        }
 
         val headersPlusContentType = headers.map { hdrNel =>
           hdrNel.<::(contentType)
@@ -156,7 +159,7 @@ object SprayHttpClient {
           NonEmptyList(contentType)
         }
 
-        HttpResponse(code, headersPlusContentType.some, body)
+        HttpResponse(code, headersPlusContentType.some, body.toByteArray)
       }
     }
   }
