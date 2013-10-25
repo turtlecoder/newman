@@ -11,36 +11,44 @@ name := "newman"
 
 organization := "com.stackmob"
 
-scalaVersion := "2.10.2"
+scalaVersion := "2.10.3"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-feature")
 
+scalacOptions in Test ++= Seq("-Yrangepos")
+
 resolvers ++= List(
-  "spray repo" at "http://repo.spray.io",
-  "spray nightly" at "http://nightlies.spray.io"
+  "spray repo" at "http://repo.spray.io"
 )
 
 libraryDependencies ++= {
   val httpCoreVersion = "4.2.5"
   val httpClientVersion = "4.2.5"
   val scalaCheckVersion = "1.10.1"
-  val specs2Version = "2.2.2"
+  val specs2Version = "2.2.3"
   val mockitoVersion = "1.9.0"
   val liftJsonVersion = "2.5.1"
+  val sprayVersion = "1.2-RC1"
   Seq(
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion exclude("org.apache.httpcomponents", "httpcore"),
-    "io.spray" % "spray-client" % "1.2-20130822",
-    "io.spray" % "spray-caching" % "1.2-20130822",
-    "com.typesafe.akka" %% "akka-actor" % "2.2.0",
-    "com.twitter" %% "finagle-http" % "6.5.0",
+    "io.spray" % "spray-client" % sprayVersion,
+    "io.spray" % "spray-caching" % sprayVersion,
+    "com.typesafe.akka" %% "akka-actor" % "2.2.3",
+    "com.twitter" %% "finagle-http" % "6.5.0" exclude("commons-codec", "commons-codec"),
     "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion,
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
-    "org.specs2" %% "specs2" % specs2Version % "test",
-    "org.pegdown" % "pegdown" % "1.2.1" % "test",
+    "org.specs2" %% "specs2" % specs2Version % "test" exclude("org.scalaz", "scalaz-core_2.10"),
+    "org.pegdown" % "pegdown" % "1.2.1" % "test" exclude("org.parboiled", "parboiled-core"),
     "org.mockito" % "mockito-all" % mockitoVersion % "test"
   )
 }
+
+testOptions in Test += Tests.Argument("html", "console")
+
+conflictManager := ConflictManager.strict
+
+dependencyOverrides <+= (scalaVersion) { vsn => "org.scala-lang" % "scala-library" % vsn }
 
 logBuffered := false
 
@@ -76,8 +84,6 @@ publishTo <<= (version) { version: String =>
 publishMavenStyle := true
 
 publishArtifact in Test := true
-
-testOptions in Test += Tests.Argument("html", "console")
 
 pomExtra := (
   <url>https://github.com/stackmob/newman</url>
