@@ -56,9 +56,10 @@ trait HttpRequest {
     compactRender(toJValue)
   }
 
-  private lazy val md5 = MessageDigest.getInstance("MD5")
+  lazy val md5 = HttpRequest.md5.clone().asInstanceOf[MessageDigest]
 
   lazy val hash: HashCode = {
+
     val headersString: String = {
       ~headers.map { hdrs =>
         hdrs.list.foldLeft(new StringBuilder) { (b, h) =>
@@ -66,11 +67,29 @@ trait HttpRequest {
         }.toString()
       }
     }
-    val bodyBytes = Option(this).collect { case t: HttpRequestWithBody => t.body } | RawBody.empty
-    val bodyString = new String(bodyBytes, Constants.UTF8Charset)
-    //requestType-url-headers-body
-    val str = s"${requestType.stringVal}${url.toString}$headersString$bodyString"
-    Hex.encodeHexString(md5.digest(str.getBytes(Constants.UTF8Charset)))
+
+    val bodyBytes = this match {
+      case t: HttpRequestWithBody => t.body
+      case _ => RawBody.empty
+    }
+
+    def combineMessageParts(byteArrays: Array[Byte]*): Array[Byte] = {
+      val msgBytes: Array[Byte] = new Array(byteArrays.foldLeft(0)((s, arr) => s + arr.length))
+
+      var currPos = 0
+      for (arr <- byteArrays) {
+        System.arraycopy(arr, 0, msgBytes, currPos, arr.length)
+        currPos += arr.length
+      }
+
+      msgBytes
+    }
+
+    val requestTypeBytes = requestType.stringVal.getBytes(Constants.UTF8Charset)
+    val urlStringBytes = url.toString.getBytes(Constants.UTF8Charset)
+    val headersStringBytes = headersString.getBytes(Constants.UTF8Charset)
+
+    Hex.encodeHexString(HttpRequest.md5.digest(combineMessageParts(requestTypeBytes, urlStringBytes, headersStringBytes, bodyBytes)))
   }
 
   /**
@@ -96,6 +115,8 @@ trait HttpRequest {
 }
 
 object HttpRequest {
+
+  private lazy val md5 = MessageDigest.getInstance("MD5")
 
   def fromJValue(jValue: JValue)(implicit client: HttpClient): Result[HttpRequest] = {
     import com.stackmob.newman.serialization.request.HttpRequestSerialization
