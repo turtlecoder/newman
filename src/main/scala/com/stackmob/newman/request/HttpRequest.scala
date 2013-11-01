@@ -89,7 +89,7 @@ trait HttpRequest {
     val urlStringBytes = url.toString.getBytes(Constants.UTF8Charset)
     val headersStringBytes = headersString.getBytes(Constants.UTF8Charset)
 
-    Hex.encodeHexString(HttpRequest.md5.digest(combineMessageParts(requestTypeBytes, urlStringBytes, headersStringBytes, bodyBytes)))
+    Hex.encodeHexString(md5.digest(combineMessageParts(requestTypeBytes, urlStringBytes, headersStringBytes, bodyBytes)))
   }
 
   /**
