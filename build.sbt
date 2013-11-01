@@ -28,7 +28,7 @@ libraryDependencies ++= {
   val specs2Version = "2.2.3"
   val mockitoVersion = "1.9.0"
   val liftJsonVersion = "2.5.1"
-  val sprayVersion = "1.2-RC1"
+  val sprayVersion = "1.2-RC2"
   Seq(
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion exclude("org.apache.httpcomponents", "httpcore"),
