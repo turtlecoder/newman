@@ -22,14 +22,14 @@ To add it to your project, use this for Maven:
 <dependency>
   <groupId>com.stackmob</groupId>
   <artifactId>newman_${scala.version}</artifactId>
-  <version>1.3.2</version>
+  <version>1.3.3</version>
 </dependency>
 ```
 
 or the equivalent for sbt:
 
 ```scala
-libraryDependencies += "com.stackmob" %% "newman" % "1.3.2"
+libraryDependencies += "com.stackmob" %% "newman" % "1.3.3"
 ```
 
 # Basic Usage
