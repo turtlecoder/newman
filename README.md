@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/stackmob/newman.png?branch=master)](https://travis-ci.org/stackmob/newman)
 
-Newman is StackMob's HTTP client. We named it after the [Seinfeld Character](http://en.wikipedia.org/wiki/Newman_(Seinfeld))
+Newman is StackMob's HTTP client. We named it after the [Seinfeld Character](http://en.wikipedia.org/wiki/Newman_(Seinfeld)).
 
 And wrote a post explaining our motivation for building this library [here](https://blog.stackmob.com/2013/03/newman/).
 
