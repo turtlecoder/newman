@@ -94,7 +94,7 @@ Using `ETagAwareHttpClient` is very similar to the basic usage above. Following 
 
 ```scala
 import com.stackmob.newman.{ETagAwareHttpClient, ApacheHttpClient}
-import com.stacmob.newman.caching.InMemoryHttpResponseCacher
+import com.stackmob.newman.caching.InMemoryHttpResponseCacher
 import com.stackmob.newman.dsl._
 import java.net.URL
 	
