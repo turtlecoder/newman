@@ -125,16 +125,22 @@ object FinagleHttpClient {
   implicit class RichNettyHttpResponse(resp: NettyHttpResponse) {
     def bodyBytes: Array[Byte] = {
       val channelBuf = resp.getContent
-      val array = channelBuf.array
+      //Check if channelBuf  can be handled with array method
+      if (channelBuf.hasArray){
+        val array = channelBuf.array
 
-      //the index of the first byte in the backing byte array of this ChannelBuffer.
-      //if there isn't a backing byte array, then this throws
-      val arrayOffset = channelBuf.arrayOffset
-      //the index of the first readable byte in this ChannelBuffer
-      val readerIndex = channelBuf.readerIndex()
+        //the index of the first byte in the backing byte array of this ChannelBuffer.
+        //if there isn't a backing byte array, then this throws
+        val arrayOffset = channelBuf.arrayOffset
+        //the index of the first readable byte in this ChannelBuffer
+        val readerIndex = channelBuf.readerIndex()
 
-      //return a copy of the backing array, starting at the effective beginning of the HTTP response body
-      array.slice(arrayOffset + readerIndex, array.length)
+        //return a copy of the backing array, starting at the effective beginning of the HTTP response body
+        array.slice(arrayOffset + readerIndex, array.length)
+      } else {
+        val byteBuffer = channelBuf.toByteBuffer
+        byteBuffer.array
+      }
     }
     def toNewmanHttpResponse: Option[HttpResponse] = {
       for {
