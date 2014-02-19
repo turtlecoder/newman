@@ -44,15 +44,15 @@ case class HttpResponse(code: HttpResponseCode,
   private lazy val jsonMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Boolean), String])
   private lazy val caseClassMap = new JConcurrentMapWrapper(new ConcurrentHashMap[(Charset, Class[_]), Result[_]])
 
-  def bodyString(implicit charset: Charset = UTF8Charset): String = {
+  def bodyString(implicit charset: Charset = defaultCharset): String = {
     rawBodyMap.getOrElseUpdate(charset, new String(rawBody, charset))
   }
 
-  def toJValue(implicit charset: Charset = UTF8Charset): JValue = {
+  def toJValue(implicit charset: Charset = defaultCharset): JValue = {
     jValueMap.getOrElseUpdate(charset, toJSON(this)(getResponseSerialization.writer))
   }
 
-  def toJson(prettyPrint: Boolean = false)(implicit charset: Charset = UTF8Charset): String = {
+  def toJson(prettyPrint: Boolean = false)(implicit charset: Charset = defaultCharset): String = {
     jsonMap.getOrElseUpdate((charset, prettyPrint), {
       if(prettyPrint) {
         pretty(render(toJValue))
@@ -62,7 +62,7 @@ case class HttpResponse(code: HttpResponseCode,
     })
   }
 
-  def bodyAsCaseClass[T <: AnyRef](implicit m: Manifest[T], charset: Charset = UTF8Charset): Result[T] = {
+  def bodyAsCaseClass[T <: AnyRef](implicit m: Manifest[T], charset: Charset = defaultCharset): Result[T] = {
     def theReader(implicit reader: JSONR[T] = DefaultBodySerialization.getReader): JSONR[T] = reader
     caseClassMap.getOrElseUpdate((charset, m.runtimeClass), {
       fromJSON[T](parse(bodyString(charset)))(theReader)
@@ -71,7 +71,7 @@ case class HttpResponse(code: HttpResponseCode,
 
   def bodyAs[T](implicit reader: JSONR[T],
                 m: Manifest[T],
-                charset: Charset = UTF8Charset): Result[T] = {
+                charset: Charset = defaultCharset): Result[T] = {
     parsedBodyMap.get((charset, m.runtimeClass)) match {
       case Some(v) => v.map(_.asInstanceOf[T])
       case None => {
@@ -83,7 +83,7 @@ case class HttpResponse(code: HttpResponseCode,
   }
 
   private def parseBody[T](implicit reader: JSONR[T],
-                           charset: Charset = UTF8Charset): Result[T] = {
+                           charset: Charset = defaultCharset): Result[T] = {
     Validation.fromTryCatch {
       parse(bodyString(charset))
     } leftMap { t: Throwable =>
@@ -118,7 +118,7 @@ case class HttpResponse(code: HttpResponseCode,
   def bodyAsIfResponseCode[T](expected: HttpResponseCode)
                              (implicit reader: JSONR[T],
                               m: Manifest[T],
-                              charset: Charset = UTF8Charset): ThrowableValidation[T] = {
+                              charset: Charset = defaultCharset): ThrowableValidation[T] = {
     bodyAsIfResponseCode[T](expected, { resp: HttpResponse =>
       bodyAs[T].leftMap { errNel: NonEmptyList[Error] =>
         val t: Throwable = JSONParsingError(errNel)
@@ -132,6 +132,21 @@ case class HttpResponse(code: HttpResponseCode,
   }
 
   lazy val notModified: Boolean = code === HttpResponseCode.NotModified
+
+  lazy val responseCharset: Option[Charset] = headers.flatMap(headersList => {
+    headersList.list.collectFirst({
+      case (HttpHeaders.CONTENT_TYPE, CHARSET_PATTERN(_, charset)) =>
+        charset
+    })
+  }).flatMap(charset => {
+    try {
+      Some(Charset.forName(charset))
+    } catch {
+      case _: Throwable => None
+    }
+  })
+
+  private def defaultCharset = responseCharset.getOrElse(UTF8Charset)
 }
 
 object HttpResponse {
@@ -160,4 +175,6 @@ object HttpResponse {
   }
 
   case class JSONParsingError(errNel: NonEmptyList[Error]) extends Exception(getString(errNel))
+
+  private val CHARSET_PATTERN = """(.+);\s+charset=(.+)""".r
 }
