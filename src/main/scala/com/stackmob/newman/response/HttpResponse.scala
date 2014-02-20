@@ -135,16 +135,10 @@ case class HttpResponse(code: HttpResponseCode,
 
   lazy val responseCharset: Option[Charset] = headers.flatMap(headersList => {
     headersList.list.collectFirst({
-      case (HttpHeaders.CONTENT_TYPE, CHARSET_PATTERN(_, charset)) =>
-        charset
+      case (HttpHeaders.CONTENT_TYPE, CHARSET_PATTERN(_, charsetName)) =>
+        charsetName
     })
-  }).flatMap(charset => {
-    try {
-      Some(Charset.forName(charset))
-    } catch {
-      case _: Throwable => None
-    }
-  })
+  }).flatMap(charsetName => Validation.fromTryCatch(Charset.forName(charsetName)).toOption)
 
   private def defaultCharset = responseCharset.getOrElse(UTF8Charset)
 }
