@@ -54,7 +54,7 @@ trait HttpRequest {
   def toJson(prettyPrint: Boolean = false)(implicit client: HttpClient): String = if(prettyPrint) {
     pretty(render(toJValue))
   } else {
-    compactRender(toJValue)
+    compact(render(toJValue))
   }
 
   lazy val md5 = HttpRequest.md5.clone().asInstanceOf[MessageDigest]

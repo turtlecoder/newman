@@ -26,6 +26,7 @@ import java.nio.charset.Charset
 import com.stackmob.newman.serialization.common.DefaultBodySerialization
 import Constants._
 import org.json4s._
+import org.json4s.native._
 
 
 trait RequestBuilderDSL {
@@ -142,7 +143,7 @@ trait RequestBuilderDSL {
                             (implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A],
                              charset: Charset = UTF8Charset): HeaderAndBodyBuilder = {
       //if it's a string, don't JSON encode it
-      val bodyString = value.cast[String].map(s => s) | compactRender(toJSON(value))
+      val bodyString = value.cast[String].map(s => s) | JsonMethods.compact(JsonMethods.render((toJSON(value))))
       setBodyString(bodyString)
     }
 
