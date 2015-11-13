@@ -25,7 +25,7 @@ libraryDependencies ++= {
   val httpCoreVersion = "4.2.5"
   val httpClientVersion = "4.2.5"
   val scalaCheckVersion = "1.10.1"
-  val specs2Version = "2.2.3"
+  val specs2Version = "3.6"
   val mockitoVersion = "1.9.0"
   val liftJsonVersion = "2.5.1"
   val sprayVersion = "1.3.1"
@@ -37,12 +37,14 @@ libraryDependencies ++= {
     "io.spray" % "spray-caching" % sprayVersion,
     "com.typesafe.akka" %% "akka-actor" % akkaVersion,
     "com.twitter" %% "finagle-http" % "6.5.0" exclude("commons-codec", "commons-codec"),
-    "net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion exclude("org.scalaz", "scalaz-core_2.10"),
+    //"net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion exclude("org.scalaz", "scalaz-core_2.10"),
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
-    "org.specs2" %% "specs2" % specs2Version % "test" exclude("org.scalaz", "scalaz-core_2.10"),
+    "org.specs2" %% "specs2-core" % specs2Version % "test" exclude("org.scalaz", "scalaz-core_2.10"),
     "org.pegdown" % "pegdown" % "1.2.1" % "test" exclude("org.parboiled", "parboiled-core"),
     "org.mockito" % "mockito-all" % mockitoVersion % "test",
-    "org.scalaz" %% "scalaz-core" % "7.1.4"
+    "org.scalaz" %% "scalaz-core" % "7.1.4",
+    "org.json4s" %% "json4s-native" % "3.3.0",
+    "org.json4s" %% "json4s-scalaz" % "3.3.0"
   )
 }
 
