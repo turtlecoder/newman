@@ -21,8 +21,8 @@ import scalaz._
 import scalaz.Validation._
 import Scalaz._
 import com.stackmob.newman.response.HttpResponseCode
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.scalaz.JsonScalaz._
 import serialization.common.SerializationBase
 
 object HttpResponseCodeSerialization extends SerializationBase[HttpResponseCode] {

@@ -22,8 +22,8 @@ import org.specs2.matcher._
 import com.stackmob.newman.{Headers, Constants}
 import java.nio.charset.Charset
 import scalaz.Scalaz._
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.scalaz.JsonScalaz._
 import scala.util.Try
 
 trait ResponseMatcher extends MustExpectations with MustMatchers { this: Specification with HeadersMatcher =>

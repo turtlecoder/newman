@@ -19,8 +19,8 @@ package serialization.common
 
 import scalaz._
 import Scalaz._
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.scalaz.JsonScalaz._
 import com.stackmob.newman.Constants._
 
 object RawBodySerialization extends SerializationBase[RawBody] {

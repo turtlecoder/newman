@@ -20,7 +20,7 @@ import request.HttpRequest
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import java.net.URL
 import scalaz.Validation
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s.scalaz.JsonScalaz._
 import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
 import scala.concurrent.{ExecutionContext, Future}

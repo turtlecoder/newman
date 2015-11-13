@@ -22,7 +22,7 @@ import org.specs2.matcher.{MatchResult, Expectable, Matcher}
 import org.specs2.execute.{Failure => SpecsFailure, Result => SpecsResult}
 import scalaz._
 import Scalaz._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s.scalaz.JsonScalaz._
 
 trait BaseContext {
 

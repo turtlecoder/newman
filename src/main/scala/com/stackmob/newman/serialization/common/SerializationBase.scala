@@ -16,7 +16,7 @@
 
 package com.stackmob.newman.serialization.common
 
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s.scalaz.JsonScalaz._
 
 trait SerializationBase[T] {
   def writer: JSONW[T]

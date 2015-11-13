@@ -22,8 +22,8 @@ import Scalaz._
 import enumeration._
 import com.stackmob.newman.request.HttpRequestType
 import com.stackmob.newman.serialization.common.SerializationBase
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.scalaz.JsonScalaz._
 
 object HttpRequestTypeSerialization extends SerializationBase[HttpRequestType] {
   implicit override val reader = new JSONR[HttpRequestType] {

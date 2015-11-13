@@ -17,12 +17,15 @@
 package com.stackmob.newman
 package serialization.request
 
+import org.json4s.scalaz.JsonScalaz
+
 import scalaz._
 import Scalaz._
+import scalaz.Validation.FlatMap._
 import com.stackmob.newman.serialization.common.SerializationBase
 import com.stackmob.newman.request._
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.scalaz.JsonScalaz._
 import java.net.URL
 import com.stackmob.newman.HttpClient
 

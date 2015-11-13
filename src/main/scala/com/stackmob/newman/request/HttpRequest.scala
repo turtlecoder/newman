@@ -21,8 +21,9 @@ import java.net.URL
 import scalaz._
 import scalaz.Validation._
 import Scalaz._
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.JsonDSL._
+import org.json4s.native.JsonMethods._
 import com.stackmob.newman.{Constants, HttpClient}
 import com.stackmob.newman.request.HttpRequestExecution._
 import java.security.MessageDigest
@@ -44,7 +45,7 @@ trait HttpRequest {
   def apply: Future[HttpResponse]
 
   def toJValue(implicit client: HttpClient): JValue = {
-    import net.liftweb.json.scalaz.JsonScalaz.toJSON
+    import org.json4s.scalaz.JsonScalaz.toJSON
     import com.stackmob.newman.serialization.request.HttpRequestSerialization
     val requestSerialization = new HttpRequestSerialization(client)
     toJSON(this)(requestSerialization.writer)
@@ -120,7 +121,7 @@ object HttpRequest {
 
   def fromJValue(jValue: JValue)(implicit client: HttpClient): Result[HttpRequest] = {
     import com.stackmob.newman.serialization.request.HttpRequestSerialization
-    import net.liftweb.json.scalaz.JsonScalaz.fromJSON
+    import org.json4s.scalaz.JsonScalaz.fromJSON
     val requestSerialization = new HttpRequestSerialization(client)
     fromJSON(jValue)(requestSerialization.reader)
   }

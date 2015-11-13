@@ -1,7 +1,7 @@
 package com.stackmob.newman.test
 
 import com.stackmob.newman.jsonscalaz._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s.scalaz.JsonScalaz._
 import com.stackmob.newman.Headers
 
 package object client {

@@ -20,7 +20,7 @@ import org.specs2.Specification
 import org.specs2.execute.{Result => SpecsResult}
 import scalaz._
 import Scalaz._
-import net.liftweb.json._
+import org.json4s._
 import com.stackmob.newman._
 import com.stackmob.newman.dsl._
 import java.net.URL
@@ -28,7 +28,7 @@ import com.stackmob.newman.request.HttpRequest
 import com.stackmob.newman.response.{HttpResponseCode, HttpResponse}
 import com.stackmob.newman.Constants.UTF8Charset
 import org.specs2.matcher.Matcher
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s.scalaz.JsonScalaz._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit

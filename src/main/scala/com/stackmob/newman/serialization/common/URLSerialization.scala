@@ -18,8 +18,8 @@ package com.stackmob.newman.serialization.common
 
 import scalaz._
 import Scalaz._
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.scalaz.JsonScalaz._
 import java.net.URL
 
 object URLSerialization extends SerializationBase[URL] {

@@ -18,8 +18,11 @@ package com.stackmob.newman
 package serialization.common
 
 import scalaz.Validation._
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.scalaz.JsonScalaz._
+import org.json4s.native.JsonMethods._
+import org.json4s.native.Serialization
+import org.json4s.native.Serialization._
 
 object DefaultBodySerialization {
 

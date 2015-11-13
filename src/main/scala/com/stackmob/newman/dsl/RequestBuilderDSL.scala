@@ -25,7 +25,8 @@ import java.net.URL
 import java.nio.charset.Charset
 import com.stackmob.newman.serialization.common.DefaultBodySerialization
 import Constants._
-import net.liftweb.json._
+import org.json4s._
+
 
 trait RequestBuilderDSL {
   private val HeadersPrependLens: Headers @> Headers = lensu(
@@ -135,7 +136,8 @@ trait RequestBuilderDSL {
       setBody(s.getBytes(charset))
     }
 
-    import net.liftweb.json.scalaz.JsonScalaz._
+
+    import org.json4s.scalaz.JsonScalaz._
     def setBody[A <: AnyRef](value: A)
                             (implicit writer: JSONW[A] = DefaultBodySerialization.getWriter[A],
                              charset: Charset = UTF8Charset): HeaderAndBodyBuilder = {

@@ -19,13 +19,15 @@ package response
 
 import scalaz._
 import Scalaz._
+import scalaz.Validation.FlatMap._
 import scalaz.NonEmptyList._
 import jsonscalaz._
 import java.nio.charset.Charset
 import java.util.Date
 import com.stackmob.newman.Constants._
-import net.liftweb.json._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.scalaz.JsonScalaz._
+import org.json4s.native.JsonMethods._
 import org.apache.http.HttpHeaders
 import com.stackmob.newman.serialization.response.HttpResponseSerialization
 import com.stackmob.newman.serialization.common.DefaultBodySerialization

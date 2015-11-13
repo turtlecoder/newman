@@ -16,8 +16,8 @@
 
 package com.stackmob.newman
 
-import net.liftweb.json.scalaz.JsonScalaz._
-import net.liftweb.json.JValue
+import org.json4s.scalaz.JsonScalaz._
+import org.json4s.JValue
 
 package object jsonscalaz {
 

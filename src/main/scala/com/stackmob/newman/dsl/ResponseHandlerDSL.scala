@@ -18,13 +18,14 @@ package com.stackmob.newman
 package dsl
 
 import scalaz._
+import scalaz.Validation.FlatMap._
 import Scalaz._
 import response.HttpResponseCode
 import response.HttpResponse
 import response.HttpResponse.JSONParsingError
 import java.nio.charset.Charset
 import Constants._
-import net.liftweb.json.scalaz.JsonScalaz._
+import org.json4s.scalaz.JsonScalaz._
 
 /**
  * Facilitates the handling of various response codes per response, where each handler for a given code may fail or may succeed with
@@ -61,7 +62,7 @@ import net.liftweb.json.scalaz.JsonScalaz._
  *
  * If the response is expected to be considered a success when it its code is `200 OK`
  * and is expected to have a body whose content can is valid JSON `expectJSONBody`
- * can be called given there is an implicit `net.liftweb.json.scalaz.Types.JSONR` in scope for `T`.
+ * can be called given there is an implicit `org.json4s.scalaz.Types.JSONR` in scope for `T`.
  * See `expectJSONBody` for more info.
  *
  * Example:

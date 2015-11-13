@@ -17,10 +17,12 @@
 package com.stackmob.newman.dsl
 
 import scalaz._
+import scalaz.Validation.FlatMap._
 import scalaz.Scalaz._
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import scalaz.Validation
-import net.liftweb.json.scalaz.JsonScalaz._
+//import org.json4s.scalaz.JsonScalaz._
+import org.json4s.scalaz.JsonScalaz._
 import java.nio.charset.Charset
 import com.stackmob.newman.Constants._
 import com.stackmob.newman._
@@ -98,16 +100,9 @@ trait AsyncResponseHandlerDSL {
                          (implicit reader: JSONR[S],
                           m: Manifest[S],
                           charset: Charset = UTF8Charset): AsyncResponseHandler[Failure, Success] = {
-      handleCode(code)((resp: HttpResponse) => {
-        val res = resp.bodyAs[S].leftMap { t =>
-          errorConv(JSONParsingError(t): Throwable): Failure
-        } match {
-          case Success(a) => handler(a)
-          case Failure(e) => Failure(e)
-        }
-        res
-      })
-
+      handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].leftMap { t =>
+        errorConv(JSONParsingError(t): Throwable): Failure
+      }.flatMap(handler))
     }
 
     /**
