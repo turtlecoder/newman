@@ -1,3 +1,5 @@
+__This is a work-in-progress version. Many warnings, and tests commented out for compiling! See [Changlog.md](CHANGELOG.md)__
+
 #Newman
 
 [![Build Status](https://travis-ci.org/stackmob/newman.png?branch=master)](https://travis-ci.org/stackmob/newman)

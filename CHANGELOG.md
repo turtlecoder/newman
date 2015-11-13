@@ -1,3 +1,9 @@
+# 0.14.3
+* Library rebuilt with newer versions of libraries. Updated libraries are
+  * Scalaz 7.1.4
+  * specs2 3.6
+  * net.liftweb.json -> json4s (to get around net.liftweb.json's strict compatibility with scala 2.10.0)
+
 # 0.14.2
 * Improved URLBuilderDSL performance
 

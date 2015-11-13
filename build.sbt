@@ -37,7 +37,6 @@ libraryDependencies ++= {
     "io.spray" % "spray-caching" % sprayVersion,
     "com.typesafe.akka" %% "akka-actor" % akkaVersion,
     "com.twitter" %% "finagle-http" % "6.5.0" exclude("commons-codec", "commons-codec"),
-    //"net.liftweb" %% "lift-json-scalaz7" % liftJsonVersion exclude("org.scalaz", "scalaz-core_2.10"),
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
     "org.specs2" %% "specs2-core" % specs2Version % "test" exclude("org.scalaz", "scalaz-core_2.10"),
     "org.pegdown" % "pegdown" % "1.2.1" % "test" exclude("org.parboiled", "parboiled-core"),
