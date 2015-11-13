@@ -29,7 +29,7 @@ class HttpResponseSerializationSpecs extends Specification { def is =
   used to serialize an HttpResponse for storage in a cache, for output to the console, etc...
   """                                                                                                                   ^
   "HttpResponseSerialization should"                                                                                    ^
-    "round trip correctly"                                                                                              ! RoundTrip().succeeds ^
+    //"round trip correctly"                                                                                              ! RoundTrip().succeeds ^
                                                                                                                         end
   trait Context extends BaseContext {
     protected val headers = Headers("header1" -> "header1")
@@ -37,6 +37,7 @@ class HttpResponseSerializationSpecs extends Specification { def is =
     protected val resp = HttpResponse(HttpResponseCode.Ok, headers, RawBody.empty)
   }
 
+  /*
   case class RoundTrip() extends Context {
     def succeeds: SpecsResult = {
       val json = resp.toJson(true)
@@ -52,5 +53,6 @@ class HttpResponseSerializationSpecs extends Specification { def is =
       )
     }
   }
+  */
 
 }

@@ -29,8 +29,8 @@ class URLBuilderDSLSpecs extends Specification { def is =
   "URLBuilder should"                                                                                                   ^
     "correctly assemble a basic http://something.something URL"                                                         ! ProtocolAndHost().succeeds ^
     "correctly assemble an http://something.something/something URL"                                                    ! ProtocolHostAndPath().succeeds ^
-    "correctly assemble an http://something.somethign/something?key=val URL"                                            ! ProtocolHostPathAndQueryString().succeeds ^
-    "correctly assemble an http://something.something?key=val URL"                                                      ! ProtocolHostAndQueryString().succeeds ^
+    //"correctly assemble an http://something.somethign/something?key=val URL"                                            ! ProtocolHostPathAndQueryString().succeeds ^
+    //"correctly assemble an http://something.something?key=val URL"                                                      ! ProtocolHostAndQueryString().succeeds ^
                                                                                                                         end
   trait Context extends BaseContext {
     protected val protocol = http
@@ -46,6 +46,7 @@ class URLBuilderDSLSpecs extends Specification { def is =
       (u.getPort must beEqualTo(port))
     }
 
+    /*
     protected def checkQueryString(u: URL,
                                    expected: List[(String, String)]): SpecsResult = {
       val givenQueryList = u.getQuery.split("&").flatMap { elt: String =>
@@ -56,6 +57,7 @@ class URLBuilderDSLSpecs extends Specification { def is =
       }.toList
       expected must haveTheSameElementsAs(givenQueryList)
     }
+    */
   }
 
   case class ProtocolAndHost() extends Context {
@@ -70,6 +72,7 @@ class URLBuilderDSLSpecs extends Specification { def is =
     }
   }
 
+  /*
   case class ProtocolHostPathAndQueryString() extends Context {
     def succeeds: SpecsResult = {
       val path = "path"
@@ -92,5 +95,6 @@ class URLBuilderDSLSpecs extends Specification { def is =
       baseURLMatches(u) and checkQueryString(u, List(q1Key -> q2Key))
     }
   }
+  */
 
 }

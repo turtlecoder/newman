@@ -1,5 +1,5 @@
 package com.stackmob.newman.test.finagle
-
+/*
 import org.specs2.{ScalaCheck, Specification}
 import com.stackmob.newman.FinagleHttpClient.RichNettyHttpResponse
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
@@ -61,3 +61,4 @@ class RichNettyHttpResponseSpecs extends Specification with ScalaCheck { def is 
     }
   }
 }
+*/

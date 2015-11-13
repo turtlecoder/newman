@@ -19,7 +19,9 @@ package client
 
 import com.stackmob.newman.test.caching.DummyHttpResponseCacher
 import com.stackmob.newman.test.scalacheck._
-import org.specs2.{ScalaCheck, Specification}
+import org.specs2.Specification
+
+//import org.specs2.{ScalaCheck, Specification}
 import com.stackmob.newman.caching._
 import com.stackmob.newman.response.HttpResponse
 import org.scalacheck._
@@ -28,6 +30,7 @@ import java.net.URL
 import com.stackmob.newman._
 import com.stackmob.newman.request.HttpRequestWithoutBody
 
+/*
 class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { def is =
   "ReadCachingDummyHttpClientSpecs".title                                                                               ^ end ^
   "CachingDummyHttpClient is an HttpClient that caches responses for some defined TTL"                                  ^ end ^
@@ -133,3 +136,4 @@ class ReadCachingDummyHttpClientSpecs extends Specification with ScalaCheck { de
     }
   }
 }
+*/
