@@ -21,6 +21,7 @@ import org.specs2.execute.{Result => SpecsResult}
 import scalaz._
 import Scalaz._
 import org.json4s._
+import org.json4s.native.JsonMethods._
 import com.stackmob.newman._
 import com.stackmob.newman.dsl._
 import java.net.URL
@@ -115,12 +116,12 @@ class BodySerializationSpecs extends Specification { def is =
 
     def deserializesWithJSONR: SpecsResult = {
       val bodyObject = SomeClass("boyz", 2, "men")
-      ensureSucceedsWithReader(getResponse(compactRender(toJSON(bodyObject))), bodyObject)
-    }
+      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
+      }
 
     def deserializesWithoutJSONR: SpecsResult = {
       val bodyObject = ClassWithoutReader(9.5, false)
-      ensureSucceedsAsCaseClass(getResponse(compactRender(toJSON(bodyObject))), bodyObject)
+      ensureSucceedsAsCaseClass(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
     }
 
     def deserializesWithSpecificJSONR: SpecsResult = {
@@ -133,7 +134,7 @@ class BodySerializationSpecs extends Specification { def is =
           }
         }
       }
-      ensureSucceedsWithReader(getResponse(compactRender(toJSON(bodyObject))), bodyObject)
+      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), bodyObject)
     }
 
     def deserializesWithReplacedJSONR: SpecsResult = {
@@ -148,7 +149,7 @@ class BodySerializationSpecs extends Specification { def is =
           }
         }
       }
-      ensureSucceedsWithReader(getResponse(compactRender(toJSON(bodyObject))), newBodyObject)
+      ensureSucceedsWithReader(getResponse(compact(render(toJSON(bodyObject)))), newBodyObject)
     }
   }
 

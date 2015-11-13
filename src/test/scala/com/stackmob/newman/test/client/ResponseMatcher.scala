@@ -24,6 +24,7 @@ import java.nio.charset.Charset
 import scalaz.Scalaz._
 import org.json4s._
 import org.json4s.scalaz.JsonScalaz._
+import org.json4s.native.JsonMethods._
 import scala.util.Try
 
 trait ResponseMatcher extends MustExpectations with MustMatchers { this: Specification with HeadersMatcher =>

@@ -59,7 +59,7 @@ case class HttpResponse(code: HttpResponseCode,
       if(prettyPrint) {
         pretty(render(toJValue))
       } else {
-        compct(render(toJValue))
+        compact(render(toJValue))
       }
     })
   }
