@@ -16,6 +16,7 @@
 
 package com.stackmob.newman.dsl
 
+import scalaz._
 import scalaz.Scalaz._
 import com.stackmob.newman.response.{HttpResponse, HttpResponseCode}
 import scalaz.Validation
@@ -97,9 +98,16 @@ trait AsyncResponseHandlerDSL {
                          (implicit reader: JSONR[S],
                           m: Manifest[S],
                           charset: Charset = UTF8Charset): AsyncResponseHandler[Failure, Success] = {
-      handleCode(code)((resp: HttpResponse) => resp.bodyAs[S].leftMap { t =>
-        errorConv(JSONParsingError(t): Throwable): Failure
-      }.flatMap(handler))
+      handleCode(code)((resp: HttpResponse) => {
+        val res = resp.bodyAs[S].leftMap { t =>
+          errorConv(JSONParsingError(t): Throwable): Failure
+        } match {
+          case Success(a) => handler(a)
+          case Failure(e) => Failure(e)
+        }
+        res
+      })
+
     }
 
     /**
