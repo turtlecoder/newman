@@ -29,7 +29,7 @@ libraryDependencies ++= {
   val mockitoVersion = "1.9.0"
   val liftJsonVersion = "2.5.1"
   val sprayVersion = "1.3.1"
-  val akkaVersion = "2.3.4"
+  val akkaVersion = "2.3.14"
   Seq(
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion exclude("org.apache.httpcomponents", "httpcore"),
