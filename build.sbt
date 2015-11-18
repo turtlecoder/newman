@@ -30,6 +30,7 @@ libraryDependencies ++= {
   val liftJsonVersion = "2.5.1"
   val sprayVersion = "1.3.1"
   val akkaVersion = "2.3.14"
+  val scalazCoreVersion = "7.1.4"
   Seq(
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion exclude("org.apache.httpcomponents", "httpcore"),
@@ -41,7 +42,7 @@ libraryDependencies ++= {
     "org.specs2" %% "specs2-core" % specs2Version % "test" exclude("org.scalaz", "scalaz-core_2.10"),
     "org.pegdown" % "pegdown" % "1.2.1" % "test" exclude("org.parboiled", "parboiled-core"),
     "org.mockito" % "mockito-all" % mockitoVersion % "test",
-    "org.scalaz" %% "scalaz-core" % "7.1.4",
+    "org.scalaz" %% "scalaz-core" % scalazCoreVersion,
     "org.json4s" %% "json4s-native" % "3.3.0",
     "org.json4s" %% "json4s-scalaz" % "3.3.0"
   )
