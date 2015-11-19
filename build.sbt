@@ -28,14 +28,15 @@ libraryDependencies ++= {
   val specs2Version = "3.6"
   val mockitoVersion = "1.9.0"
   val liftJsonVersion = "2.5.1"
-  val sprayVersion = "1.3.1"
+  val sprayClientVersion = "1.3.1"
+  val sprayCachingVersion = "1.3.1"
   val akkaVersion = "2.3.14"
   val scalazCoreVersion = "7.1.4"
   Seq(
     "org.apache.httpcomponents" % "httpcore" % httpCoreVersion,
     "org.apache.httpcomponents" % "httpclient" % httpClientVersion exclude("org.apache.httpcomponents", "httpcore"),
-    "io.spray" % "spray-client" % sprayVersion,
-    "io.spray" % "spray-caching" % sprayVersion,
+    "io.spray" % "spray-client" % sprayClientVersion,
+    "io.spray" % "spray-caching" % sprayCachingVersion,
     "com.typesafe.akka" %% "akka-actor" % akkaVersion,
     "com.twitter" %% "finagle-http" % "6.5.0" exclude("commons-codec", "commons-codec"),
     "org.scalacheck" %% "scalacheck" % scalaCheckVersion % "test",
