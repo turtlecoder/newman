@@ -22,16 +22,16 @@ import org.specs2.execute.{Result => SpecsResult}
 import java.net.URL
 
 class URLBuilderDSLSpecs extends Specification { def is =
-  "URLBuilderDSLSpecs".title                                                                                            ^
+  "URLBuilderDSLSpecs".title   ^
   """
   URLBuilder is Newman's DSL for building URLs in as much of a typesafe way as possible
-  """                                                                                                                   ^
-  "URLBuilder should"                                                                                                   ^
-    "correctly assemble a basic http://something.something URL"                                                         ! ProtocolAndHost().succeeds ^
-    "correctly assemble an http://something.something/something URL"                                                    ! ProtocolHostAndPath().succeeds ^
-    //"correctly assemble an http://something.somethign/something?key=val URL"                                            ! ProtocolHostPathAndQueryString().succeeds ^
-    //"correctly assemble an http://something.something?key=val URL"                                                      ! ProtocolHostAndQueryString().succeeds ^
-                                                                                                                        end
+  """                          ^
+  "URLBuilder should"          ^
+    "correctly assemble a basic http://something.something URL"              ! ProtocolAndHost().succeeds ^
+    "correctly assemble an http://something.something/something URL"         ! ProtocolHostAndPath().succeeds ^
+    "correctly assemble an http://something.something/something?key=val URL" ! ProtocolHostPathAndQueryString().succeeds ^
+    "correctly assemble an http://something.something?key=val URL"           ! ProtocolHostAndQueryString().succeeds ^
+    end
   trait Context extends BaseContext {
     protected val protocol = http
     protected val host = "stackmob.com"
@@ -46,7 +46,7 @@ class URLBuilderDSLSpecs extends Specification { def is =
       (u.getPort must beEqualTo(port))
     }
 
-    /*
+
     protected def checkQueryString(u: URL,
                                    expected: List[(String, String)]): SpecsResult = {
       val givenQueryList = u.getQuery.split("&").flatMap { elt: String =>
@@ -55,9 +55,9 @@ class URLBuilderDSLSpecs extends Specification { def is =
           case _ => Nil
         }
       }.toList
-      expected must haveTheSameElementsAs(givenQueryList)
+      givenQueryList must containTheSameElementsAs(expected)
     }
-    */
+
   }
 
   case class ProtocolAndHost() extends Context {
@@ -72,7 +72,7 @@ class URLBuilderDSLSpecs extends Specification { def is =
     }
   }
 
-  /*
+
   case class ProtocolHostPathAndQueryString() extends Context {
     def succeeds: SpecsResult = {
       val path = "path"
@@ -95,6 +95,6 @@ class URLBuilderDSLSpecs extends Specification { def is =
       baseURLMatches(u) and checkQueryString(u, List(q1Key -> q2Key))
     }
   }
-  */
+
 
 }
