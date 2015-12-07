@@ -33,11 +33,11 @@ class HttpRequestExecutionSpecs extends Specification { def is =
   ways like sequentially, chained (ie: generate the next request based on the previous response)
   """                                                                                                                   ^
   "HttpRequestExecution should"                                                                                         ^
-    "execute sequence requests correctly"                                                                               ! ExecuteSequence().executesCorrectly ^
-    "fail if the first sequenced request fails"                                                                         ! ExecuteSequence().firstTimeout ^
-    "fail if the last request fails"                                                                                    ! ExecuteSequence().lastTimeout ^
-    "execute concurrent requests correctly"                                                                             ! ExecuteConcurrent().executesCorrectly ^
-    //"fail only the request that fails"                                                                                  ! ExecuteConcurrent().oneFails ^
+    "execute sequence requests correctly" ! ExecuteSequence().executesCorrectly ^
+    "fail if the first sequenced request fails" ! ExecuteSequence().firstTimeout ^
+    "fail if the last request fails" ! ExecuteSequence().lastTimeout ^
+    "execute concurrent requests correctly" ! ExecuteConcurrent().executesCorrectly ^
+    "fail only the request that fails" ! ExecuteConcurrent().oneFails ^
                                                                                                                         end
   trait Context extends BaseContext {
     protected lazy val requestURL = new URL("http://stackmob.com")
@@ -101,19 +101,21 @@ class HttpRequestExecutionSpecs extends Specification { def is =
       val res = concurrentRequests(requestList)
       res.toReqRespList must beEqualTo(expectedRequestResponseList.toReqRespList)
     }
-/*
+
     def oneFails = {
       val requestList = List(request1, throwingRequest)
       val res = concurrentRequests(requestList)
 
-      val oneThrows = res must haveOneElementLike {
+      val oneThrows = res must contain(like[(HttpRequest, Future[HttpResponse])] {
         case tup => tup._2.toEither() must beLeft
-      }
-      val oneSucceeds = res must haveOneElementLike {
+      })
+
+      val oneSucceeds = res must contain(like[(Any, Future[HttpResponse])] {
         case tup => tup._2.toEither() must beRight
-      }
+      })
+
       oneThrows and oneSucceeds
     }
-    */
+
   }
 }
