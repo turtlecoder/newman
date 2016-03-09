@@ -11,7 +11,7 @@ name := "newman"
 
 organization := "com.stackmob"
 
-scalaVersion := "2.10.3"
+scalaVersion := "2.10.6"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-feature")
 
