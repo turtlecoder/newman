@@ -23,8 +23,8 @@ resolvers ++= List(
 )
 
 libraryDependencies ++= {
-  val httpCoreVersion = "4.4.5"
-  val httpClientVersion = "4.5.2"
+  val httpCoreVersion = "4.4.6"
+  val httpClientVersion = "4.5.3"
   val scalaCheckVersion = "1.10.1"
   val specs2Version = "3.6"
   val mockitoVersion = "1.9.0"
